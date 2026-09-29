@@ -33,3 +33,5 @@ tools/machost/machost
 # built by tools/papermono_test
 tools/papermono_test/papermono_test
 tools/papermono_test/screens
+tools/papermono_test/zx
+tools/papermono_test/msx

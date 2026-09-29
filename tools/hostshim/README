@@ -1,0 +1,5 @@
+Stand-ins for the handful of ESP-IDF headers the machines include, so that
+src/spectrum/ and src/msx/ build and run on the development machine
+(tools/papermono_test/machines). Time is simulated: vTaskDelay advances the
+clock esp_timer_get_time reads, so a machine pacing itself to 50 or 60Hz
+runs as fast as the host allows. NVS always says "nothing stored".
