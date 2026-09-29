@@ -15,6 +15,9 @@
  *   click X Y      move, down, run 0.2, up, run 0.2
  *   key U          press and release HID usage U (hex), e.g. key 04 is A
  *   cmd U          the same with Command held
+ *   text STRING    type STRING (to the end of the command) on a US
+ *                  keyboard, shift and all: text voc^e -> vocÃª with the
+ *                  US-International dead keys
  *   shot FILE      the screen as a PNG
  *   cursor         print where the Mac says the cursor is
  *
@@ -106,6 +109,38 @@ static void shot(const char *path)
 
 static int px, py, pb;
 
+/* An ASCII character as a US keyboard types it: usage, and shift. */
+static int us_key(char ch, unsigned *usage, int *shift)
+{
+    static const char plain[] = "abcdefghijklmnopqrstuvwxyz1234567890\n\x1b\b\t -=[]\\#;'`,./";
+    static const char shifted[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()\n\x1b\b\t _+{}|#:\"~<>?";
+    const char *p;
+    if ((p = strchr(plain, ch)) && ch) { *usage = 0x04 + (unsigned)(p - plain); *shift = 0; }
+    else if ((p = strchr(shifted, ch)) && ch) { *usage = 0x04 + (unsigned)(p - shifted); *shift = 1; }
+    else return 0;
+    return 1;
+}
+
+static void type_text(const char *s)
+{
+    for (; *s; s++) {
+        unsigned u;
+        int sh;
+        if (!us_key(*s, &u, &sh)) continue;
+        uint8_t r[8] = {0};
+        r[0] = sh ? 0x02 : 0;
+        if (sh) { mac_hid_report(r); run_for(0.03); }
+        r[2] = (uint8_t)u;
+        mac_hid_report(r);
+        run_for(0.06);
+        r[2] = 0;
+        mac_hid_report(r);
+        run_for(0.03);
+        if (sh) { r[0] = 0; mac_hid_report(r); run_for(0.03); }
+    }
+    run_for(0.3);
+}
+
 static void key(unsigned usage, int command)
 {
     uint8_t r[8] = {0};
@@ -151,6 +186,7 @@ int main(int argc, char **argv)
         else if (!strcmp(cmd, "up")) { pb = 0; mac_pointer(px, py, pb); }
         else if (sscanf(cmd, "key %x", &u) == 1) key(u, 0);
         else if (sscanf(cmd, "cmd %x", &u) == 1) key(u, 1);
+        else if (!strncmp(cmd, "text ", 5)) type_text(cmd + 5);
         else if (sscanf(cmd, "shot %255s", arg) == 1) shot(arg);
         else if (!strcmp(cmd, "cursor")) {
             int x, y;

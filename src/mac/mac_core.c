@@ -205,7 +205,7 @@ static const struct { uint8_t bits; uint8_t mac; } modifiers[] = {
     { 0x88, MKC_Command },
 };
 
-#define KQ_SIZE 32
+#define KQ_SIZE 64
 static volatile uint16_t kq[KQ_SIZE];
 static volatile unsigned kq_head, kq_tail;
 static uint8_t last_report[8];
@@ -232,20 +232,160 @@ static int mapped(uint8_t usage)
     return usage == 0x04 || hid_to_mac[usage] != 0;
 }
 
+/* --- US-International, on a Mac ----------------------------------------
+ *
+ * The keyboard is typed as US-International, as on the owner's other
+ * machines (the MSX here, MicroBASIC on the PaperS3): ' ` ^ ~ " are dead
+ * keys, the letter after one gets the accent, the accent followed by a
+ * space is the accent on its own, and ' then c is c-cedilla. The table of
+ * what composes is the PaperS3's dead_keys.h.
+ *
+ * The Mac already has accents, as Option dead keys in its own US layout:
+ * Option-e acute, Option-` grave, Option-i circumflex, Option-n tilde,
+ * Option-u diaeresis, Option-c c-cedilla. So a composed letter goes over
+ * as the Mac's own sequence - Option-e, then e - and the Mac draws the
+ * accented letter in whatever font it is using, in MacWrite as anywhere.
+ * Shift is let go around the Option key, which would otherwise make a
+ * different character, and put back for the letter.
+ */
+#define MAC_US_INTERNATIONAL 1
+
+static int shift_on;            /* shift as the Mac has been told it is */
+static int dead;                /* the pending dead key, or 0 */
+static uint8_t swallowed[6];    /* keys whose release must not reach the Mac */
+
+static void swallow(uint8_t usage)
+{
+    for (int i = 0; i < 6; i++) if (!swallowed[i]) { swallowed[i] = usage; return; }
+}
+
+static int take_swallowed(uint8_t usage)
+{
+    for (int i = 0; i < 6; i++) if (swallowed[i] == usage) { swallowed[i] = 0; return 1; }
+    return 0;
+}
+
+static void set_shift(int on)
+{
+    if (on != shift_on) { kq_push(MKC_Shift, on); shift_on = on; }
+}
+
+/* A key pressed and let go, with shift as asked, then shift put back. */
+static void tap(uint8_t mkc, int shift, int shift_after)
+{
+    set_shift(shift);
+    kq_push(mkc, 1);
+    kq_push(mkc, 0);
+    set_shift(shift_after);
+}
+
+static int dead_of(uint8_t usage, int shift)
+{
+    if (usage == 0x34) return shift ? '"' : '\'';
+    if (usage == 0x35) return shift ? '~' : '`';
+    if (usage == 0x23 && shift) return '^';
+    return 0;
+}
+
+static int is_vowel(uint8_t u) { return u == 0x04 || u == 0x08 || u == 0x0c || u == 0x12 || u == 0x18; }
+
+/* Whether `usage` takes dead key `d`, from dead_keys.h. */
+static int composes(int d, uint8_t u)
+{
+    switch (d) {
+    case '\'': return is_vowel(u) || u == 0x06;                   /* and c */
+    case '`': case '^': case '"': return is_vowel(u);
+    case '~': return u == 0x04 || u == 0x12 || u == 0x11;          /* a o n */
+    }
+    return 0;
+}
+
+static uint8_t mac_accent_key(int d)
+{
+    switch (d) {
+    case '\'': return MKC_E;
+    case '`': return MKC_Grave;
+    case '^': return MKC_I;
+    case '~': return MKC_N;
+    default:  return MKC_U;                                         /* diaeresis */
+    }
+}
+
+/* The dead key as the character it is printed with. */
+static void literal(int d, int shift_after)
+{
+    switch (d) {
+    case '\'': tap(MKC_SingleQuote, 0, shift_after); break;
+    case '"':  tap(MKC_SingleQuote, 1, shift_after); break;
+    case '`':  tap(MKC_Grave, 0, shift_after); break;
+    case '~':  tap(MKC_Grave, 1, shift_after); break;
+    case '^':  tap(MKC_6, 1, shift_after); break;
+    }
+}
+
+/* A key going down. Returns 1 if it is to reach the Mac as it is. */
+static int us_intl_keydown(uint8_t usage, const uint8_t r[8])
+{
+    const int shift = (r[0] & 0x22) != 0;
+    if (r[0] & 0x99) { dead = 0; return 1; }      /* Ctrl or Command: a shortcut */
+
+    if (dead) {
+        const int d = dead;
+        dead = 0;
+        if (usage == 0x2c) {                     /* space: the accent itself */
+            literal(d, shift);
+            swallow(usage);
+            return 0;
+        }
+        if (composes(d, usage)) {
+            if (d == '\'' && usage == 0x06) {   /* c-cedilla: Option-c, shifted for capital */
+                kq_push(MKC_Option, 1);
+                tap(MKC_C, shift, shift);
+                kq_push(MKC_Option, 0);
+                swallow(usage);
+                return 0;
+            }
+            kq_push(MKC_Option, 1);
+            tap(mac_accent_key(d), 0, 0);
+            kq_push(MKC_Option, 0);
+            set_shift(shift);
+            return 1;                            /* the letter itself, as typed */
+        }
+        literal(d, shift);                       /* no accent: both as typed */
+        if (dead_of(usage, shift)) { dead = dead_of(usage, shift); swallow(usage); return 0; }
+        return 1;
+    }
+
+    if (dead_of(usage, shift)) {
+        dead = dead_of(usage, shift);
+        swallow(usage);
+        return 0;
+    }
+    return 1;
+}
+
 void mac_hid_report(const uint8_t r[8])
 {
     for (unsigned i = 0; i < sizeof(modifiers) / sizeof(modifiers[0]); i++) {
         int was = (last_report[0] & modifiers[i].bits) != 0;
         int is = (r[0] & modifiers[i].bits) != 0;
-        if (was != is) kq_push(modifiers[i].mac, is);
+        if (was == is) continue;
+        if (modifiers[i].mac == MKC_Shift) set_shift(is);
+        else kq_push(modifiers[i].mac, is);
     }
     for (int i = 2; i < 8; i++) {
         uint8_t u = last_report[i];
-        if (u && mapped(u) && !in_report(r, u)) kq_push(hid_to_mac[u], 0);
+        if (!u || !mapped(u) || in_report(r, u)) continue;
+        if (take_swallowed(u)) continue;
+        kq_push(hid_to_mac[u], 0);
     }
     for (int i = 2; i < 8; i++) {
         uint8_t u = r[i];
-        if (u && mapped(u) && !in_report(last_report, u)) kq_push(hid_to_mac[u], 1);
+        if (!u || !mapped(u) || in_report(last_report, u)) continue;
+#if MAC_US_INTERNATIONAL
+        if (!us_intl_keydown(u, r)) continue;
+#endif
+        kq_push(hid_to_mac[u], 1);
     }
     memcpy(last_report, r, 8);
 }

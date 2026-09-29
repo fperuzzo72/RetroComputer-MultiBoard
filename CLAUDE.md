@@ -340,6 +340,15 @@ panel, so the picture is the right way round and touch drives the pointer.
   every 11-13ms, fast refresh 398-407ms, emulation 154-206% of a Mac Plus.
   Tap-then-drag on a menu works and the owner is happy with it; the
   pointer speed is "good enough".
+- **The Mac's keyboard is US-International** (`mac_core.c`, the PaperS3
+  MicroBASIC's dead_keys.h rules): ' ` ^ ~ " are dead keys, and a composed
+  letter goes over as the Mac's own Option sequence (Option-e then e for
+  e-acute; Option-c for c-cedilla), so the Mac draws it in its own font.
+  machost's `text` command tests it: "Ol'a, voc^e ... a'c'ucar, caf'e"
+  comes out "Olá, você ... açúcar, café" in TeachText. Capital A-acute
+  showed as a box there, with the right Option-e Shift-A sequence sent: most
+  likely TeachText's System 6 bitmap font lacks the glyph. Unconfirmed;
+  check in MacWrite before calling it done.
 - **Never write the cursor globals during boot.** The ROM's RAM test
   reads its patterns back and a pointer write in the middle is a sad Mac,
   03FFFF. `mac_core.c` waits for CrsrCouple == 0xFF and Mouse on screen.
