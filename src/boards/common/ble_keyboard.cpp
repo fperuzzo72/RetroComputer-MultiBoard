@@ -103,6 +103,8 @@ static volatile uint32_t sAdvSeen = 0;
 static volatile uint32_t sNotifyCount = 0;
 static volatile uint8_t  sLastLen = 0;
 static volatile bool     sLogReports = false;
+static volatile uint32_t sRejected = 0;
+static volatile int      sSubscribed = 0;
 
 void ble_keyboard_log_reports(int on) { sLogReports = on ? true : false; }
 unsigned long ble_keyboard_report_count(void) { return (unsigned long)sNotifyCount; }
@@ -164,7 +166,7 @@ static void notifyCB(NimBLERemoteCharacteristic *chr, uint8_t *data, size_t len,
      * report (consumer keys, a mouse) and is not ours. */
     const uint8_t *p = data;
     if (len == 9) { p = data + 1; len = 8; }
-    if (len < 8) return;
+    if (len < 8) { sRejected++; return; }
 
     portENTER_CRITICAL(&sReportMux);
     memcpy(sReport, p, 8);
@@ -327,6 +329,7 @@ static bool connectToKeyboard() {
         }
     }
     Serial.printf("BLE: %d notifying characteristic(s) subscribed\n", subCount);
+    sSubscribed = subCount;
     bool subscribed = subCount > 0;
 
     if (!subscribed) {
@@ -382,6 +385,14 @@ void ble_keyboard_init() {
 }
 
 int ble_keyboard_connected() { return sConnected ? 1 : 0; }
+
+void ble_keyboard_status(void) {
+    Serial.printf("BLE: %s, %d report characteristic(s) subscribed, %lu reports "
+                  "(last %u bytes), %lu not keyboard-shaped, %lu adverts seen\n",
+                  sConnected ? "connected" : "not connected", sSubscribed,
+                  (unsigned long)sNotifyCount, (unsigned)sLastLen,
+                  (unsigned long)sRejected, (unsigned long)sAdvSeen);
+}
 
 void ble_keyboard_poll() {
     /* The connect handshake must not run inside the scan callback, which

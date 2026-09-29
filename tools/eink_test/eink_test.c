@@ -226,8 +226,10 @@ int main(int argc, char **argv)
     printf("  aimed at 471,42 in %d pushes; the Mac's cursor is at %d,%d\n", pushes, cx, cy);
     check(pushes >= 0 && abs(cx - 471) <= 3 && abs(cy - 42) <= 3, "trackpad pushes land the pointer within 3 pixels of the aim");
 
-    /* 3. double tap opens it */
-    tap(); idle(60); tap(); idle(3000);
+    /* 3. double tap opens it, at the owner's own rhythm measured on the
+     * device (2026-09-29): each touch one 10ms sample, 170ms between them */
+    tick(1, 400, 240); tick(0, 0, 0); idle(170);
+    tick(1, 400, 240); tick(0, 0, 0); idle(3000);
     snapshot(argv[3], "2-double-tap");
     printf("  inside where the window opens: %.0f%% black\n", 100 * blackness(30, 70, 300, 110));
     check(blackness(30, 70, 300, 110) < 0.2f, "double tap on the disc opens its window");

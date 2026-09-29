@@ -267,6 +267,8 @@ static void touch_service(void)
  *   c A MS     clean automatically (a full refresh) once the picture has
  *              been still MS after at least A fast refreshes; c alone
  *              says what it is now
+ *   b          the BLE keyboard: connected, reports seen, last length
+ *   bl         toggle printing every raw report from the keyboard
  *   r          toggle printing every touch sample, "touch <ms> <x> <y>",
  *              in upright panel pixels: the jitter, measured
  *   t X Y      put the pointer at X,Y (machine pixels) and click there
@@ -371,6 +373,13 @@ static void console_command(const char *line)
         int after; unsigned long ms;
         panel_get_idle_clean(&after, &ms);
         Serial.printf("clean: a full refresh after %d fast ones and %lums still\n", after, ms);
+    } else if (!strcmp(line, "b")) {
+        if (ble_started) ble_keyboard_status(); else Serial.println("BLE: not started yet");
+    } else if (!strcmp(line, "bl")) {
+        static bool on;
+        on = !on;
+        ble_keyboard_log_reports(on);
+        Serial.printf("BLE: raw reports %s\n", on ? "logged" : "not logged");
     } else if (!strcmp(line, "r")) {
         raw_touch_log = !raw_touch_log;
         Serial.printf("raw touch log %s\n", raw_touch_log ? "on" : "off");

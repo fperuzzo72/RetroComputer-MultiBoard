@@ -50,6 +50,10 @@ void ble_keyboard_scan(int on);
  * BLE_KEYBOARD_PASSKEY. */
 int ble_keyboard_take_passkey(uint32_t *passkey);
 
+/* For a console: connection, reports seen, the last one's length, how many
+ * were thrown away as not shaped like a keyboard report. */
+void ble_keyboard_status(void);
+
 #ifdef __cplusplus
 }
 #endif
