@@ -20,9 +20,9 @@ Both run on the hardware. The boot menu picks the machine *and* what it
 starts with - a cartridge, a snapshot, a tape - and everything is in
 flash, so there is no SD card in any of this.
 
-The second board is the **M5Stack Paper Mono**, an ESP32-S3 with an
-800x480 e-ink panel, carrying all three: the MSX and the Spectrum, and a
-**Macintosh Plus**. See "The Paper Mono" below.
+Two more boards are M5Stack's e-ink devices, the **Paper Mono** (800x480)
+and the **PaperS3** (960x540), each carrying all three: the MSX and the
+Spectrum, and a **Macintosh Plus**. See "The e-ink boards" below.
 
 ## Status, in detail
 
@@ -82,15 +82,22 @@ make -C tools/tapebench
 TRAP=0 ./tools/tapebench/load 48.rom game.tap   # signal only, no shortcut
 ```
 
-## The Paper Mono
+## The e-ink boards: Paper Mono and PaperS3
 
-`pio run -e papermono` builds one firmware with the MSX, the Spectrum and
-the Macintosh. At power-on a touch menu asks which computer, then what it
+`pio run -e papermono` and `pio run -e papers3` build one firmware each
+with the MSX, the Spectrum and the Macintosh, from one board layer
+(`src/boards/eink/`); what differs between the two devices is
+`eink_board.h` and nothing else. At power-on a touch menu asks which computer, then what it
 starts with; left untouched for five seconds, the outlined one boots with
 what it had last time.
 
-The device is held with its **buttons along the top**; the picture and
-touch are turned to match.
+The Paper Mono is held with its **buttons along the top**; the picture and
+touch are turned to match. The PaperS3 has no button the firmware can
+read (its side button only switches it on and off), so the buttons' jobs
+are also gestures, on both:
+
+- a finger held still for 1.5 seconds: a full refresh
+- held for 5 seconds: restart into the boot menu
 
 | | MSX, Spectrum | Macintosh |
 |---|---|---|
@@ -99,6 +106,9 @@ touch are turned to match.
 | other button (GPIO3) | full refresh, to clear ghosting | the same |
 | other button held 2 s | restart into the boot menu | the same |
 
+(The buttons are the Paper Mono's. On the PaperS3 the Mac needs none: the
+trackpad clicks with a tap and holds the button with tap-then-drag.)
+
 **The keyboard** is the same BLE transport as the CYD's, now shared
 (`src/boards/common/`), paired the way the PaperS3 MicroBASIC pairs: a
 keyboard that asks for a code gets one on the panel, **123456**, to type
@@ -106,23 +116,25 @@ on the keyboard itself followed by Enter. The MSX has its US-International
 dead keys, and so does the Mac (below).
 
 **The 8-bit pictures** are 256x216 at exactly 2x, 512x432 in the middle
-of the panel. The panel has two colours; each machine pixel is four panel
+of the panel. **The Mac** is scaled to the panel's height: 1.40x on the
+Paper Mono, 1.58x on the PaperS3. The panel has two colours; each machine pixel is four panel
 pixels, so five tones, and the tone is how far a colour stands from the
 border colour. MSX-BASIC's white on blue comes out black on white, a
 Spectrum's ink on paper as it is. The Spectrum's FLASH attribute is held
 steady: blinking it would refresh the whole e-ink panel twice a second.
 The MSX is held to its own 60 frames a second.
 
-Status: **built and run on the development machine, not yet on the
-device** (2026-09-28). `tools/papermono_test` has `zx` and `msx`, which run
+Status: **built and run on the development machine, not yet on either
+device** (2026-09-29). `make -C tools/eink_test EINK=PAPERS3 -B` builds the
+host tools for the PaperS3's layout. `tools/eink_test` has `zx` and `msx`, which run
 the real machine code through the real picture path and write what the
 panel would show:
 
 ```bash
-make -C tools/papermono_test
-./tools/papermono_test/msx 0 /tmp/msx 6          # MSX-BASIC at six seconds
-./tools/papermono_test/zx 8 /tmp/zx 4            # the eighth Spectrum snapshot
-./tools/papermono_test/screens /tmp/menus        # the menus
+make -C tools/eink_test
+./tools/eink_test/msx 0 /tmp/msx 6          # MSX-BASIC at six seconds
+./tools/eink_test/zx 8 /tmp/zx 4            # the eighth Spectrum snapshot
+./tools/eink_test/screens /tmp/menus        # the menus
 ```
 
 ## The Macintosh, on the Paper Mono
@@ -138,7 +150,7 @@ height (719x480, centred). umac can patch the ROM to the panel's own
 inch against the Mac's 72, and a Mac pixel for a panel pixel was too small
 to read. The scaling is nearest-pixel, so some Mac pixels come out two
 panel pixels wide and some one; for 1-bit text on a 1-bit panel that
-reads better than anything averaged. `src/boards/papermono/picture.h`.
+reads better than anything averaged. `src/boards/eink/picture.h`.
 
 **The device is held with its buttons along the top**, and the picture
 and touch are turned 180 degrees to match: along the bottom, the hand
@@ -162,15 +174,15 @@ close box. The finger pushes the pointer rather than standing on it:
 | button on GPIO2 (top right, held buttons-up) | the mouse button, held for as long as it is |
 | button on GPIO3 | full refresh, to clear the ghosts fast refreshes leave |
 
-`src/boards/papermono/trackpad.c` is plain C, and `tools/papermono_test`
+`src/boards/eink/trackpad.c` is plain C, and `tools/eink_test`
 runs it, with `picture.h`, in front of the real Mac on the development
 machine: a simulated finger aims the pointer, double-taps the disc open and
 holds the Apple menu down, and every pixel of the scaled, turned panel is
 checked against the Mac pixel it should show.
 
 ```bash
-make -C tools/papermono_test
-./tools/papermono_test/papermono_test roms/mac/macplus.rom roms/mac/boot.img /tmp/pm
+make -C tools/eink_test
+./tools/eink_test/papermono_test roms/mac/macplus.rom roms/mac/boot.img /tmp/pm
 ```
 
 Under all that, the Mac only ever had a relative mouse, so the position is
@@ -220,7 +232,7 @@ percentage of a real Mac Plus, and the panel's refresh times.
 ```
 src/boards/cyd/        the CYD: panel, amplifier, BLE keyboard host, card,
                        serial console. Knows nothing about what is emulated.
-src/boards/papermono/  the Paper Mono: e-ink panel, touch, serial console
+src/boards/eink/  the Paper Mono: e-ink panel, touch, serial console
 src/machine.h          the only thing that crosses between boards and machines
 src/display_mono.h     how a 1-bit machine hands its framebuffer to a board
 src/msx/               the MSX1, on the vendored fMSX core

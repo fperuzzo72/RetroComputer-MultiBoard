@@ -247,6 +247,20 @@ The tape code stays because the conversion needs it, because Avalon and
 Thrust still ride on it, and because it is the only honest way to load a
 tape a user supplies later.
 
+## The e-ink boards: Paper Mono and PaperS3 (2026-09-29)
+
+`src/boards/eink/` serves both M5Stack devices; `eink_board.h` is the only
+place they differ (panel size, turned round or not, buttons or not).
+`pio run -e papers3` builds for the PaperS3: 960x540 ED047TC1 through
+freeink-sdk's BoardPaperS3 and M5GFX 0.2.26, GT911 touch, the PaperS3
+MicroBASIC's memory settings, its shared partition table, app1 at
+0x6A0000 (where MicroBASIC lives today: where this goes is undecided).
+No readable buttons, so a finger held 1.5s is a full refresh and 5s a
+restart into the boot menu, on both boards. **Neither firmware has run on
+a device**; freeink-sdk's own PaperS3 profile marks panel rotation and
+touch flips "pending hardware validation", so check the orientation and
+where taps land first.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,
@@ -255,7 +269,7 @@ morning of 2026-09-29; the last device run was the Mac-only firmware.
 
 - **The 8-bit machines draw through `display8.c`**, the Paper Mono's
   display.h: 2x, four machine pixels to a panel byte, tone by contrast
-  with the border. `tools/papermono_test` `zx` and `msx` run the real
+  with the border. `tools/eink_test` `zx` and `msx` run the real
   machines through it on the host (tools/hostshim stands in for the
   ESP-IDF headers, with simulated time); use them before guessing.
 - **One canvas** (panel.cpp): the Mac's picture, display8 and the menus
@@ -277,7 +291,7 @@ morning of 2026-09-29; the last device run was the Mac-only firmware.
 
 ## The Paper Mono and the Macintosh
 
-A second board, `src/boards/papermono/`: M5Stack Paper Mono, ESP32-S3,
+A second board, `src/boards/eink/`: M5Stack Paper Mono, ESP32-S3,
 8MB PSRAM, 800x480 1-bit SSD1677 e-ink, FT6336 touch. Different chip and
 toolchain from the CYD (pioarduino, Arduino core 3.3), with the hardware
 driven by **freeink-sdk, a git submodule pinned to `6dfe245`, the commit
@@ -315,7 +329,7 @@ panel, so the picture is the right way round and touch drives the pointer.
   the bottom the hand kept pressing them (owner's request, 2026-09-28).
 - **The Mac is 512x342, scaled 1.40x** (nearest-pixel, 719x480 centred).
   It started at the panel's native 800x480; the owner found it too small
-  to read. `src/boards/papermono/picture.h` holds the scale and the
+  to read. `src/boards/eink/picture.h` holds the scale and the
   upside-down flag, and both the picture and touch go through it.
 - **Touch is a trackpad** (`trackpad.c`, plain C): drag pushes the
   pointer with acceleration, tap clicks, tap-tap double-clicks,
@@ -323,7 +337,7 @@ panel, so the picture is the right way round and touch drives the pointer.
   refresh, read straight off the pins (InputManager's two-button logic
   reports presses only on release). Replaced pointing straight at things
   because a finger is too big for a Mac close box. Three bugs were found
-  by `tools/papermono_test` before the device saw any of it: the slop
+  by `tools/eink_test` before the device saw any of it: the slop
   catch-up getting fast-end acceleration (every push overshot), a
   double tap holding the button 20ms (the Mac saw one click), and the
   sad Mac below.
@@ -380,7 +394,7 @@ panel, so the picture is the right way round and touch drives the pointer.
 - **Never write the cursor globals during boot.** The ROM's RAM test
   reads its patterns back and a pointer write in the middle is a sad Mac,
   03FFFF. `mac_core.c` waits for CrsrCouple == 0xFF and Mouse on screen.
-- **Run `tools/papermono_test` after touching picture.h, trackpad.c or
+- **Run `tools/eink_test` after touching picture.h, trackpad.c or
   the pointer code.** Its probes were wrong three times before they were
   right (a desktop pattern looks like a title bar; the cursor sprite
   moving is not the screen changing), so read the PNGs it writes, not
