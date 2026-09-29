@@ -118,6 +118,19 @@ void ble_keyboard_scan(int on) {
     else    NimBLEDevice::getScan()->stop();
 }
 
+/* Key slots as a keyboard fills them: each empty or a key usage (0x04 and
+ * up; 0x01 is the rollover error, also a keyboard's), and no key after an
+ * empty slot. */
+static bool looksLikeKeys(const uint8_t *keys, int n) {
+    bool empty = false;
+    for (int i = 0; i < n; i++) {
+        if (keys[i] == 0) { empty = true; continue; }
+        if (empty) return false;
+        if (keys[i] != 0x01 && (keys[i] < 0x04 || keys[i] > 0xE7)) return false;
+    }
+    return true;
+}
+
 static void notifyCB(NimBLERemoteCharacteristic *chr, uint8_t *data, size_t len, bool isNotify) {
     (void)isNotify;
     sNotifyCount++;
@@ -151,7 +164,7 @@ static void notifyCB(NimBLERemoteCharacteristic *chr, uint8_t *data, size_t len,
         }
 
         int rollover = 0, held = 0;
-        for (size_t i = 2; i < len && i < 16; i++) {
+        for (size_t i = (len == 7 ? 1 : 2); i < len && i < 16; i++) {
             if (data[i] == 0x01) rollover = 1;
             else if (data[i] != 0x00) held++;
         }
@@ -162,14 +175,29 @@ static void notifyCB(NimBLERemoteCharacteristic *chr, uint8_t *data, size_t len,
 
     /* A boot keyboard report is [modifiers, reserved, key1..key6]. Some
      * keyboards notify a 9-byte report whose first byte is the HID Report
-     * ID; the rest is the same eight bytes. Anything shorter is some other
-     * report (consumer keys, a mouse) and is not ours. */
-    const uint8_t *p = data;
-    if (len == 9) { p = data + 1; len = 8; }
-    if (len < 8) { sRejected++; return; }
+     * ID; the rest is the same eight bytes.
+     *
+     * And some send seven: [modifiers, key1..key6], no reserved byte. The
+     * owner's keyboard does, on 0x2A4D in report protocol, and every one of
+     * its reports was thrown away as too short: it paired, asked for its
+     * code, connected and typed nothing (2026-09-29, 214 reports, 214
+     * rejected). Seven bytes is also a size a mouse report can be, so they
+     * are taken only when they look like keys: every key slot empty or a
+     * keyboard usage, the keys packed at the front.
+     *
+     * Anything else is some other report (consumer keys, a mouse) and is
+     * not ours. */
+    uint8_t rep[8];
+    if (len == 9) { memcpy(rep, data + 1, 8); }
+    else if (len == 8) { memcpy(rep, data, 8); }
+    else if (len == 7 && looksLikeKeys(data + 1, 6)) {
+        rep[0] = data[0];
+        rep[1] = 0;
+        memcpy(rep + 2, data + 1, 6);
+    } else { sRejected++; return; }
 
     portENTER_CRITICAL(&sReportMux);
-    memcpy(sReport, p, 8);
+    memcpy(sReport, rep, 8);
     portEXIT_CRITICAL(&sReportMux);
 }
 
