@@ -16,6 +16,11 @@ void panel_set_i2c_lock(SemaphoreHandle_t lock);
 void panel_canvas_lock(void);
 void panel_canvas_unlock(void);
 
+/* The automatic clean: a full refresh once the picture has sat still for
+ * `ms` after at least `after` fast refreshes. */
+void panel_set_idle_clean(int after, unsigned long ms);
+void panel_get_idle_clean(int *after, unsigned long *ms);
+
 /* For the console: buffers, calls, and why nothing was sent. */
 void panel_diag(void);
 

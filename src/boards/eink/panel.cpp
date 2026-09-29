@@ -50,9 +50,23 @@ static volatile bool full_requested;
  * sat still for IDLE_CLEAN_MS after at least IDLE_CLEAN_AFTER fast ones,
  * it is cleaned while nobody is moving anything. A picture that never sits
  * still is cleaned anyway after FAST_PER_FULL. Starting values. */
-static const int IDLE_CLEAN_AFTER = 30;
-static const unsigned long IDLE_CLEAN_MS = 4000;
+static int IDLE_CLEAN_AFTER = 30;
+static unsigned long IDLE_CLEAN_MS = 4000;
 static const int FAST_PER_FULL = 200;
+
+/* `c AFTER MS` on the console changes the first two while the owner looks
+ * at the glass: tuning this by reflashing costs a cycle per guess. */
+void panel_set_idle_clean(int after, unsigned long ms)
+{
+    IDLE_CLEAN_AFTER = after < 1 ? 1 : after;
+    IDLE_CLEAN_MS = ms;
+}
+
+void panel_get_idle_clean(int *after, unsigned long *ms)
+{
+    *after = IDLE_CLEAN_AFTER;
+    *ms = IDLE_CLEAN_MS;
+}
 
 /* And "full" is not the flashing black-white-black clean other panels do:
  * this driver has none, and its corrective mode drives every pixel through

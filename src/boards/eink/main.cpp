@@ -256,6 +256,9 @@ static void touch_service(void)
  *
  *   s          statistics: panel refreshes, heap
  *   f          full refresh on the next pass
+ *   c A MS     clean automatically (a full refresh) once the picture has
+ *              been still MS after at least A fast refreshes; c alone
+ *              says what it is now
  *   r          toggle printing every touch sample, "touch <ms> <x> <y>",
  *              in upright panel pixels: the jitter, measured
  *   t X Y      put the pointer at X,Y (machine pixels) and click there
@@ -353,6 +356,13 @@ static void console_command(const char *line)
         panel_diag();
         input_gap_max = 0;
         machine->debug_command("s");
+    } else if (sscanf(line, "c %d %d", &a, &b) == 2) {
+        panel_set_idle_clean(a, (unsigned long)b);
+        Serial.printf("clean: a full refresh after %d fast ones and %dms still\n", a, b);
+    } else if (!strcmp(line, "c")) {
+        int after; unsigned long ms;
+        panel_get_idle_clean(&after, &ms);
+        Serial.printf("clean: a full refresh after %d fast ones and %lums still\n", after, ms);
     } else if (!strcmp(line, "r")) {
         raw_touch_log = !raw_touch_log;
         Serial.printf("raw touch log %s\n", raw_touch_log ? "on" : "off");
