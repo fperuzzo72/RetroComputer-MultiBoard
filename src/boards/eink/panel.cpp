@@ -192,7 +192,10 @@ void panel_begin(void)
     epd.clearScreen(0xFF);
     epd.displayBuffer(EInkDisplay::FULL_REFRESH);
     canvas = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    glass = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    /* PSRAM too: it is only compared and copied, and 48kB of internal RAM
+     * is what the BLE keyboard needs once it connects (26kB was all that
+     * was left with the MSX running, 2026-09-29). */
+    glass = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (canvas) memset(canvas, 0xFF, CANVAS_BYTES);
     if (glass) memset(glass, 0xFF, CANVAS_BYTES);
     canvas_lock = xSemaphoreCreateMutex();
