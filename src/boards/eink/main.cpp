@@ -68,6 +68,14 @@ static InputManager input;
 static const int PANEL_W = CANVAS_W;
 static const int PANEL_H = CANVAS_H;
 
+/* How CrossPlay, in the other app slot of the same device, knows this
+ * firmware is here: it looks for this string in the slot's image before
+ * offering to boot it, and refuses to self-update over it (CrossPlay's
+ * src/util/RetroSlot.h). The two slots' esp_app_desc_t are identical under
+ * pioarduino, so nothing else tells them apart. Printed at boot, so the
+ * linker keeps it. Change it there too or not at all. */
+static const char kAppSlotMarker[] = "RetroComputer-MultiBoard app slot marker v1";
+
 static void machineTask(void *arg)
 {
     (void)arg;
@@ -535,6 +543,7 @@ void setup()
     machine_storage_init();
     machine = machine_list[machine_chosen_index()];
     Serial.printf("\n\nPaper Mono: %d computer(s) built in\n", machine_count);
+    Serial.printf("%s\n", kAppSlotMarker);
     Serial.printf("boot: internal %u free, PSRAM %u free\n",
                   heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                   heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
