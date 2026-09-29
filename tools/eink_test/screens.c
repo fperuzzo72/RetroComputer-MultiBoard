@@ -65,9 +65,11 @@ int main(int argc, char **argv)
 {
     if (argc != 2) { fprintf(stderr, "usage: %s <out-prefix>\n", argv[0]); return 1; }
     char p[512];
-    const char *machines[] = { "MSX (Hotbit HB-8000)", "ZX Spectrum 48K", "Macintosh Plus" };
+    const char *machines[] = { "MSX (Hotbit HB-8000)", "ZX Spectrum 48K", "Macintosh Plus", "Voltar ao CrossPlay" };
 
-    ui_draw_machines(canvas, machines, 3, 0, 0, "Sem toque, liga o MSX em 5 s");
+    ui_draw_machines(canvas, machines, 4, 0, 0, "Sem toque, em 5 s liga o marcado");
+    snprintf(p, sizeof p, "%s-machines-4.png", argv[1]); png(p);
+    ui_draw_machines(canvas, machines, 3, 0, 0, "Sem toque, em 5 s liga o marcado");
     snprintf(p, sizeof p, "%s-machines.png", argv[1]); png(p);
     /* positions relative to the panel, so the same checks hold on both
      * boards (make EINK=PAPERS3 for the PaperS3) */

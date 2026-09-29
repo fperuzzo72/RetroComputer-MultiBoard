@@ -12,6 +12,8 @@
 #include <SDCardManager.h>
 #include <string.h>
 
+#include "panel_eink.h"
+
 #define MEDIA_DIR "/mac"
 #define MEDIA_MAX 16
 
@@ -19,6 +21,7 @@ static char names[MEDIA_MAX][48];
 static char paths[MEDIA_MAX][64];
 static int count;
 static FsFile file;
+static bool mounted;
 
 static bool wanted(const char *n)
 {
@@ -36,6 +39,7 @@ extern "C" void media_begin(void)
         Serial.println("media: no card");
         return;
     }
+    mounted = true;
     FsFile dir = sd.open(MEDIA_DIR);
     if (!dir || !dir.isDirectory()) {
         Serial.println("media: card mounted, no " MEDIA_DIR " folder");
@@ -56,6 +60,36 @@ extern "C" void media_begin(void)
         f.close();
     }
     dir.close();
+}
+
+int media_create(const char *name, const uint8_t *data, uint32_t len)
+{
+    if (!mounted || count >= MEDIA_MAX) return -1;
+    SDCardManager &sd = SDCardManager::getInstance();
+    sd.mkdir(MEDIA_DIR);
+    char path[64];
+    snprintf(path, sizeof path, MEDIA_DIR "/%s.img", name);
+    if (sd.exists(path)) return -1;
+
+    panel_message("Copiando o disco para o cartao", "um momento");
+    FsFile f = sd.open(path, O_RDWR | O_CREAT | O_EXCL);
+    bool ok = (bool)f;
+    for (uint32_t done = 0; ok && done < len; ) {
+        const uint32_t n = len - done > 32768 ? 32768 : len - done;
+        ok = f.write(data + done, n) == n;
+        done += n;
+    }
+    if (f) { f.sync(); f.close(); }
+    panel_message_clear();
+    if (!ok) {
+        Serial.printf("media: could not write %s, removing it\n", path);
+        sd.remove(path);
+        return -1;
+    }
+    strncpy(paths[count], path, sizeof paths[count] - 1);
+    strncpy(names[count], name, sizeof names[count] - 1);
+    Serial.printf("media: %s written, %lu kB\n", path, (unsigned long)(len / 1024));
+    return count++;
 }
 
 int media_count(void) { return count; }

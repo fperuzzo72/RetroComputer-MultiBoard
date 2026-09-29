@@ -24,6 +24,11 @@ const char *media_name(int i);
 /* An image opened for reading and writing, or NULL. */
 void *media_open(int i, uint32_t *size);
 
+/* Write `len` bytes as a new image called `name` (".img" is added) in the
+ * card's folder, and list it. Its index, or -1: no card, no room, or a
+ * file of that name already there (never overwritten). */
+int media_create(const char *name, const uint8_t *data, uint32_t len);
+
 /* 0 on success, as umac's disc callbacks want. */
 int media_read(void *h, uint8_t *data, uint32_t offset, uint32_t len);
 int media_write(void *h, const uint8_t *data, uint32_t offset, uint32_t len);

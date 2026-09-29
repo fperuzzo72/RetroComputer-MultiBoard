@@ -13,6 +13,7 @@
  *   EINK_PANEL_W/H     the panel, in the frame the picture is drawn in
  *   EINK_UPSIDE_DOWN   held turned round from freeink-sdk's frame
  *   EINK_HAS_BUTTONS   two buttons the firmware can read (GPIO2, GPIO3)
+ *   EINK_OTHER_APP     what the boot menu's last choice goes back to
  */
 
 #if defined(EINK_BOARD_PAPERS3)
@@ -25,6 +26,9 @@
 #define EINK_PANEL_H      540
 #define EINK_UPSIDE_DOWN  0
 #define EINK_HAS_BUTTONS  0
+/* What lives in the other app slot on the owner's device (the shared
+ * table: CrossPoint in app0, this in app1). */
+#define EINK_OTHER_APP    "CrossPoint"
 
 #else
 
@@ -39,6 +43,7 @@
 #define EINK_PANEL_H      480
 #define EINK_UPSIDE_DOWN  1
 #define EINK_HAS_BUTTONS  1
+#define EINK_OTHER_APP    "CrossPlay"
 
 #endif
 

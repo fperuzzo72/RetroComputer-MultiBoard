@@ -9,6 +9,7 @@
  * lasts until the power goes), and the rest are the images on the board's
  * card (media.h), read and written in place, so that what is saved stays.
  * The choice is remembered by name, the card's order being the card's.
+ * A card with no disc on it is given a copy of the built-in one.
  */
 #include "machine.h"
 #include "display_mono.h"
@@ -108,6 +109,22 @@ static void m_run(void)
     const uint8_t *rom = mac_rom_image;
     const size_t rom_len = (size_t)(mac_rom_image_end - mac_rom_image);
     if (selected < 0) selected = recall();
+
+    /* A card with no disc on it gets a copy of the built-in one, which the
+     * Mac then boots from: what is saved stays, and nobody has to take the
+     * card out to put a disc on it (the owner's request, 2026-09-29). */
+    if (selected == 0 && media_count() == 0) {
+        char name[32];
+        const char *label = entry_label(0);
+        const char *colon = strchr(label, ':');
+        snprintf(name, sizeof name, "%s", colon ? colon + 2 : "Mac");
+        const int made = media_create(name, mac_disc_image,
+                                      (uint32_t)(mac_disc_image_end - mac_disc_image));
+        if (made >= 0) {
+            selected = made + 1;
+            remember(selected);
+        }
+    }
     printf("mac: booting from %s\n", entry_label(selected));
 
     if (selected > 0) {

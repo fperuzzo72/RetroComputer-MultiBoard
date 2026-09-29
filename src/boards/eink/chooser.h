@@ -10,11 +10,14 @@ extern "C" {
  * meanwhile. */
 
 #define CHOOSER_TIMEOUT (-10)
+#define CHOOSER_EXTRA   (-20)
 
 /* Which computer. `mark` is the one outlined, and the one returned as
  * CHOOSER_TIMEOUT's meaning when `timeout_ms` passes untouched (0 waits
- * for ever). -1 if cancelled. */
-int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned long timeout_ms);
+ * for ever). -1 if cancelled. `extra`, if not NULL, is one more band after
+ * the computers, answered as CHOOSER_EXTRA. */
+int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned long timeout_ms,
+                         const char *extra);
 
 /* Which entry of that machine: an index, or -1 for "back". */
 int chooser_pick_entry(int machine_index, int allow_cancel);

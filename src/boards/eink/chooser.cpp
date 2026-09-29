@@ -13,11 +13,14 @@
  * Mac's desktop - would ghost through a fast refresh of it. */
 static void show(void) { panel_request_full(); }
 
-int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned long timeout_ms)
+int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned long timeout_ms,
+                         const char *extra)
 {
-    const char *names[8];
-    const int n = machine_count < 8 ? machine_count : 8;
-    for (int i = 0; i < n; i++) names[i] = machine_list[i]->name;
+    const char *names[9];
+    const int machines = machine_count < 8 ? machine_count : 8;
+    int n = machines;
+    for (int i = 0; i < machines; i++) names[i] = machine_list[i]->name;
+    if (extra) names[n++] = extra;
 
     uint8_t *c = panel_canvas();
     panel_canvas_lock();
@@ -39,6 +42,7 @@ int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned 
         /* one touch and the countdown is off: somebody is choosing */
         timeout_ms = 0;
         const int hit = ui_hit_machines(x, y, n, allow_cancel);
+        if (hit >= machines) { result = CHOOSER_EXTRA; break; }
         if (hit >= 0) { result = hit; break; }
         if (hit == UI_BACK) { result = -1; break; }
     }

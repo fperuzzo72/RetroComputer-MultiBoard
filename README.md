@@ -198,6 +198,29 @@ dead keys, and a composed letter goes over as the Mac's own Option
 sequence (Option-e then e), so the Mac draws the accent in its own font.
 `text Ol'a, voc^e` in machost comes out "Olá, você" in TeachText.
 
+**The discs.** The disc built into the firmware is **Paper Mac**, a 1.44MB
+volume made from pico-mac's 32MB PicoMicroMac image: System 3.2 with Finder
+5.3, MacWrite 1.6 and MacPaint 1.3, nineteen small games (Lode Runner,
+Missile Command, Crystal Raider, Asteroids, Frogger...) and about 400kB
+free. `tools/make_mac_disc.py` builds it, or any other selection, with
+hfsutils (`brew install hfsutils`):
+
+```bash
+python3 tools/make_mac_disc.py ~/Downloads/umac0.img roms/mac/boot.img 1440 "Paper Mac" \
+    ":System Folder" ":Programs" ":Files" ":Games:Lode Runner" ...
+```
+
+The card holds more: every `.img`, `.dsk` or `.hfv` in a `mac` folder at
+its root is a choice in the Mac's menu, read and written in place, so what
+is saved stays after a power cycle. **A card with no disc on it is given a
+copy of the built-in one** the first time the Mac starts, and the Mac boots
+from that copy: nobody has to take the card out to begin. The choice of
+disc is remembered.
+
+**Back to the reader.** The first menu's last choice, when the other app
+slot holds a firmware, is "Voltar ao CrossPlay" (CrossPoint on the
+PaperS3): it makes that slot the one that boots and restarts.
+
 The ROM and the boot disc are not in the repository. Put them in
 `roms/mac/`, which git ignores:
 
