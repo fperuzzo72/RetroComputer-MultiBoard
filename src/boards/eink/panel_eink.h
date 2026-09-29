@@ -1,5 +1,5 @@
-#ifndef PANEL_PAPERMONO_H
-#define PANEL_PAPERMONO_H
+#ifndef PANEL_EINK_H
+#define PANEL_EINK_H
 
 /* The Paper Mono's panel, board-side. Machines see display_mono.h only. */
 
@@ -28,7 +28,7 @@ const uint8_t *panel_mono_picture(int *w, int *h);
 /* How the machine's picture sits on the panel, for mapping touch; NULL
  * before the machine has attached one. */
 #include "picture.h"
-const papermono_view *panel_view(void);
+const eink_view *panel_view(void);
 
 /* How long the last full (ghost-clearing) refresh took. */
 unsigned long panel_last_full_ms(void);

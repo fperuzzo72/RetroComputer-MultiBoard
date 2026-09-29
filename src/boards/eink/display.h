@@ -6,7 +6,9 @@ extern "C" {
 
 #include <stdint.h>
 
-/* The panel, for the 8-bit machines, on the Paper Mono.
+#include "eink_board.h"
+
+/* The panel, for the 8-bit machines, on an e-ink board.
  *
  * The same contract as the CYD's display.h (src/boards/cyd/display.h):
  * a machine renders its picture a band of scanlines at a time, 8 bits a
@@ -18,9 +20,9 @@ extern "C" {
 
 #define DISPLAY_PICTURE_W 256
 
-/* The panel, upright (buttons at the top). */
-#define DISPLAY_PANEL_W 800
-#define DISPLAY_PANEL_H 480
+/* The panel, in the frame the picture is drawn in. */
+#define DISPLAY_PANEL_W EINK_PANEL_W
+#define DISPLAY_PANEL_H EINK_PANEL_H
 
 /* A panel that must not be made to blink. Every change is a ~400ms
  * refresh of the whole e-ink panel, so a machine that flashes something

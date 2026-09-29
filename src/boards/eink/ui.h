@@ -1,12 +1,12 @@
-#ifndef PAPERMONO_UI_H
-#define PAPERMONO_UI_H
+#ifndef EINK_UI_H
+#define EINK_UI_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* The Paper Mono's screens, drawn and hit-tested, with nothing that waits
  * for a finger: chooser.cpp does the waiting. Split like this so that
- * tools/papermono_test can draw every screen on the development machine.
+ * tools/eink_test can draw every screen on the development machine.
  *
  * Coordinates are the upright frame (canvas.h). Targets are at least
  * 50 panel pixels tall, about 6mm on this panel: a fingertip, not a

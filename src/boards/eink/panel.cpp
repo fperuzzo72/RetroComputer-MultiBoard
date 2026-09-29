@@ -1,4 +1,4 @@
-/* panel.cpp - the Paper Mono's 800x480 e-ink panel.
+/* panel.cpp - the e-ink panel, EINK_PANEL_W x EINK_PANEL_H (eink_board.h).
  *
  * Everything that wants to be seen draws into one canvas, in the panel's
  * own frame (canvas.h): the Mac's picture, scaled from its framebuffer
@@ -15,7 +15,7 @@
  * The picture is scaled to fill the panel's height (picture.h): a Mac
  * pixel for a panel pixel was too small to read.
  */
-#include "panel_papermono.h"
+#include "panel_eink.h"
 
 #include <Arduino.h>
 #include <EInkDisplay.h>
@@ -31,7 +31,7 @@ static EInkDisplay epd(-1, -1, -1, -1, -1, -1);   /* pins come from the board pr
 
 static const uint8_t *mono_fb;
 static int mono_w, mono_h;
-static papermono_view view;
+static eink_view view;
 static volatile unsigned long mono_vsyncs;
 
 static unsigned long refreshes, full_refreshes, last_refresh_ms, total_refresh_ms, last_full_ms;
@@ -112,13 +112,13 @@ extern "C" void display_mono_attach(const uint8_t *fb, int w, int h)
 {
     mono_w = w;
     mono_h = h;
-    view = papermono_view_make(EInkDisplay::DISPLAY_WIDTH, EInkDisplay::DISPLAY_HEIGHT, w, h);
+    view = eink_view_make(CANVAS_W, CANVAS_H, w, h);
     free(mono_shown);
     mono_shown = (uint8_t *)calloc((size_t)(w / 8) * h, 1);
     mono_fb = fb;
 }
 
-const papermono_view *panel_view(void) { return mono_fb ? &view : NULL; }
+const eink_view *panel_view(void) { return mono_fb ? &view : NULL; }
 
 extern "C" void display_mono_vsync(void) { mono_vsyncs = mono_vsyncs + 1; }
 
@@ -143,6 +143,11 @@ void panel_message_clear(void) { msg_on = false; }
 void panel_begin(void)
 {
     epd.begin();
+    /* Everything here draws for EINK_PANEL_W x EINK_PANEL_H; if freeink-sdk
+     * disagrees about the panel, say so before drawing garbage. */
+    if (epd.getDisplayWidth() != CANVAS_W || epd.getDisplayHeight() != CANVAS_H)
+        Serial.printf("panel: freeink-sdk says %ux%u, this build draws %dx%d - wrong board?\n",
+                      epd.getDisplayWidth(), epd.getDisplayHeight(), CANVAS_W, CANVAS_H);
     epd.clearScreen(0xFF);
     epd.displayBuffer(EInkDisplay::FULL_REFRESH);
     canvas = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -164,7 +169,7 @@ static bool mono_to_canvas(void)
         caret_skips++;
         return false;
     }
-    papermono_draw(&view, canvas, mono_fb);
+    eink_draw(&view, canvas, mono_fb);
     memcpy(mono_shown, mono_fb, n);
     return true;
 }

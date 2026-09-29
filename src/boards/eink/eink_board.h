@@ -1,0 +1,45 @@
+#ifndef EINK_BOARD_H
+#define EINK_BOARD_H
+
+/* Which e-ink board this is, and the few things that differ between them.
+ *
+ * src/boards/eink/ drives two M5Stack devices from one tree; platformio.ini
+ * picks one with EINK_BOARD_PAPERMONO or EINK_BOARD_PAPERS3, and freeink-sdk
+ * does the hardware for both. Everything here is a fact about the device,
+ * decided once, and read by everything that needs it: never test the board
+ * anywhere else (the CYD port's lesson - conditions written in two places
+ * drift apart).
+ *
+ *   EINK_PANEL_W/H     the panel, in the frame the picture is drawn in
+ *   EINK_UPSIDE_DOWN   held turned round from freeink-sdk's frame
+ *   EINK_HAS_BUTTONS   two buttons the firmware can read (GPIO2, GPIO3)
+ */
+
+#if defined(EINK_BOARD_PAPERS3)
+
+/* M5Stack PaperS3: 4.7" ED047TC1, 960x540, driven over the S3's parallel
+ * bus through LovyanGFX; GT911 touch. No button the firmware can read: the
+ * side button only switches it on and, held, off. */
+#define EINK_BOARD_NAME   "PaperS3"
+#define EINK_PANEL_W      960
+#define EINK_PANEL_H      540
+#define EINK_UPSIDE_DOWN  0
+#define EINK_HAS_BUTTONS  0
+
+#else
+
+/* M5Stack Paper Mono: 800x480 SSD1677, FT6336 touch, two buttons. Held with
+ * the buttons along the top: along the bottom, the hand kept pressing them
+ * (the owner's request, 2026-09-28). */
+#ifndef EINK_BOARD_PAPERMONO
+#define EINK_BOARD_PAPERMONO 1
+#endif
+#define EINK_BOARD_NAME   "Paper Mono"
+#define EINK_PANEL_W      800
+#define EINK_PANEL_H      480
+#define EINK_UPSIDE_DOWN  1
+#define EINK_HAS_BUTTONS  1
+
+#endif
+
+#endif

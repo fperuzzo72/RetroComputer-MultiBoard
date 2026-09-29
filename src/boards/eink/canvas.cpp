@@ -17,7 +17,7 @@ void canvas_clear(uint8_t *c, int black)
 void canvas_px(uint8_t *c, int x, int y, int black)
 {
     if (x < 0 || y < 0 || x >= CANVAS_W || y >= CANVAS_H) return;
-#if PAPERMONO_UPSIDE_DOWN
+#if EINK_UPSIDE_DOWN
     x = CANVAS_W - 1 - x;
     y = CANVAS_H - 1 - y;
 #endif

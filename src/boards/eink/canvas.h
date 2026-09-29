@@ -1,16 +1,17 @@
-#ifndef PAPERMONO_CANVAS_H
-#define PAPERMONO_CANVAS_H
+#ifndef EINK_CANVAS_H
+#define EINK_CANVAS_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Drawing on the Paper Mono's panel buffer: 800x480, one bit a pixel, a
- * set bit white, most significant bit leftmost, in the panel's own frame.
+/* Drawing on an e-ink panel buffer: one bit a pixel, a set bit white,
+ * most significant bit leftmost, in the panel's own frame, EINK_PANEL_W x
+ * EINK_PANEL_H (eink_board.h).
  *
  * Every coordinate here is in the upright frame, the way the device is
  * held (buttons along the top, picture.h); the turn to the panel's frame
  * happens in canvas_px and nowhere else. Plain drawing, no machine and no
- * hardware in it, so tools/papermono_test can draw the same screens on the
+ * hardware in it, so tools/eink_test can draw the same screens on the
  * development machine and look at them.
  *
  * Text is Noto Sans at 24px, from freeink-sdk's FreeInkUI (header only,
@@ -19,8 +20,10 @@ extern "C" {
 
 #include <stdint.h>
 
-#define CANVAS_W 800
-#define CANVAS_H 480
+#include "eink_board.h"
+
+#define CANVAS_W EINK_PANEL_W
+#define CANVAS_H EINK_PANEL_H
 #define CANVAS_BYTES (CANVAS_W / 8 * CANVAS_H)
 
 void canvas_clear(uint8_t *c, int black);

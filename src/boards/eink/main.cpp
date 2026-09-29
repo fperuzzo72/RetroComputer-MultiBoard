@@ -1,10 +1,11 @@
-/* main.cpp - M5Stack Paper Mono firmware, entry point.
+/* main.cpp - the e-ink boards' firmware, entry point.
  *
- * The board: an ESP32-S3 with 8MB of PSRAM, an 800x480 1-bit e-ink panel
- * (SSD1677), an FT6336 capacitive touch panel, two buttons. Everything
- * about the hardware comes from freeink-sdk, the same library CrossPoint
- * and CrossPlay drive this device with; the panel, touch and power-rail
- * bring-up are its, not ours.
+ * Two M5Stack devices, one of them per build (eink_board.h): the Paper
+ * Mono (ESP32-S3, 8MB PSRAM, 800x480 1-bit SSD1677, FT6336 touch, two
+ * buttons) and the PaperS3 (ESP32-S3, 8MB PSRAM, 960x540 ED047TC1 over a
+ * parallel bus, GT911 touch, no button the firmware can read). Everything
+ * about the hardware comes from freeink-sdk, the library CrossPoint,
+ * CrossPlay and the PaperS3 MicroBASIC drive these devices with.
  *
  * Three tasks. The machine runs flat out on core 1 and never waits for the
  * panel. On core 0, the input task reads the touch panel and the buttons
@@ -32,6 +33,13 @@
  *
  * GPIO3 pressed is a full refresh, which clears the ghosts fast refreshes
  * leave; held for two seconds it restarts the board into the boot menu.
+ *
+ * The same two things are gestures too, so a board without buttons (the
+ * PaperS3) has them: a finger held still 1.5 seconds is a full refresh,
+ * held 5 seconds a restart into the boot menu. On the Mac a still finger
+ * does nothing else (a tap is under a quarter of a second), and on the
+ * 8-bit machines the long press does not also count as the tap that
+ * opens the list.
  */
 #include <Arduino.h>
 #include <InputManager.h>
@@ -39,10 +47,11 @@
 #include "machine.h"
 #include "display.h"
 #include "display_mono.h"
-#include "panel_papermono.h"
+#include "canvas.h"
+#include "panel_eink.h"
 #include "picture.h"
 #include "trackpad.h"
-#include "board_papermono.h"
+#include "board_eink.h"
 #include "chooser.h"
 #include "selector.h"
 #include "ble_keyboard.h"
@@ -54,8 +63,8 @@
 static InputManager input;
 
 /* The panel, in pixels. The touch panel reports 0..1 across it. */
-static const int PANEL_W = 800;
-static const int PANEL_H = 480;
+static const int PANEL_W = CANVAS_W;
+static const int PANEL_H = CANVAS_H;
 
 static void machineTask(void *arg)
 {
@@ -109,7 +118,7 @@ static void upright(float nx, float ny, int *x, int *y)
 {
     *x = (int)(nx * PANEL_W);
     *y = (int)(ny * PANEL_H);
-#if PAPERMONO_UPSIDE_DOWN
+#if EINK_UPSIDE_DOWN
     *x = PANEL_W - 1 - *x;
     *y = PANEL_H - 1 - *y;
 #endif
@@ -121,7 +130,11 @@ static volatile bool restart_to_menu;
 
 static void buttons_service(void)
 {
+#if !EINK_HAS_BUTTONS
+    return;
+#endif
     static unsigned long refresh_down_at;
+#if EINK_HAS_BUTTONS
     const bool m = digitalRead(BoardConfig::ACTIVE.input.up) == LOW;
     const bool r = digitalRead(BoardConfig::ACTIVE.input.down) == LOW;
 
@@ -144,6 +157,30 @@ static void buttons_service(void)
         refresh_down_at = 0;
         restart_to_menu = true;
     }
+#endif
+}
+
+/* A finger held still: 1.5s a full refresh, 5s a restart into the boot
+ * menu. The buttons' two jobs, for a board that has none, and on every
+ * board because they cost nothing. */
+static void hold_service(void)
+{
+    static bool refreshed, restarted;
+    float nx, ny;
+    unsigned long held;
+    if (!input.isTouchTapCandidate(nx, ny, held)) {
+        refreshed = restarted = false;
+        return;
+    }
+    if (!refreshed && held >= 1500) {
+        refreshed = true;
+        panel_request_full();
+        Serial.println("touch: held 1.5s, full refresh");
+    }
+    if (!restarted && held >= 5000) {
+        restarted = true;
+        restart_to_menu = true;
+    }
 }
 
 /* --- touch ------------------------------------------------------------------ */
@@ -152,8 +189,10 @@ static void touch_service(void)
 {
     float nx, ny;
     if (ui_mode || !machine->pointer) {
-        /* a menu, or a machine that has no use for the panel: taps only */
+        /* a menu, or a machine that has no use for the panel: taps only,
+         * and not the lift of a finger held for a refresh (hold_service) */
         if (!input.wasTouchTap(nx, ny)) return;
+        if (input.lastTouchHeldMs() >= 1500) return;
         int x, y;
         upright(nx, ny, &x, &y);
         if (ui_mode) {
@@ -165,7 +204,7 @@ static void touch_service(void)
         return;
     }
 
-    const papermono_view *v = panel_view();
+    const eink_view *v = panel_view();
     if (!v) return;
     if (!tp_ready) {
         trackpad_init(&tp, v->w, v->h, (float)v->dh / v->h);
@@ -189,7 +228,7 @@ static void touch_service(void)
 
     const bool touching = input.isTouchHeldAt(nx, ny);
     int x = (int)(nx * PANEL_W), y = (int)(ny * PANEL_H);
-    if (touching) papermono_touch_upright(v, &x, &y);
+    if (touching) eink_touch_upright(v, &x, &y);
     if (raw_touch_log) {
         static bool was;
         if (touching) Serial.printf("touch %lu %d %d\n", millis(), x, y);
@@ -229,7 +268,7 @@ static void dump_picture(void)
     static const char hex[] = "0123456789abcdef";
     int w, h;
     const uint8_t *fb = panel_mono_picture(&w, &h);
-    char line[2 * 100 + 1];
+    char line[CANVAS_W / 4 + 1];
     if (!fb) {
         /* The whole panel as it is being drawn, upright and with a set bit
          * black, the way tools/fbdump.py reads the Mac's. */
@@ -238,8 +277,8 @@ static void dump_picture(void)
         Serial.printf("FB %d %d\n", PANEL_W, PANEL_H);
         for (int y = 0; y < PANEL_H; y++) {
             for (int x = 0; x < PANEL_W / 8; x++) {
-#if PAPERMONO_UPSIDE_DOWN
-                uint8_t b = papermono_reverse8(c[(PANEL_H - 1 - y) * (PANEL_W / 8) + (PANEL_W / 8 - 1 - x)]);
+#if EINK_UPSIDE_DOWN
+                uint8_t b = eink_reverse8(c[(PANEL_H - 1 - y) * (PANEL_W / 8) + (PANEL_W / 8 - 1 - x)]);
 #else
                 uint8_t b = c[y * (PANEL_W / 8) + x];
 #endif
@@ -355,6 +394,7 @@ static void inputTask(void *arg)
         last = now;
         input.update();
         buttons_service();
+        hold_service();
         touch_service();
         vTaskDelay(pdMS_TO_TICKS(10));
     }

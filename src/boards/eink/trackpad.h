@@ -1,5 +1,5 @@
-#ifndef PAPERMONO_TRACKPAD_H
-#define PAPERMONO_TRACKPAD_H
+#ifndef EINK_TRACKPAD_H
+#define EINK_TRACKPAD_H
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,7 +21,7 @@ extern "C" {
  *   hardware button the mouse button, held for as long as it is
  *
  * Plain C with no board in it: fed touch samples and a clock, it answers
- * where the pointer is and whether the button is down. tools/papermono_test
+ * where the pointer is and whether the button is down. tools/eink_test
  * runs it on the development machine.
  */
 

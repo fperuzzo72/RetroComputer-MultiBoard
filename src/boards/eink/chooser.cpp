@@ -3,10 +3,10 @@
 
 #include <Arduino.h>
 
-#include "board_papermono.h"
+#include "board_eink.h"
 #include "canvas.h"
 #include "machine.h"
-#include "panel_papermono.h"
+#include "panel_eink.h"
 #include "ui.h"
 
 /* A menu takes the whole panel, and what was there before - a game, the

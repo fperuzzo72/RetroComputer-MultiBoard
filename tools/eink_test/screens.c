@@ -27,7 +27,7 @@ static void png(const char *path)
         raw[y * (stride + 1)] = 0;
         for (int x = 0; x < w; x++) {
             /* upright: the canvas holds the panel's own, turned frame */
-            int sx = PAPERMONO_UPSIDE_DOWN ? w - 1 - x : x, sy = PAPERMONO_UPSIDE_DOWN ? h - 1 - y : y;
+            int sx = EINK_UPSIDE_DOWN ? w - 1 - x : x, sy = EINK_UPSIDE_DOWN ? h - 1 - y : y;
             int white = (canvas[sy * stride + sx / 8] >> (7 - sx % 8)) & 1;
             unsigned char *o = &raw[y * (stride + 1) + 1 + x / 8];
             if (x % 8 == 0) *o = 0;
@@ -69,8 +69,11 @@ int main(int argc, char **argv)
 
     ui_draw_machines(canvas, machines, 3, 0, 0, "Sem toque, liga o MSX em 5 s");
     snprintf(p, sizeof p, "%s-machines.png", argv[1]); png(p);
-    check(ui_hit_machines(400, 120, 3, 0) == 0 && ui_hit_machines(400, 250, 3, 0) == 1 &&
-          ui_hit_machines(400, 370, 3, 0) == 2 && ui_hit_machines(400, 450, 3, 0) == UI_NONE,
+    /* positions relative to the panel, so the same checks hold on both
+     * boards (make EINK=PAPERS3 for the PaperS3) */
+    const int W = CANVAS_W, H = CANVAS_H, FOOT = H - 50;
+    check(ui_hit_machines(W / 2, 120, 3, 0) == 0 && ui_hit_machines(W / 2, 250, 3, 0) == 1 &&
+          ui_hit_machines(W / 2, 370, 3, 0) == 2 && ui_hit_machines(W / 2, FOOT, 3, 0) == UI_NONE,
           "machine bands answer where they are drawn");
 
     ui_draw_entries(canvas, "MSX (Hotbit HB-8000)", name, 25, 0, 1);
@@ -78,8 +81,8 @@ int main(int argc, char **argv)
     ui_draw_entries(canvas, "MSX (Hotbit HB-8000)", name, 25, 1, 1);
     snprintf(p, sizeof p, "%s-entries-2.png", argv[1]); png(p);
     check(ui_hit_entries(40, 90, 25, 0, 1) == 0 && ui_hit_entries(40, 90, 25, 1, 1) == UI_PER_PAGE &&
-          ui_hit_entries(700, 430, 25, 0, 1) == UI_NEXT && ui_hit_entries(560, 430, 25, 1, 1) == UI_PREV &&
-          ui_hit_entries(60, 430, 25, 0, 1) == UI_BACK,
+          ui_hit_entries(W - 80, FOOT, 25, 0, 1) == UI_NEXT && ui_hit_entries(W - 220, FOOT, 25, 1, 1) == UI_PREV &&
+          ui_hit_entries(60, FOOT, 25, 0, 1) == UI_BACK,
           "entry cells, arrows and back answer where they are drawn");
 
     ui_draw_entries(canvas, "MSX (Hotbit HB-8000)", name, 25, 0, 0);
@@ -106,9 +109,10 @@ int main(int argc, char **argv)
         for (int x = 0; x < 256; x++) {
             int want_black = ((x / 8 + y / 8) % 3 == 0 && ((x ^ y) & 4));
             for (int d = 0; d < 4; d++) {
-                int ux = 144 + 2 * x + (d & 1), uy = 24 + 2 * y + (d >> 1);
-                int px = PAPERMONO_UPSIDE_DOWN ? 799 - ux : ux, py = PAPERMONO_UPSIDE_DOWN ? 479 - uy : uy;
-                int is_black = !((canvas[py * 100 + px / 8] >> (7 - px % 8)) & 1);
+                const int X0 = ((W - 512) / 2) & ~7, Y0 = (H - 432) / 2;
+                int ux = X0 + 2 * x + (d & 1), uy = Y0 + 2 * y + (d >> 1);
+                int px = EINK_UPSIDE_DOWN ? W - 1 - ux : ux, py = EINK_UPSIDE_DOWN ? H - 1 - uy : uy;
+                int is_black = !((canvas[py * (W / 8) + px / 8] >> (7 - px % 8)) & 1);
                 bad += is_black != want_black;
                 black += is_black;
             }

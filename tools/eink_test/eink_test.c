@@ -1,13 +1,13 @@
-/* papermono_test - the Paper Mono's touch and picture path, without the
+/* eink_test - the Paper Mono's touch and picture path, without the
  * Paper Mono.
  *
  * Runs the real Mac (src/mac/mac_core.c, lib/umac) behind the board's real
- * trackpad (src/boards/papermono/trackpad.c) and picture code (picture.h),
+ * trackpad (src/boards/eink/trackpad.c) and picture code (picture.h),
  * with a simulated finger, and writes the panel's framebuffer out as it
  * would be sent to the glass. The same idea as tools/machost, one layer
  * further out.
  *
- *   papermono_test <rom> <disc> <out-prefix>
+ *   eink_test <rom> <disc> <out-prefix>
  *
  * Checks, and says which failed:
  *   1. every panel pixel is the right Mac pixel, scaled and turned round
@@ -25,9 +25,9 @@
 #include "picture.h"
 #include "trackpad.h"
 
-enum { PW = 800, PH = 480 };
+enum { PW = EINK_PANEL_W, PH = EINK_PANEL_H };
 static uint64_t now_us;
-static papermono_view view;
+static eink_view view;
 static trackpad tp;
 static uint8_t panel[PW / 8 * PH];
 
@@ -120,9 +120,9 @@ static unsigned char *slurp(const char *p, size_t *n)
 static void snapshot(const char *prefix, const char *name)
 {
     char path[512];
-    papermono_draw(&view, panel, mac_framebuffer());
+    eink_draw(&view, panel, mac_framebuffer());
     snprintf(path, sizeof path, "%s-%s.png", prefix, name);
-    save_png(path, panel, PW, PH, 1);   /* turned back upright to look at */
+    save_png(path, panel, PW, PH, EINK_UPSIDE_DOWN);   /* turned back upright to look at */
     printf("  %s\n", path);
 }
 
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
     size_t rl, dl;
     unsigned char *rom = slurp(argv[1], &rl), *disc = slurp(argv[2], &dl);
     if (mac_start(rom, rl, disc, dl)) return 1;
-    view = papermono_view_make(PW, PH, DISP_WIDTH, DISP_HEIGHT);
+    view = eink_view_make(PW, PH, DISP_WIDTH, DISP_HEIGHT);
     trackpad_init(&tp, DISP_WIDTH, DISP_HEIGHT, (float)view.dh / DISP_HEIGHT);
     printf("picture %dx%d drawn %dx%d at %d,%d (%.2fx)\n", view.w, view.h, view.dw, view.dh,
            view.x0, view.y0, (float)view.dh / view.h);
@@ -185,12 +185,12 @@ int main(int argc, char **argv)
     idle(32000);   /* boot */
 
     /* 1. every panel pixel against the Mac pixel it should show */
-    papermono_draw(&view, panel, mac_framebuffer());
+    eink_draw(&view, panel, mac_framebuffer());
     const uint8_t *fb = mac_framebuffer();
     long wrong = 0;
     for (int py = 0; py < PH; py++)
         for (int px = 0; px < PW; px++) {
-            int ux = PW - 1 - px, uy = PH - 1 - py;   /* upright point shown at this panel pixel */
+            int ux = EINK_UPSIDE_DOWN ? PW - 1 - px : px, uy = EINK_UPSIDE_DOWN ? PH - 1 - py : py;   /* upright point shown here */
             int want_white = 1;
             if (ux >= view.x0 && ux < view.x0 + view.dw && uy >= view.y0 && uy < view.y0 + view.dh) {
                 int mx = (ux - view.x0) * view.w / view.dw, my = (uy - view.y0) * view.h / view.dh;
@@ -209,9 +209,9 @@ int main(int argc, char **argv)
              * this Mac pixel */
             int ux = view.x0 + (mx * view.dw + view.w - 1) / view.w;
             int uy = view.y0 + (my * view.dh + view.h - 1) / view.h;
-            int x = PW - 1 - ux, y = PH - 1 - uy;   /* as the panel reports it */
-            papermono_touch_upright(&view, &x, &y);
-            papermono_upright_to_picture(&view, &x, &y);
+            int x = EINK_UPSIDE_DOWN ? PW - 1 - ux : ux, y = EINK_UPSIDE_DOWN ? PH - 1 - uy : uy;   /* as the panel reports it */
+            eink_touch_upright(&view, &x, &y);
+            eink_upright_to_picture(&view, &x, &y);
             if ((x != mx || y != my) && bad++ < 3) printf("  mac %d,%d drawn at upright %d,%d maps back to %d,%d\n", mx, my, ux, uy, x, y);
         }
     check(bad == 0, "a touch on a panel point maps back to the Mac pixel drawn there");

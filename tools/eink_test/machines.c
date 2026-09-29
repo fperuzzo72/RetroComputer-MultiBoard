@@ -47,7 +47,7 @@ static void png(const char *path)
     for (int y = 0; y < h; y++) {
         raw[y * (stride + 1)] = 0;
         for (int x = 0; x < w; x++) {
-            int sx = PAPERMONO_UPSIDE_DOWN ? w - 1 - x : x, sy = PAPERMONO_UPSIDE_DOWN ? h - 1 - y : y;
+            int sx = EINK_UPSIDE_DOWN ? w - 1 - x : x, sy = EINK_UPSIDE_DOWN ? h - 1 - y : y;
             int white = (canvas[sy * stride + sx / 8] >> (7 - sx % 8)) & 1;
             unsigned char *o = &raw[y * (stride + 1) + 1 + x / 8];
             if (x % 8 == 0) *o = 0;

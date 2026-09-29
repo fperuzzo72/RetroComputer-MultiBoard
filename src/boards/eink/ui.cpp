@@ -6,7 +6,7 @@
 
 static const int M = 16;          /* outer margin */
 static const int HEAD_H = 64;     /* title band */
-static const int FOOT_Y = 404;    /* footer band starts here */
+static const int FOOT_Y = CANVAS_H - 76;   /* footer band starts here */
 static const int FOOT_H = 64;
 
 static int inside(int x, int y, int bx, int by, int bw, int bh)

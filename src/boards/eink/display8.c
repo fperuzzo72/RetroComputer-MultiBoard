@@ -1,7 +1,8 @@
-/* display8.c - the 8-bit machines' pictures on the Paper Mono's panel.
+/* display8.c - the 8-bit machines' pictures on an e-ink panel.
  *
  * Size. The picture is 256 wide and up to 216 tall with its border, and
- * it goes up exactly twice, to 512x432 in the middle of the 800x480 panel.
+ * it goes up exactly twice, to 512x432 in the middle of the panel (800x480
+ * on the Paper Mono, 960x540 on the PaperS3).
  * An integer scale keeps every pixel square and every character stroke
  * the same width, which the 1.40x the Mac needs cannot.
  *
@@ -14,7 +15,7 @@
  * A Spectrum's black ink on white paper comes out as it is, and a game on
  * a black border comes out with bright things dark on white.
  *
- * Plain C: tools/papermono_test runs it on the development machine.
+ * Plain C: tools/eink_test runs it on the development machine.
  */
 #include "display.h"
 #include "picture.h"
@@ -30,8 +31,9 @@ static long long now_us(void) { return 0; }
 
 #define PIC_H   216
 #define SCALE   2
-#define X0      ((DISPLAY_PANEL_W - DISPLAY_PICTURE_W * SCALE) / 2)   /* 144 */
-#define Y0      ((DISPLAY_PANEL_H - PIC_H * SCALE) / 2)               /* 24 */
+/* Whole bytes: a machine pixel is two panel pixels, four to a byte. */
+#define X0      (((DISPLAY_PANEL_W - DISPLAY_PICTURE_W * SCALE) / 2) & ~7)
+#define Y0      ((DISPLAY_PANEL_H - PIC_H * SCALE) / 2)
 #define STRIDE  (DISPLAY_PANEL_W / 8)
 
 static uint8_t *canvas;
@@ -88,7 +90,7 @@ static void put_row(int y, const uint8_t *tones)
 {
     for (int odd = 0; odd < 2; odd++) {
         int uy = Y0 + y * SCALE + odd;
-#if PAPERMONO_UPSIDE_DOWN
+#if EINK_UPSIDE_DOWN
         uint8_t *row = canvas + (DISPLAY_PANEL_H - 1 - uy) * STRIDE;
 #else
         uint8_t *row = canvas + uy * STRIDE;
@@ -97,8 +99,8 @@ static void put_row(int y, const uint8_t *tones)
             const uint8_t *t = tones + k * 4;
             uint8_t b = (uint8_t)(pair_bits(t[0], odd) << 6 | pair_bits(t[1], odd) << 4 |
                                   pair_bits(t[2], odd) << 2 | pair_bits(t[3], odd));
-#if PAPERMONO_UPSIDE_DOWN
-            row[(DISPLAY_PANEL_W - 1 - (X0 + k * 8 + 7)) / 8] = papermono_reverse8(b);
+#if EINK_UPSIDE_DOWN
+            row[(DISPLAY_PANEL_W - 1 - (X0 + k * 8 + 7)) / 8] = eink_reverse8(b);
 #else
             row[(X0 + k * 8) / 8] = b;
 #endif

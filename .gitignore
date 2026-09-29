@@ -30,8 +30,8 @@ src/mac/mac_media.S
 # built by tools/machost
 tools/machost/machost
 
-# built by tools/papermono_test
-tools/papermono_test/papermono_test
-tools/papermono_test/screens
-tools/papermono_test/zx
-tools/papermono_test/msx
+# built by tools/eink_test
+tools/eink_test/eink_test
+tools/eink_test/screens
+tools/eink_test/zx
+tools/eink_test/msx

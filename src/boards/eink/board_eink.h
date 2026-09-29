@@ -1,5 +1,5 @@
-#ifndef BOARD_PAPERMONO_H
-#define BOARD_PAPERMONO_H
+#ifndef BOARD_EINK_H
+#define BOARD_EINK_H
 #ifdef __cplusplus
 extern "C" {
 #endif

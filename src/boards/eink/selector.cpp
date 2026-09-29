@@ -17,7 +17,7 @@
 #include "chooser.h"
 #include "display.h"
 #include "machine.h"
-#include "panel_papermono.h"
+#include "panel_eink.h"
 #include "selector.h"
 
 #include "esp_system.h"

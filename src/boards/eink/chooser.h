@@ -1,5 +1,5 @@
-#ifndef PAPERMONO_CHOOSER_H
-#define PAPERMONO_CHOOSER_H
+#ifndef EINK_CHOOSER_H
+#define EINK_CHOOSER_H
 #ifdef __cplusplus
 extern "C" {
 #endif
