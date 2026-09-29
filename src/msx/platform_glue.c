@@ -101,8 +101,23 @@ void Keyboard(void) {
      * and the video task both sit at priority 5 on core 1 and neither
      * sleeps on its own, so without this the Arduino loop task never runs
      * and the idle task never gets to feed the watchdog. One millisecond
-     * out of a 16.7ms frame is a price worth paying for that. */
-    vTaskDelay(1);
+     * out of a 16.7ms frame is a price worth paying for that.
+     *
+     * And no faster than 60 frames a second, the Hotbit's own rate. On the
+     * CYD the machine never gets there - pushing pixels to the panel holds
+     * it to 20-37 - so this only ever waits on a board that does not
+     * draw at the machine's pace, like the Paper Mono. A frame that comes
+     * in late resets the schedule rather than letting the next ones race
+     * to catch up. */
+    {
+        static int64_t next;
+        const int64_t now = esp_timer_get_time();
+        if (!next || now - next > 100000) next = now;
+        next += 16667;
+        const int64_t wait = next - now;
+        if (wait > 1000) vTaskDelay(pdMS_TO_TICKS((wait + 999) / 1000));
+        else vTaskDelay(1);
+    }
 }
 
 /** Joystick()/Mouse() ****************************************/

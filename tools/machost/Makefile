@@ -4,7 +4,7 @@
 #   ./tools/machost/machost macplus.rom system.img "run 25; shot boot.png"
 #
 # Same resolution and memory as the Paper Mono build (platformio.ini,
-# [env:papermono-mac]); change both together.
+# [env:papermono]); change both together.
 
 ROOT = ../..
 UMAC = $(ROOT)/lib/umac

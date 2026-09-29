@@ -1,11 +1,13 @@
-/* panel.cpp - the Paper Mono's 800x480 e-ink panel, for a 1-bit machine.
+/* panel.cpp - the Paper Mono's 800x480 e-ink panel.
  *
- * The machine draws into its own framebuffer as fast as it likes and never
- * waits for the panel. This side looks at that framebuffer on its own
- * schedule, and when it differs from what the glass shows, copies it over
- * and refreshes. A refresh takes as long as the waveform takes, whatever
- * the machine does meanwhile, so the picture is always the machine's
- * latest and some intermediate frames are simply never shown.
+ * Everything that wants to be seen draws into one canvas, in the panel's
+ * own frame (canvas.h): the Mac's picture, scaled from its framebuffer
+ * here; the 8-bit machines' pictures, put there band by band by display8.c;
+ * the menus, by chooser.cpp. On top of that goes an optional message box
+ * (the BLE pairing code), and the result goes to the glass when it differs
+ * from what the glass already shows. Nothing that draws ever waits for the
+ * panel: a refresh takes as long as the waveform takes, the picture is
+ * always the latest, and some intermediate frames are simply never shown.
  *
  * Fast refreshes leave ghosts, so every so often, and whenever a button
  * asks, a full one clears them.
@@ -17,10 +19,13 @@
 
 #include <Arduino.h>
 #include <EInkDisplay.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "display_mono.h"
 #include "picture.h"
+#include "canvas.h"
+#include "ui.h"
 
 static EInkDisplay epd(-1, -1, -1, -1, -1, -1);   /* pins come from the board profile */
 
@@ -28,9 +33,6 @@ static const uint8_t *mono_fb;
 static int mono_w, mono_h;
 static papermono_view view;
 static volatile unsigned long mono_vsyncs;
-
-/* What is on the glass, in the machine's own polarity, for the comparison. */
-static uint8_t *shown;
 
 static unsigned long refreshes, full_refreshes, last_refresh_ms, total_refresh_ms, last_full_ms;
 static int fast_since_full;
@@ -96,11 +98,23 @@ static bool caret_only(const uint8_t *a, const uint8_t *b, int stride, int h)
     return col >= 0 && last - first < 24;
 }
 
+/* The canvas everything draws into, the frame last sent to the glass, and
+ * the Mac's framebuffer as last drawn onto the canvas (for its caret test). */
+static uint8_t *canvas;
+static uint8_t *glass;
+static uint8_t *mono_shown;
+
+/* The message box over the picture, if any. */
+static char msg1[64], msg2[32];
+static volatile bool msg_on;
+
 extern "C" void display_mono_attach(const uint8_t *fb, int w, int h)
 {
     mono_w = w;
     mono_h = h;
     view = papermono_view_make(EInkDisplay::DISPLAY_WIDTH, EInkDisplay::DISPLAY_HEIGHT, w, h);
+    free(mono_shown);
+    mono_shown = (uint8_t *)calloc((size_t)(w / 8) * h, 1);
     mono_fb = fb;
 }
 
@@ -115,35 +129,58 @@ const uint8_t *panel_mono_picture(int *w, int *h)
     return mono_fb;
 }
 
+uint8_t *panel_canvas(void) { return canvas; }
+
+void panel_message(const char *line1, const char *line2)
+{
+    strncpy(msg1, line1 ? line1 : "", sizeof msg1 - 1);
+    strncpy(msg2, line2 ? line2 : "", sizeof msg2 - 1);
+    msg_on = true;
+}
+
+void panel_message_clear(void) { msg_on = false; }
+
 void panel_begin(void)
 {
     epd.begin();
     epd.clearScreen(0xFF);
     epd.displayBuffer(EInkDisplay::FULL_REFRESH);
-    shown = (uint8_t *)heap_caps_malloc(EInkDisplay::BUFFER_SIZE, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    if (shown) memset(shown, 0, EInkDisplay::BUFFER_SIZE);
+    canvas = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    glass = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (canvas) memset(canvas, 0xFF, CANVAS_BYTES);
+    if (glass) memset(glass, 0xFF, CANVAS_BYTES);
 }
 
 void panel_request_full(void) { full_requested = true; }
 
-/* The machine's picture into the panel's framebuffer: scaled, centred and
- * the right way up for how the device is held (picture.h). */
-static void copy_in(void)
+/* The Mac's picture onto the canvas when it has changed, other than by the
+ * caret blinking: scaled, centred, the right way up (picture.h). */
+static bool mono_to_canvas(void)
 {
-    papermono_draw(&view, epd.getFrameBuffer(), mono_fb);
-    memcpy(shown, mono_fb, (size_t)(mono_w / 8) * mono_h);
+    if (!mono_fb || !mono_shown) return false;
+    const size_t n = (size_t)(mono_w / 8) * mono_h;
+    if (memcmp(mono_shown, mono_fb, n) == 0) return false;
+    if (caret_only(mono_shown, mono_fb, mono_w / 8, mono_h)) {
+        caret_skips++;
+        return false;
+    }
+    papermono_draw(&view, canvas, mono_fb);
+    memcpy(mono_shown, mono_fb, n);
+    return true;
 }
 
 bool panel_service(void)
 {
-    if (!mono_fb || !shown) return false;
-    const size_t n = (size_t)(mono_w / 8) * mono_h;
+    if (!canvas || !glass) return false;
+    mono_to_canvas();
+
+    /* canvas and message into the frame the controller is sent */
+    uint8_t *out = epd.getFrameBuffer();
+    memcpy(out, canvas, CANVAS_BYTES);
+    if (msg_on) ui_draw_message(out, msg1, msg2[0] ? msg2 : NULL);
+
     const unsigned long now = millis();
-    bool changed = memcmp(shown, mono_fb, n) != 0;
-    if (changed && caret_only(shown, mono_fb, mono_w / 8, mono_h)) {
-        changed = false;
-        caret_skips++;
-    }
+    const bool changed = memcmp(out, glass, CANVAS_BYTES) != 0;
     if (changed) last_change_ms = now;
     const bool idle_clean = !changed && fast_since_full >= IDLE_CLEAN_AFTER &&
                             now - last_change_ms >= IDLE_CLEAN_MS;
@@ -157,7 +194,7 @@ bool panel_service(void)
         return false;
     }
 
-    copy_in();
+    memcpy(glass, out, CANVAS_BYTES);
     const unsigned long t0 = millis();
     if (full) {
         if (full_requested) cleans_button++;

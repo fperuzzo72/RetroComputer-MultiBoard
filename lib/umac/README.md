@@ -32,6 +32,13 @@ marked in the source:
   keyboard holds one event, and a second arriving before the Mac has read
   the first overwrites it. `src/mac/mac_core.c` queues keys and asks this
   before handing over the next.
+- **`include/scc.h` is `include/umac_scc.h`** here, and `main.c` and
+  `scc.c` include it by that name. fMSX has an `SCC.h` (Konami's sound
+  chip), and on a case-insensitive filesystem a build carrying both
+  machines found fMSX's when umac asked for its own.
+- **The global `overlay` is `umac_overlay`** (`src/main.c`,
+  `include/machw.h`): fMSX's video layer defines a global of the same
+  name, and the two machines would not link into one firmware.
 - `m68kconf.h` lives in `musashi/` so that Musashi's `#include "m68kconf.h"`
   finds umac's without the `MUSASHI_CNF` define umac's Makefile passes.
 

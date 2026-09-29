@@ -157,3 +157,12 @@ void display_blit_us_reset(void) { blit_us = 0; }
 void display_set_swap_bytes(int on) { (void)on; }
 int  display_get_swap_bytes(void) { return 1; }
 void display_request_test_pattern(int which) { (void)which; }
+
+/* The vendored MSX video layer calls this name; a one-line forward, as on
+ * the CYD, rather than another edit to upstream AVideo.i. */
+void display_write_frame_msx(short left, short top, short width, short height,
+                             const uint8_t *buffer, uint16_t bgColor,
+                             const uint16_t *palette)
+{
+    display_write_picture(left, top, width, height, buffer, bgColor, palette);
+}

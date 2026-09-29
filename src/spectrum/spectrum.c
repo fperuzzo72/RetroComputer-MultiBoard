@@ -278,12 +278,21 @@ static void runFrame(void) {
     }
 
     /* The flash attribute swaps ink and paper twice a second, so every
-     * cell using it has to be redrawn when the phase turns over. */
+     * cell using it has to be redrawn when the phase turns over.
+     *
+     * Not on a panel that must not blink (DISPLAY_STEADY, the Paper Mono's
+     * e-ink): there every phase change would be a refresh of the whole
+     * panel, twice a second for as long as BASIC's K cursor is on screen.
+     * Flashing cells show steady, as ink on paper. */
+#ifndef DISPLAY_STEADY
     if (++flashCounter >= 16) {
         flashCounter = 0;
         flashPhase = !flashPhase;
         markAll();
     }
+#else
+    (void)flashCounter;
+#endif
 
     if (sAutoloadAt && sFrames >= sAutoloadAt) {
         sAutoloadAt = 0;

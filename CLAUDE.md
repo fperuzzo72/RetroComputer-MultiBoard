@@ -257,7 +257,7 @@ CrossPlay runs on this same device**. Do not move it to a newer SDK
 without a reason; that commit is the one known to light this panel.
 
 The first machine on it is a **Macintosh Plus** (`pio run -e
-papermono-mac`, `src/mac/`, `lib/umac/`). Status as of 2026-09-28:
+papermono`, `src/mac/`, `lib/umac/`). Status as of 2026-09-28:
 **runs on the device** (flashed to app1 beside CrossPlay in app0; otadata
 selects which). Measured there: 175-181% of a Mac Plus, fast refresh
 ~320-400ms, Finder reached and a serial-console double-click opens the

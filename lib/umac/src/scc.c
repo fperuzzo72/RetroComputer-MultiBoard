@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#include "scc.h"
+#include "umac_scc.h"
 
 #ifdef DEBUG
 #define SDBG(...)       printf(__VA_ARGS__)

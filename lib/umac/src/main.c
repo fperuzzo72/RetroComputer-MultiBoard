@@ -43,7 +43,7 @@
 #include "machw.h"
 #include "m68k.h"
 #include "via.h"
-#include "scc.h"
+#include "umac_scc.h"
 #include "rom.h"
 #include "disc.h"
 
@@ -75,7 +75,7 @@ static unsigned int g_int_controller_highest_int = 0;  /* Highest pending interr
 uint8_t *_ram_base;
 uint8_t *_rom_base;
 
-int overlay = 1;
+int umac_overlay = 1;
 static uint64_t global_time_us = 0;
 static int sim_done = 0;
 static jmp_buf main_loop_jb;
@@ -154,7 +154,7 @@ static void     via_ra_changed(uint8_t val)
         // 4 = overlay
         // 3 = snd.pg2 (sound buffer select)
         // [2:0] = sound volume
-        overlay = !!(val & 0x10);
+        umac_overlay = !!(val & 0x10);
         if ((oldval ^ val) & 0x10) {
                 MDBG("OVERLAY CHANGING\n");
                 update_overlay_layout();
@@ -499,7 +499,7 @@ void    FAST_FUNC(cpu_write_long)(unsigned int address, unsigned int value)
 /* Update function pointers for memory accessors based on overlay state/memory map layout */
 static void     update_overlay_layout(void)
 {
-        if (overlay) {
+        if (umac_overlay) {
                 cpu_read_instr = cpu_read_instr_overlay;
         } else {
                 cpu_read_instr = cpu_read_instr_normal;
@@ -697,7 +697,7 @@ static void     mouse_tick(void)
 
 void    umac_reset(void)
 {
-        overlay = 1;
+        umac_overlay = 1;
         m68k_pulse_reset();
 }
 

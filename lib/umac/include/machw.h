@@ -54,7 +54,7 @@ static inline uint8_t *rom_get_base(void)
         return _rom_base;
 }
 
-extern int overlay;
+extern int umac_overlay;
 
 #define ADR24(x)                        ((x) & 0xffffff)
 
@@ -71,9 +71,9 @@ extern int overlay;
  *
  * i.e. RAM is 60-80, or !overlay and 0.  And ROM is 40-50, or overlay and 0.
  */
-#define IS_ROM(x)       (((ADR24(x) & 0xf00000) == ROM_ADDR) || (overlay && (ADR24(x) & 0xf00000) == 0))
+#define IS_ROM(x)       (((ADR24(x) & 0xf00000) == ROM_ADDR) || (umac_overlay && (ADR24(x) & 0xf00000) == 0))
 /* RAM: always at 0x600000-0x7fffff, sometimes at 0 (0 most likely so check first!) */
-#define IS_RAM(x)       ((!overlay && ((ADR24(x) & 0xc00000) == 0)) || ((ADR24(x) & 0xe00000) == RAM_HIGH_ADDR))
+#define IS_RAM(x)       ((!umac_overlay && ((ADR24(x) & 0xc00000) == 0)) || ((ADR24(x) & 0xe00000) == RAM_HIGH_ADDR))
 
 /* For regular power-of-two memory sizes, this should resolve to a
  * simple mask (i.e. be fast).  For non-Po2 (e.g. a Mac208K), this

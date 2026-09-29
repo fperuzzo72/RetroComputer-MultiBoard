@@ -5,6 +5,14 @@
 
 void panel_begin(void);
 
+/* The canvas everything draws into (canvas.h), for display8 and menus. */
+#include <stdint.h>
+uint8_t *panel_canvas(void);
+
+/* A boxed message over the picture until cleared: the pairing code. */
+void panel_message(const char *line1, const char *line2);
+void panel_message_clear(void);
+
 /* Refresh if the machine's picture has changed since the last one.
  * Blocks for the length of the waveform. True if it refreshed. */
 bool panel_service(void);

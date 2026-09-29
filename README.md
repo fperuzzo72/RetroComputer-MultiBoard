@@ -84,7 +84,7 @@ TRAP=0 ./tools/tapebench/load 48.rom game.tap   # signal only, no shortcut
 
 ## The Macintosh, on the Paper Mono
 
-`pio run -e papermono-mac` builds a Macintosh Plus for the M5Stack Paper
+`pio run -e papermono` builds, among others, a Macintosh Plus for the M5Stack Paper
 Mono: Matt Evans' [umac](https://github.com/evansm7/umac) on the Musashi
 68000 core (`lib/umac/`, see its README), a Mac Plus ROM, **4MB** of RAM
 in PSRAM, System 6 or 7.
