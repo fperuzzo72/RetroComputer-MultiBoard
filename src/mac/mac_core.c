@@ -47,23 +47,18 @@ static int get16(unsigned addr)
     return (int16_t)((ram[addr] << 8) | ram[addr + 1]);
 }
 
-int mac_start(const uint8_t *rom_image, size_t rom_len,
-              const uint8_t *disc_image, size_t disc_len)
+/* RAM and the patched ROM copy; the disc is the caller's business. */
+static int start_common(const uint8_t *rom_image, size_t rom_len)
 {
-    disc_descr_t discs[DISC_NUM_DRIVES];
-
     if (rom_len != ROM_SIZE) {
         printf("mac: ROM is %u bytes, a Mac Plus ROM is %u\n",
                (unsigned)rom_len, (unsigned)ROM_SIZE);
         return -1;
     }
-
     ram = big_alloc(RAM_SIZE);
     rom = big_alloc(ROM_SIZE);
-    disc = disc_len ? big_alloc(disc_len) : NULL;
-    if (!ram || !rom || (disc_len && !disc)) {
-        printf("mac: out of memory (RAM %u, ROM %u, disc %u)\n",
-               (unsigned)RAM_SIZE, (unsigned)ROM_SIZE, (unsigned)disc_len);
+    if (!ram || !rom) {
+        printf("mac: out of memory (RAM %u, ROM %u)\n", (unsigned)RAM_SIZE, (unsigned)ROM_SIZE);
         return -1;
     }
     memset(ram, 0, RAM_SIZE);
@@ -75,9 +70,22 @@ int mac_start(const uint8_t *rom_image, size_t rom_len,
         printf("mac: this is not the Mac Plus v3 ROM (4D1F8172) umac needs\n");
         return -1;
     }
+    return 0;
+}
 
-    /* The disc is copied too, so the Mac can write to it. Nothing the Mac
-     * writes survives a reset yet; that waits for the card. */
+int mac_start(const uint8_t *rom_image, size_t rom_len,
+              const uint8_t *disc_image, size_t disc_len)
+{
+    disc_descr_t discs[DISC_NUM_DRIVES];
+    if (start_common(rom_image, rom_len)) return -1;
+
+    /* The built-in disc is copied, so the Mac can write to it. What it
+     * writes lasts until the power goes; a disc on the card keeps it. */
+    disc = disc_len ? big_alloc(disc_len) : NULL;
+    if (disc_len && !disc) {
+        printf("mac: out of memory for a %ukB disc\n", (unsigned)(disc_len / 1024));
+        return -1;
+    }
     memset(discs, 0, sizeof(discs));
     if (disc) {
         memcpy(disc, disc_image, disc_len);
@@ -87,7 +95,29 @@ int mac_start(const uint8_t *rom_image, size_t rom_len,
     }
 
     umac_init(ram, rom, discs);
-    printf("mac: %ux%u, %ukB RAM, disc %ukB\n", DISP_WIDTH, DISP_HEIGHT,
+    printf("mac: %ux%u, %ukB RAM, disc %ukB in RAM\n", DISP_WIDTH, DISP_HEIGHT,
+           (unsigned)(RAM_SIZE / 1024), (unsigned)(disc_len / 1024));
+    return 0;
+}
+
+int mac_start_ops(const uint8_t *rom_image, size_t rom_len, void *ctx,
+                  mac_disc_read read, mac_disc_write write, size_t disc_len)
+{
+    disc_descr_t discs[DISC_NUM_DRIVES];
+    if (start_common(rom_image, rom_len)) return -1;
+
+    /* umac calls these for every block, with no copy anywhere: base NULL
+     * is its "use the callbacks". */
+    memset(discs, 0, sizeof(discs));
+    discs[0].base = NULL;
+    discs[0].size = (unsigned)disc_len;
+    discs[0].read_only = write == NULL;
+    discs[0].op_ctx = ctx;
+    discs[0].op_read = (disc_op_read)read;
+    discs[0].op_write = (disc_op_write)write;
+
+    umac_init(ram, rom, discs);
+    printf("mac: %ux%u, %ukB RAM, disc %ukB through callbacks\n", DISP_WIDTH, DISP_HEIGHT,
            (unsigned)(RAM_SIZE / 1024), (unsigned)(disc_len / 1024));
     return 0;
 }

@@ -14,6 +14,13 @@
 #define CLICK_DOWN_MS 80    /* how long a click holds the button */
 #define CLICK_GAP_MS  80    /* between the two clicks of a double-click */
 
+/* A finger coming off the glass rolls, and the last samples before the lift
+ * slide the pointer a few pixels: in a menu held open with tap-then-drag,
+ * enough to let go below "Quit" instead of on it (owner, 2026-09-29, two
+ * tries of three). Whatever the pointer did in the last LIFT_UNDO_MS before
+ * the lift is undone. */
+#define LIFT_UNDO_MS  70
+
 /* Pointer acceleration: machine pixels per panel pixel of finger movement,
  * as a multiple of "the pointer stays under the finger". Slow movement
  * goes finer than the finger, fast movement further. `speed` is panel
@@ -92,6 +99,12 @@ void trackpad_update(trackpad *t, unsigned long now, int touching, int px, int p
         } else if (t->moved) {
             move_by(t, px - t->lx, py - t->ly, step);
         }
+        {
+            const int k = t->trail_n++ % 8;
+            t->trail[k].x = t->x;
+            t->trail[k].y = t->y;
+            t->trail[k].ms = now;
+        }
         /* a second contact that moves or lingers is a drag: button down */
         if (t->second && (t->moved || now - t->down_ms > TAP_MAX_MS)) {
             t->second = 0;
@@ -100,8 +113,20 @@ void trackpad_update(trackpad *t, unsigned long now, int touching, int px, int p
         t->lx = px;
         t->ly = py;
     } else if (t->touching) {
-        /* a finger lifts */
+        /* a finger lifts: first put the pointer back where it was before
+         * the finger started coming off */
         t->touching = 0;
+        if (t->moved) {
+            for (int j = 1; j <= 8 && j <= t->trail_n; j++) {
+                const int k = (t->trail_n - j) % 8;
+                if (now - t->trail[k].ms >= LIFT_UNDO_MS) {
+                    t->x = t->trail[k].x;
+                    t->y = t->trail[k].y;
+                    break;
+                }
+            }
+        }
+        t->trail_n = 0;
         const int quick = !t->moved && now - t->down_ms <= TAP_MAX_MS;
         if (t->second) {
             /* lifted before it could become a drag: a double tap */

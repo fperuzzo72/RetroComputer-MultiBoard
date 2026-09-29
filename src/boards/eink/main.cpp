@@ -519,6 +519,7 @@ void setup()
     panel_begin();
     display8_attach(panel_canvas());
     input_begin();
+    media_begin();
     tap_queue = xQueueCreate(8, sizeof(Tap));
 
     /* Input above the board task, so a refresh never delays a sample. */

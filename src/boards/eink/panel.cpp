@@ -50,8 +50,8 @@ static volatile bool full_requested;
  * sat still for IDLE_CLEAN_MS after at least IDLE_CLEAN_AFTER fast ones,
  * it is cleaned while nobody is moving anything. A picture that never sits
  * still is cleaned anyway after FAST_PER_FULL. Starting values. */
-static int IDLE_CLEAN_AFTER = 30;
-static unsigned long IDLE_CLEAN_MS = 4000;
+static int IDLE_CLEAN_AFTER = 5;
+static unsigned long IDLE_CLEAN_MS = 3000;
 static const int FAST_PER_FULL = 200;
 
 /* `c AFTER MS` on the console changes the first two while the owner looks
@@ -73,7 +73,10 @@ void panel_get_idle_clean(int *after, unsigned long *ms)
  * the ordinary waveform instead. Under the Mac's half-black desktop pattern
  * that reads as the whole screen blinking. The first values here (10 fast,
  * 1.5s idle, 60 cap) cleaned every ~20s, at nearly every pause, and the
- * owner found it blinked far too much. */
+ * owner found it blinked far too much; the next (30 fast, 4s) never came
+ * at all during a Mac's boot, whose ~20 fast refreshes darkened the
+ * desktop pattern step by step (owner, 2026-09-29: "vai escurecendo a
+ * medida em que vai desenhando"). Now 5 fast, 3s still; `c` tunes it. */
 static unsigned long cleans_button, cleans_idle, cleans_cap, caret_skips;
 
 /* Window refreshes (only the changed rectangle, through the driver's

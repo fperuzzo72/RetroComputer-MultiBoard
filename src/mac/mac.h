@@ -21,6 +21,14 @@ extern "C" {
 int  mac_start(const uint8_t *rom, size_t rom_len,
                const uint8_t *disc, size_t disc_len);
 
+/* The same, with the disc read and written through callbacks instead of
+ * copied into memory: a disc on the card, of any size, whose writes stay.
+ * The callbacks return 0 on success; a NULL write makes it read-only. */
+typedef int (*mac_disc_read)(void *ctx, uint8_t *data, unsigned offset, unsigned len);
+typedef int (*mac_disc_write)(void *ctx, uint8_t *data, unsigned offset, unsigned len);
+int  mac_start_ops(const uint8_t *rom, size_t rom_len, void *ctx,
+                   mac_disc_read read, mac_disc_write write, size_t disc_len);
+
 /* One slice of emulation: 5ms of emulated time, then the timers, the
  * pointer and the keyboard. `now_us` is wall-clock time, which is what
  * the 60Hz and 1Hz interrupts follow. */

@@ -253,6 +253,21 @@ int main(int argc, char **argv)
     check(!tp.button && after < 50, "lifting lets the button go and the menu closes");
 
 
+    /* 5. a finger sliding as it comes off the glass: the pointer stays
+     * where it was before the slide (the owner's "Quit" let go below) */
+    {
+        int x0, y0, b0, x1, y1, b1;
+        for (int i = 0; i < 20; i++) tick(1, 300, 200 + i * 2);   /* a drag down */
+        for (int i = 0; i < 15; i++) tick(1, 300, 240);           /* then still */
+        trackpad_pointer(&tp, &x0, &y0, &b0);
+        tick(1, 300, 250); tick(1, 300, 262);                       /* the roll off */
+        tick(0, 0, 0);
+        trackpad_pointer(&tp, &x1, &y1, &b1);
+        printf("  before the slide %d,%d; after the lift %d,%d\n", x0, y0, x1, y1);
+        check(abs(x1 - x0) <= 1 && abs(y1 - y0) <= 1, "a finger sliding as it lifts does not move the pointer");
+        idle(300);
+    }
+
     printf(failures ? "%d FAILED\n" : "all passed\n", failures);
     return failures != 0;
 }

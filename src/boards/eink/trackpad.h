@@ -51,6 +51,11 @@ typedef struct {
     int clicks_left;
     unsigned long click_ms;
 
+    /* where the pointer was over the last few samples, to undo the slide
+     * a finger makes as it comes off the glass */
+    struct { float x, y; unsigned long ms; } trail[8];
+    int trail_n;
+
     int hw_button;
     int button;              /* what the machine is told */
 } trackpad;
