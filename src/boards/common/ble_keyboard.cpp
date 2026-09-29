@@ -1,4 +1,4 @@
-/* ble_keyboard.cpp - BLE HID keyboard host (central) for FNK0103 MSX.
+/* ble_keyboard.cpp - BLE HID keyboard host (central), for every board.
  *
  * Adapted from the connect/subscribe pattern in esp32beans/BLE_HID_Client
  * (MIT license, see /third_party_licenses/BLE_HID_Client.txt), simplified
@@ -12,6 +12,20 @@
  * belongs to whichever machine is built in, behind machine->hid_report();
  * this file knows nothing about MSX or Spectrum, and they know nothing
  * about BLE.
+ *
+ * Shared by the boards: src/boards/common/. Two build options:
+ *
+ *   BLE_KEYBOARD_NAME     what the host calls itself ("FNK0103-MSX")
+ *   BLE_KEYBOARD_PASSKEY  pair the way the M5PaperS3 MicroBASIC does, which
+ *                         is freeink-sdk's BleKeyboardHost: the host says it
+ *                         has a display, and a keyboard that insists on
+ *                         Passkey Entry is given 123456 to type on its own
+ *                         keys, followed by Enter. The board shows the code
+ *                         (ble_keyboard_take_passkey()); without it a
+ *                         keyboard that wants a code waits for one nobody
+ *                         was shown and reads as "will not pair". Keyboards
+ *                         happy with Just Works still pair without one. The
+ *                         CYD builds without this and pairs as it always has.
  */
 #include <Arduino.h>
 #include <NimBLEDevice.h>
@@ -20,10 +34,21 @@
 #include "ble_keyboard.h"
 #include "machine.h"
 
+#ifndef BLE_KEYBOARD_NAME
+#define BLE_KEYBOARD_NAME "FNK0103-MSX"
+#endif
+
 static const char HID_SERVICE_UUID[]        = "1812";
 static const char HID_BOOT_KBD_INPUT_UUID[] = "2a22"; /* Boot Keyboard Input Report */
 static const char HID_PROTOCOL_MODE_UUID[]  = "2a4e"; /* 0 = boot protocol         */
 static const char HID_REPORT_DATA_UUID[]    = "2a4d"; /* generic Report (fallback) */
+
+#ifdef BLE_KEYBOARD_PASSKEY
+/* Fixed, as freeink-sdk fixes it: the same code every time is one less
+ * thing to read off a slow panel. */
+#define BLE_PASSKEY 123456
+static volatile bool sPasskeyShown = false;
+#endif
 
 static NimBLEAddress sTarget;
 static volatile bool sHaveTarget = false;
@@ -200,9 +225,30 @@ class KbdClientCallbacks : public NimBLEClientCallbacks {
         portEXIT_CRITICAL(&sReportMux);
         NimBLEDevice::getScan()->start(0, false, true);
     }
+#ifdef BLE_KEYBOARD_PASSKEY
+    void onPassKeyEntry(NimBLEConnInfo &connInfo) override {
+        NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
+    }
+    /* The keyboard is about to wait for the code to be typed on it. */
+    uint32_t onPassKeyDisplay(NimBLEConnInfo &connInfo) override {
+        (void)connInfo;
+        sPasskeyShown = true;
+        Serial.printf("BLE: type %06lu and Enter on the keyboard to pair\n",
+                      (unsigned long)BLE_PASSKEY);
+        return BLE_PASSKEY;
+    }
+    /* Some keyboards ask to change the connection parameters on their
+     * first key press and drop the link if it is negotiated; freeink-sdk
+     * learnt that on the PaperS3 and refuses them. */
+    bool onConnParamsUpdateRequest(NimBLEClient *c, const ble_gap_upd_params *p) override {
+        (void)c; (void)p;
+        return false;
+    }
+#else
     void onPassKeyEntry(NimBLEConnInfo &connInfo) override {
         NimBLEDevice::injectPassKey(connInfo, 0);
     }
+#endif
     void onConfirmPasskey(NimBLEConnInfo &connInfo, uint32_t pin) override {
         (void)pin;
         NimBLEDevice::injectConfirmPasskey(connInfo, true);
@@ -210,6 +256,18 @@ class KbdClientCallbacks : public NimBLEClientCallbacks {
 };
 
 static KbdClientCallbacks sClientCB;
+
+int ble_keyboard_take_passkey(uint32_t *passkey) {
+#ifdef BLE_KEYBOARD_PASSKEY
+    if (!sPasskeyShown) return 0;
+    sPasskeyShown = false;
+    *passkey = BLE_PASSKEY;
+    return 1;
+#else
+    (void)passkey;
+    return 0;
+#endif
+}
 
 static bool connectToKeyboard() {
     NimBLEClient *client = NimBLEDevice::createClient();
@@ -286,16 +344,34 @@ static bool connectToKeyboard() {
 static void bleServiceTask(void *arg);
 
 void ble_keyboard_init() {
-    NimBLEDevice::init("FNK0103-MSX");
+    NimBLEDevice::init(BLE_KEYBOARD_NAME);
+#ifdef BLE_KEYBOARD_PASSKEY
+    /* freeink-sdk's settings, proven on the PaperS3: bond, no MITM required
+     * from our side, legacy pairing, and a display to show a code on. */
+    NimBLEDevice::setSecurityAuth(true, false, false);
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+    NimBLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    NimBLEDevice::setSecurityInitKey(BLE_SM_PAIR_KEY_DIST_ENC);
+    NimBLEDevice::setSecurityRespKey(BLE_SM_PAIR_KEY_DIST_ENC);
+#else
     NimBLEDevice::setSecurityAuth(true, false, true); /* bond, no MITM, secure connections */
+#endif
     NimBLEDevice::setPower(9);
 
     loadKnownKeyboard();
 
     NimBLEScan *scan = NimBLEDevice::getScan();
     scan->setScanCallbacks(new KbdScanCallbacks(), false);
+#ifdef BLE_KEYBOARD_PASSKEY
+    /* Continuous, as freeink-sdk scans: a keyboard that advertises only in
+     * extended advertising puts its data in a packet on a secondary
+     * channel that a windowed scan misses. With CONFIG_BT_NIMBLE_EXT_ADV. */
+    scan->setInterval(160);
+    scan->setWindow(160);
+#else
     scan->setInterval(45);
     scan->setWindow(15);
+#endif
     scan->setActiveScan(true);
     scan->start(0, false, true); /* scan until a HID device turns up */
 

@@ -1,5 +1,6 @@
 #ifndef BLE_KEYBOARD_H
 #define BLE_KEYBOARD_H
+#include <stdint.h>
 
 /* BLE HID keyboard host (central role) for the FNK0103 MSX emulator.
  *
@@ -43,6 +44,11 @@ void ble_keyboard_log_reports(int on);
 void ble_keyboard_inject(const uint8_t report[8]);
 unsigned long ble_keyboard_adverts_seen(void);
 void ble_keyboard_scan(int on);
+
+/* Non-zero once when a keyboard has asked for a pairing code, with the
+ * code in *passkey, for the board to show. Always 0 without
+ * BLE_KEYBOARD_PASSKEY. */
+int ble_keyboard_take_passkey(uint32_t *passkey);
 
 #ifdef __cplusplus
 }
