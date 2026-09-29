@@ -1,0 +1,27 @@
+{
+  "name": "umac",
+  "version": "0.0.0+b62d3c6",
+  "description": "Matt Evans' Micro Mac (Mac 128K/512K/Plus emulator) with Karl Stenerud's Musashi 68000 core, vendored. See README.md here.",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": {
+    "srcDir": ".",
+    "includeDir": "include",
+    "srcFilter": [
+      "+<src/*.c>",
+      "+<musashi/m68kcpu.c>",
+      "+<musashi/m68kops.c>",
+      "+<musashi/m68kdasm.c>",
+      "+<musashi/softfloat/softfloat.c>"
+    ],
+    "flags": [
+      "-Imusashi",
+      "-Imusashi/softfloat",
+      "-Wno-unused-parameter",
+      "-Wno-unused-variable",
+      "-Wno-unused-function",
+      "-Wno-sign-compare",
+      "-O2"
+    ]
+  }
+}

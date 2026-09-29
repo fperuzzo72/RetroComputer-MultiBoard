@@ -35,6 +35,12 @@ third_party_licenses/ generally for the other vendored pieces (C-BIOS,
 the ESPlay-fMSX video glue, the BLE_HID_Client pattern) and their own
 licenses.
 
+The Macintosh core vendored under lib/umac/ (umac and the Musashi 68000
+core) is mostly MIT, but its disc driver comes from Basilisk II and its key
+code table from Mini vMac, and those parts are GPLv2. See
+third_party_licenses/umac_and_musashi.txt. The freeink-sdk submodule is
+its own repository under its own MIT license.
+
 In short: this repo is not "all MIT" - only Fabricio Stefani Peruzzo's own
 code is. Building this for yourself is fine; selling it or redistributing
 it commercially is not, without separately clearing that with Marat
