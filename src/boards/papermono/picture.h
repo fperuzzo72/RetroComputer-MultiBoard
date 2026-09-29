@@ -26,6 +26,16 @@
 
 #define PAPERMONO_UPSIDE_DOWN 1
 
+/* A byte of eight pixels, mirrored left to right: what turning the panel
+ * round does to a byte of it. */
+static inline uint8_t papermono_reverse8(uint8_t b)
+{
+    b = (uint8_t)((b & 0xF0) >> 4 | (b & 0x0F) << 4);
+    b = (uint8_t)((b & 0xCC) >> 2 | (b & 0x33) << 2);
+    b = (uint8_t)((b & 0xAA) >> 1 | (b & 0x55) << 1);
+    return b;
+}
+
 typedef struct {
     int pw, ph;         /* panel, pixels */
     int w, h;           /* machine picture, pixels */
