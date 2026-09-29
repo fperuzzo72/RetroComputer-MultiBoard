@@ -60,7 +60,6 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "esp_system.h"
-#include "esp_ota_ops.h"
 
 static InputManager input;
 
@@ -497,35 +496,11 @@ static void input_begin(void)
 
 /* What comes up at power-on: which computer, and what it starts with.
  * Untouched for five seconds, the one outlined boots with what it had. */
-/* The other app slot, if it holds a firmware (on the owner's device,
- * CrossPlay on the Paper Mono, CrossPoint on the PaperS3). */
-static const esp_partition_t *other_app(void)
-{
-    const esp_partition_t *other = esp_ota_get_next_update_partition(NULL);
-    esp_app_desc_t desc;
-    if (!other || esp_ota_get_partition_description(other, &desc) != ESP_OK) return NULL;
-    return other;
-}
-
 static void boot_menu(void)
 {
     int m = machine_chosen_index();
-    const esp_partition_t *other = other_app();
     for (;;) {
-        const int pick = chooser_pick_machine(0, m, "Sem toque, em 5 s liga o marcado", 5000,
-                                              other ? "Voltar ao " EINK_OTHER_APP : NULL);
-        if (pick == CHOOSER_EXTRA) {
-            /* Boot the other slot from now on: what CrossPlay's own
-             * updater would do. Coming back is its business, or a
-             * reflash of otadata (see README). */
-            Serial.printf("boot: switching to %s in %s\n", EINK_OTHER_APP, other->label);
-            if (esp_ota_set_boot_partition(other) == ESP_OK) {
-                panel_message("Voltando ao " EINK_OTHER_APP, NULL);
-                delay(1500);
-                esp_restart();
-            }
-            continue;
-        }
+        const int pick = chooser_pick_machine(0, m, "Sem toque, em 5 s liga o marcado", 5000);
         if (pick == CHOOSER_TIMEOUT) { machine_choose(m, -1); return; }
         if (pick < 0) continue;
         if (machine_list[pick]->entry_count() <= 1) { machine_choose(pick, -1); return; }

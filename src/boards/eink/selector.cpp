@@ -41,7 +41,7 @@ int selector_frame(void)
             delay(80);
             esp_restart();
         }
-        const int pick = chooser_pick_machine(1, machine_chosen_index(), NULL, 0, NULL);
+        const int pick = chooser_pick_machine(1, machine_chosen_index(), NULL, 0);
         if (pick < 0) break;          /* back again: the game */
         m = pick;
     }
