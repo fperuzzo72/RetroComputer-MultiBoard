@@ -370,9 +370,14 @@ panel, so the picture is the right way round and touch drives the pointer.
 - **Window refreshes were tried and removed.** Measured: 2.3s per window
   refresh against ~400ms whole-panel, input blocked up to 2s behind them,
   the pointer leaping and the screen darkening.
-- **The controller sleeps after 1s without a refresh** (`controllerIdle`).
-  Left awake it holds the drive rails up and a still screen darkened, with
-  the refresh count not moving. `s` counts the sleeps.
+- **The controller does not sleep between refreshes** (removed
+  2026-09-29). Sleeping it did not stop a still screen darkening (the
+  owner saw it darken with five sleeps logged), and waking it pulses the
+  panel reset over the I2C bus the touch panel reads from another task:
+  touch died for a session, the input task hung in its first read, and the
+  refresh button froze the board. An awake controller never touches I2C.
+  The input task's reads still take an I2C mutex (panel_set_i2c_lock).
+  What darkens the screen is still unknown; a full refresh clears it.
 - **The text caret is not shown blinking.** TeachText's caret is one
   1-pixel column 16 tall, blinking about twice a second (measured with
   machost); every blink was a refresh and an editor never let the panel

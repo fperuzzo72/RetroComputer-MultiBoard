@@ -19,6 +19,8 @@
 
 #include <Arduino.h>
 #include <EInkDisplay.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -66,14 +68,36 @@ static unsigned long cleans_button, cleans_idle, cleans_cap, caret_skips;
  * task blocked for up to 2s behind them, and the owner saw the pointer
  * leap and the screen darken. Do not bring them back without measuring.
  *
- * Between refreshes the controller is put to sleep. Left awake it keeps
- * the panel's drive rails up, and a still picture slowly darkened: the
- * owner saw it with no refresh at all happening (the count did not move).
- * The driver rebuilds everything from its own model on waking, ~40ms. */
-static bool controller_awake;
+ * Putting the controller to sleep between refreshes was tried too, and
+ * taken out on 2026-09-29. It was meant to stop a still screen darkening,
+ * and did not: the owner saw it darken with the controller asleep five
+ * times over. And waking it pulses the panel's reset through the IOE1
+ * expander, on the I2C bus the touch panel and the power chip share, from
+ * the board task while the input task reads touch on the same bus: touch
+ * died for a whole session, the input task hung in its first read with
+ * the panel never refreshing, and the refresh button froze the board.
+ * Awake, the controller does not touch I2C at all. Whatever darkens the
+ * screen, it is not this; a full refresh clears it.
+ *
+ * i2c_lock stays: every use of that bus from here and from the input task
+ * takes it, so they cannot meet again whatever else comes to use it. */
+static bool controller_awake = true;
 static unsigned long last_refresh_end;
-static const unsigned long CONTROLLER_IDLE_MS = 1000;
 static unsigned long controller_sleeps;
+
+static SemaphoreHandle_t i2c_lock;
+
+void panel_set_i2c_lock(SemaphoreHandle_t lock) { i2c_lock = lock; }
+
+
+/* The menus draw the whole canvas at once; copied halfway through, the
+ * first boot showed the title and not the choices. */
+static SemaphoreHandle_t canvas_lock;
+void panel_canvas_lock(void) { if (canvas_lock) xSemaphoreTake(canvas_lock, portMAX_DELAY); }
+void panel_canvas_unlock(void) { if (canvas_lock) xSemaphoreGive(canvas_lock); }
+
+/* For `s`: why panel_service came back without refreshing. */
+static unsigned long svc_calls, svc_no_buffer, svc_unchanged;
 
 /* The Mac's text caret blinks about twice a second, and every blink is a
  * refresh: in a text editor the panel never rested. A change that is only
@@ -154,6 +178,16 @@ void panel_begin(void)
     glass = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (canvas) memset(canvas, 0xFF, CANVAS_BYTES);
     if (glass) memset(glass, 0xFF, CANVAS_BYTES);
+    canvas_lock = xSemaphoreCreateMutex();
+    if (!canvas || !glass)
+        Serial.printf("panel: buffers FAILED (canvas %p, glass %p)\n", (void *)canvas, (void *)glass);
+}
+
+void panel_diag(void)
+{
+    Serial.printf("panel: canvas %p glass %p, service %lu calls, %lu without buffers, %lu unchanged, controller %s\n",
+                  (void *)canvas, (void *)glass, svc_calls, svc_no_buffer, svc_unchanged,
+                  controller_awake ? "awake" : "asleep");
 }
 
 void panel_request_full(void) { full_requested = true; }
@@ -176,12 +210,15 @@ static bool mono_to_canvas(void)
 
 bool panel_service(void)
 {
-    if (!canvas || !glass) return false;
+    svc_calls++;
+    if (!canvas || !glass) { svc_no_buffer++; return false; }
     mono_to_canvas();
 
     /* canvas and message into the frame the controller is sent */
     uint8_t *out = epd.getFrameBuffer();
+    panel_canvas_lock();
     memcpy(out, canvas, CANVAS_BYTES);
+    panel_canvas_unlock();
     if (msg_on) ui_draw_message(out, msg1, msg2[0] ? msg2 : NULL);
 
     const unsigned long now = millis();
@@ -191,11 +228,7 @@ bool panel_service(void)
                             now - last_change_ms >= IDLE_CLEAN_MS;
     const bool full = full_requested || idle_clean || fast_since_full >= FAST_PER_FULL;
     if (!full && !changed) {
-        if (controller_awake && now - last_refresh_end >= CONTROLLER_IDLE_MS) {
-            epd.controllerIdle();
-            controller_awake = false;
-            controller_sleeps++;
-        }
+        svc_unchanged++;
         return false;
     }
 

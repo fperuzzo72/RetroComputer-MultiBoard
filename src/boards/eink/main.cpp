@@ -58,6 +58,7 @@
 #include <BoardConfig.h>
 
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_system.h"
 
 static InputManager input;
@@ -86,6 +87,10 @@ static int last_x = -1, last_y = -1, last_b = -1;
 static bool mouse_btn, refresh_btn;
 
 static unsigned long input_gap_max;   /* longest time between samples, ms */
+static SemaphoreHandle_t i2c_lock;    /* see panel.cpp: touch, power chip, panel reset */
+/* What the input task is doing, for `s` when it seems stuck. */
+static volatile int input_stage;
+static const char *const input_stages[] = { "sleeping", "reading the touch panel", "buttons", "holds", "touch" };
 static volatile bool raw_touch_log;   /* `r`: print every touch sample */
 
 /* The trackpad belongs to the input task; the console asks it. */
@@ -343,7 +348,9 @@ static void console_command(const char *line)
                       heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                       heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
                       heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
-        Serial.printf("input: longest gap between samples %lums\n", input_gap_max);
+        Serial.printf("input: longest gap between samples %lums, now %s\n", input_gap_max,
+                      input_stages[input_stage]);
+        panel_diag();
         input_gap_max = 0;
         machine->debug_command("s");
     } else if (!strcmp(line, "r")) {
@@ -392,10 +399,17 @@ static void inputTask(void *arg)
         const unsigned long now = millis();
         if (now - last > input_gap_max) input_gap_max = now - last;
         last = now;
+        input_stage = 1;
+        xSemaphoreTake(i2c_lock, portMAX_DELAY);
         input.update();
+        xSemaphoreGive(i2c_lock);
+        input_stage = 2;
         buttons_service();
+        input_stage = 3;
         hold_service();
+        input_stage = 4;
         touch_service();
+        input_stage = 0;
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
@@ -490,6 +504,8 @@ void setup()
                   heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                   heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 
+    i2c_lock = xSemaphoreCreateMutex();
+    panel_set_i2c_lock(i2c_lock);
     panel_begin();
     display8_attach(panel_canvas());
     input_begin();

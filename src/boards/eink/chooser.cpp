@@ -20,7 +20,9 @@ int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned 
     for (int i = 0; i < n; i++) names[i] = machine_list[i]->name;
 
     uint8_t *c = panel_canvas();
+    panel_canvas_lock();
     ui_draw_machines(c, names, n, mark, allow_cancel, note);
+    panel_canvas_unlock();
     show();
     board_ui(1);
     const unsigned long start = millis();
@@ -56,7 +58,9 @@ int chooser_pick_entry(int machine_index, int allow_cancel)
     board_ui(1);
     int result = -1;
     for (;;) {
+        panel_canvas_lock();
         ui_draw_entries(c, sNaming->name, entry_name, count, page, allow_cancel);
+        panel_canvas_unlock();
         show();
         int x, y, hit = UI_NONE;
         while (hit == UI_NONE) {

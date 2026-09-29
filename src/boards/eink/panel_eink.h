@@ -5,6 +5,20 @@
 
 void panel_begin(void);
 
+/* The I2C bus the touch panel, the power chip and the panel's reset share
+ * (see panel.cpp): whoever uses it takes this. */
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+void panel_set_i2c_lock(SemaphoreHandle_t lock);
+
+/* Drawing a whole screen onto the canvas (the menus): the panel does not
+ * copy it halfway. */
+void panel_canvas_lock(void);
+void panel_canvas_unlock(void);
+
+/* For the console: buffers, calls, and why nothing was sent. */
+void panel_diag(void);
+
 /* The canvas everything draws into (canvas.h), for display8 and menus. */
 #include <stdint.h>
 uint8_t *panel_canvas(void);
