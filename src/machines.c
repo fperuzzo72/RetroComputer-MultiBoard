@@ -1,6 +1,6 @@
 /* machines.c - which machines this firmware carries, and which was chosen.
  *
- * A build can carry one machine or both; platformio.ini decides by which
+ * A build can carry one machine or several; platformio.ini decides by which
  * machine directories go into it, and the HAVE_* flags below follow. With
  * both present the boot menu picks, and the choice is remembered in NVS
  * so the board comes back up as whatever it was last.
@@ -16,6 +16,9 @@ extern const Machine msx_machine;
 #ifdef HAVE_MACHINE_SPECTRUM
 extern const Machine spectrum_machine;
 #endif
+#ifdef HAVE_MACHINE_MAC
+extern const Machine mac_machine;
+#endif
 
 const Machine *const machine_list[] = {
 #ifdef HAVE_MACHINE_MSX
@@ -23,6 +26,9 @@ const Machine *const machine_list[] = {
 #endif
 #ifdef HAVE_MACHINE_SPECTRUM
     &spectrum_machine,
+#endif
+#ifdef HAVE_MACHINE_MAC
+    &mac_machine,
 #endif
 };
 

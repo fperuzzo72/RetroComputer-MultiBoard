@@ -8,10 +8,11 @@ extern "C" {
 
 /* What a machine has to provide to the board.
  *
- * Everything under src/device/ is the CYD: the panel, the amplifier, the
- * BLE keyboard, the card, the serial console, the boot menu. It knows
- * nothing about MSX or Spectrum. Everything under src/msx/ and
- * src/spectrum/ is a machine, and knows nothing about this board.
+ * Everything under src/boards/<board>/ is one board: its panel, its
+ * keyboard host, its card, its serial console, its boot menu. It knows
+ * nothing about MSX, Spectrum or Macintosh. Everything under src/msx/,
+ * src/spectrum/ and src/mac/ is a machine, and knows nothing about any
+ * board.
  *
  * A table of function pointers rather than a set of link-time symbols,
  * because one firmware carries both machines and picks at boot. The cost
@@ -77,6 +78,12 @@ typedef struct Machine {
     /* --- console commands only this machine has ------------------------ */
     int         (*debug_command)(const char *line);
     const char *(*debug_help)(void);
+
+    /* --- a pointing device, for a machine that has one ------------------
+     * Absolute position in machine pixels and the button, from a touch
+     * panel. NULL for a machine without a mouse; the 8-bit machines leave
+     * it out of their initialisers and get that for free. */
+    void        (*pointer)(int x, int y, int button);
 } Machine;
 
 /* Every machine in this firmware, and the one that was chosen. */
