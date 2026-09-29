@@ -15,10 +15,13 @@
  *   click X Y      move, down, run 0.2, up, run 0.2
  *   key U          press and release HID usage U (hex), e.g. key 04 is A
  *   cmd U          the same with Command held
+ *   mod M U        the same with HID modifier byte M (hex) held: 06 is
+ *                  Shift-Option
  *   text STRING    type STRING (to the end of the command) on a US
  *                  keyboard, shift and all: text voc^e -> vocÃª with the
  *                  US-International dead keys
  *   shot FILE      the screen as a PNG
+ *   ram FILE       the Mac's RAM, raw, to find what an application holds
  *   cursor         print where the Mac says the cursor is
  *
  *   machost macplus.rom system608.img "run 25; shot boot.png"
@@ -141,17 +144,17 @@ static void type_text(const char *s)
     run_for(0.3);
 }
 
-static void key(unsigned usage, int command)
+static void key(unsigned usage, unsigned mods)
 {
     uint8_t r[8] = {0};
-    if (command) { r[0] = 0x08; mac_hid_report(r); run_for(0.05); }
+    if (mods) { r[0] = (uint8_t)mods; mac_hid_report(r); run_for(0.05); }
     r[2] = (uint8_t)usage;
     mac_hid_report(r);
     run_for(0.1);
     r[2] = 0;
     mac_hid_report(r);
     run_for(0.05);
-    if (command) { r[0] = 0; mac_hid_report(r); run_for(0.05); }
+    if (mods) { r[0] = 0; mac_hid_report(r); run_for(0.05); }
 }
 
 int main(int argc, char **argv)
@@ -169,7 +172,7 @@ int main(int argc, char **argv)
     for (char *cmd = strtok(script, ";"); cmd; cmd = strtok(NULL, ";")) {
         char arg[256];
         double a = 0, b = 0;
-        unsigned u;
+        unsigned u, m;
         while (*cmd == ' ') cmd++;
         if (!*cmd) continue;
         if (sscanf(cmd, "run %lf", &a) == 1) run_for(a);
@@ -185,9 +188,14 @@ int main(int argc, char **argv)
         else if (!strcmp(cmd, "down")) { pb = 1; mac_pointer(px, py, pb); }
         else if (!strcmp(cmd, "up")) { pb = 0; mac_pointer(px, py, pb); }
         else if (sscanf(cmd, "key %x", &u) == 1) key(u, 0);
-        else if (sscanf(cmd, "cmd %x", &u) == 1) key(u, 1);
+        else if (sscanf(cmd, "cmd %x", &u) == 1) key(u, 0x08);
+        else if (sscanf(cmd, "mod %x %x", &m, &u) == 2) key(u, m);
         else if (!strncmp(cmd, "text ", 5)) type_text(cmd + 5);
         else if (sscanf(cmd, "shot %255s", arg) == 1) shot(arg);
+        else if (sscanf(cmd, "ram %255s", arg) == 1) {
+            FILE *f = fopen(arg, "wb");
+            if (f) { fwrite(mac_ram(), 1, mac_ram_size(), f); fclose(f); }
+        }
         else if (!strcmp(cmd, "cursor")) {
             int x, y;
             mac_cursor(&x, &y);

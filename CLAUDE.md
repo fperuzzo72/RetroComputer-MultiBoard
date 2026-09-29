@@ -392,10 +392,14 @@ panel, so the picture is the right way round and touch drives the pointer.
   letter goes over as the Mac's own Option sequence (Option-e then e for
   e-acute; Option-c for c-cedilla), so the Mac draws it in its own font.
   machost's `text` command tests it: "Ol'a, voc^e ... a'c'ucar, caf'e"
-  comes out "Olá, você ... açúcar, café" in TeachText. Capital A-acute
-  showed as a box there, with the right Option-e Shift-A sequence sent: most
-  likely TeachText's System 6 bitmap font lacks the glyph. Unconfirmed;
-  check in MacWrite before calling it done.
+  comes out "Olá, você ... açúcar, café" in TeachText. **Capitals depend
+  on the System** (measured 2026-09-29 by reading MacWrite's text out of
+  RAM with machost's `ram`): System 3.2, the Paper Mac's, composes only
+  É À Ã Õ Ñ Ä Ö Ü Ç and types ´A for Á; the other capitals go over as
+  3.2's own Shift-Option key (Á is Shift-Option-Y), chosen by SysVersion
+  (0x15a), which 3.2 leaves at 0. Only Times, Helvetica and Courier have
+  glyphs for them; Geneva, New York, Chicago and Monaco show a box, on
+  System 6 too. machost's `mod M U` presses a key with any modifiers.
 - **Never write the cursor globals during boot.** The ROM's RAM test
   reads its patterns back and a pointer write in the middle is a sad Mac,
   03FFFF. `mac_core.c` waits for CrsrCouple == 0xFF and Mouse on screen.

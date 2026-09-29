@@ -35,6 +35,7 @@ static uint8_t *disc;
 #define LM_MOUSE      0x830   /* point: v, h */
 #define LM_CRSRNEW    0x8ce   /* byte: the cursor moved, redraw it */
 #define LM_CRSRCOUPLE 0x8cf   /* byte: the cursor follows the mouse */
+#define LM_SYSVERSION 0x15a   /* word: 0x0607 for System 6.0.8, 0 before 4.1 */
 
 static void put16(unsigned addr, int v)
 {
@@ -277,6 +278,15 @@ static int mapped(uint8_t usage)
  * accented letter in whatever font it is using, in MacWrite as anywhere.
  * Shift is let go around the Option key, which would otherwise make a
  * different character, and put back for the letter.
+ *
+ * Except that System 3.2, the Paper Mac's, composes only the capitals of
+ * the original 1984 character set: É À Ã Õ Ñ Ä Ö Ü Ç. For Á it types the
+ * accent and then A. It has the other capitals all the same, one Shift-
+ * Option key each (read back out of MacWrite's text in machost), so there
+ * they go over as that key. Times, Helvetica and Courier draw them;
+ * Geneva, New York, Chicago and Monaco have no glyph and show a box.
+ * System 6 and 7 compose them all and have a different Shift-Option
+ * layout, and they are told apart by SysVersion, which 3.2 leaves at 0.
  */
 #define MAC_US_INTERNATIONAL 1
 
@@ -330,6 +340,23 @@ static int composes(int d, uint8_t u)
     return 0;
 }
 
+/* System 3.2's Shift-Option key, as a HID usage, for a capital its dead
+ * keys leave alone, or 0. */
+static uint8_t sys3_capital_key(int d, uint8_t u)
+{
+    static const struct { char d; uint8_t letter, key; } t[] = {
+        { '\'', 0x04, 0x1c }, { '\'', 0x0c, 0x16 }, { '\'', 0x12, 0x0b }, { '\'', 0x18, 0x33 },  /* Á Í Ó Ú */
+        { '`', 0x08, 0x0c }, { '`', 0x0c, 0x0a }, { '`', 0x12, 0x0f }, { '`', 0x18, 0x1b },      /* È Ì Ò Ù */
+        { '^', 0x04, 0x15 }, { '^', 0x08, 0x17 }, { '^', 0x0c, 0x07 }, { '^', 0x12, 0x0d },
+        { '^', 0x18, 0x1d },                                                                      /* Â Ê Î Ô Û */
+        { '"', 0x08, 0x18 }, { '"', 0x0c, 0x09 },                                                 /* Ë Ï */
+    };
+    if (get16(LM_SYSVERSION) != 0) return 0;
+    for (unsigned i = 0; i < sizeof t / sizeof t[0]; i++)
+        if (t[i].d == d && t[i].letter == u) return t[i].key;
+    return 0;
+}
+
 static uint8_t mac_accent_key(int d)
 {
     switch (d) {
@@ -371,6 +398,14 @@ static int us_intl_keydown(uint8_t usage, const uint8_t r[8])
             if (d == '\'' && usage == 0x06) {   /* c-cedilla: Option-c, shifted for capital */
                 kq_push(MKC_Option, 1);
                 tap(MKC_C, shift, shift);
+                kq_push(MKC_Option, 0);
+                swallow(usage);
+                return 0;
+            }
+            const uint8_t cap = shift ? sys3_capital_key(d, usage) : 0;
+            if (cap) {
+                kq_push(MKC_Option, 1);
+                tap(hid_to_mac[cap], 1, 1);
                 kq_push(MKC_Option, 0);
                 swallow(usage);
                 return 0;
