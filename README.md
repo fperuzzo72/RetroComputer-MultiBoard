@@ -1,12 +1,14 @@
-# Two 8-bit machines on a Cheap Yellow Display
+# RetroComputer-MultiBoard
 
-[![Build firmware](https://github.com/fperuzzo72/MSX-emulator-for-Cheap-Yellow-Display/actions/workflows/build.yml/badge.svg)](https://github.com/fperuzzo72/MSX-emulator-for-Cheap-Yellow-Display/actions/workflows/build.yml)
+[![Build firmware](https://github.com/fperuzzo72/RetroComputer-MultiBoard/actions/workflows/build.yml/badge.svg)](https://github.com/fperuzzo72/RetroComputer-MultiBoard/actions/workflows/build.yml)
 
-Emulator firmware for the Freenove FNK0103 3.5" ESP32 display board, the
+Old computers on small ESP32 boards: several machines, several boards,
+one tree. It started as an MSX on a Cheap Yellow Display, which is why the
+CYD comes first below.
+
+The first board is the Freenove FNK0103 3.5" ESP32 display board, the
 "Cheap Yellow Display" with the ST7796 panel, driven by a Bluetooth Low
-Energy keyboard rather than the touchscreen.
-
-One tree, one board, **two machines**:
+Energy keyboard rather than the touchscreen. On it, **two machines**:
 
 | | |
 |---|---|
@@ -17,6 +19,10 @@ One tree, one board, **two machines**:
 Both run on the hardware. The boot menu picks the machine *and* what it
 starts with - a cartridge, a snapshot, a tape - and everything is in
 flash, so there is no SD card in any of this.
+
+And a second board on the way: the **M5Stack Paper Mono**, an ESP32-S3
+with an 800x480 e-ink panel, carrying a **Macintosh Plus**. See "The
+Macintosh, on the Paper Mono" below.
 
 ## Status, in detail
 
@@ -76,22 +82,113 @@ make -C tools/tapebench
 TRAP=0 ./tools/tapebench/load 48.rom game.tap   # signal only, no shortcut
 ```
 
+## The Macintosh, on the Paper Mono
+
+`pio run -e papermono-mac` builds a Macintosh Plus for the M5Stack Paper
+Mono: Matt Evans' [umac](https://github.com/evansm7/umac) on the Musashi
+68000 core (`lib/umac/`, see its README), a Mac Plus ROM, **4MB** of RAM
+in PSRAM, System 6 or 7.
+
+**The Mac runs at its own 512x342, scaled 1.40x** to fill the panel's
+height (719x480, centred). umac can patch the ROM to the panel's own
+800x480, and that boots fine, but the panel is about 220 pixels to the
+inch against the Mac's 72, and a Mac pixel for a panel pixel was too small
+to read. The scaling is nearest-pixel, so some Mac pixels come out two
+panel pixels wide and some one; for 1-bit text on a 1-bit panel that
+reads better than anything averaged. `src/boards/papermono/picture.h`.
+
+**The device is held with its buttons along the top**, and the picture
+and touch are turned 180 degrees to match: along the bottom, the hand
+holding it kept pressing them.
+
+**Status: it runs on the device.** First flashed 2026-09-28: System 6.0.8
+boots to the Finder in well under 30 seconds, because the emulated Mac runs
+at **175-181% of a real Mac Plus**. A fast panel refresh measures
+**~320-400ms**. The scaled picture and the trackpad below are tested on
+the host and not yet on the device.
+
+**The panel is a trackpad**, because a finger is far too big for a Mac's
+close box. The finger pushes the pointer rather than standing on it:
+
+| | |
+|---|---|
+| drag anywhere | moves the pointer, finer when slow, further when quick |
+| tap | click |
+| tap, tap | double-click |
+| tap, then touch and drag | holds the button down (menus, windows, selecting text) |
+| button on GPIO2 (top right, held buttons-up) | the mouse button, held for as long as it is |
+| button on GPIO3 | full refresh, to clear the ghosts fast refreshes leave |
+
+`src/boards/papermono/trackpad.c` is plain C, and `tools/papermono_test`
+runs it, with `picture.h`, in front of the real Mac on the development
+machine: a simulated finger aims the pointer, double-taps the disc open and
+holds the Apple menu down, and every pixel of the scaled, turned panel is
+checked against the Mac pixel it should show.
+
+```bash
+make -C tools/papermono_test
+./tools/papermono_test/papermono_test roms/mac/macplus.rom roms/mac/boot.img /tmp/pm
+```
+
+Under all that, the Mac only ever had a relative mouse, so the position is
+written straight into the ROM's cursor globals, the way Mini vMac does it.
+Two things about that cost time and are worth knowing: nothing may be
+written there until the system is keeping those globals, or the ROM's RAM
+test reads it back and stops with a sad Mac (03FFFF); and a button change
+waits until the Mac's own `Mouse` global says the cursor has arrived, or a
+tap clicks wherever the cursor was before.
+
+The ROM and the boot disc are not in the repository. Put them in
+`roms/mac/`, which git ignores:
+
+```bash
+# MAME's macplus set has the ROM as two halves; this joins and checks them
+python3 tools/make_macplus_rom.py 342-0341-c.u6d 342-0342-b.u8d roms/mac/macplus.rom
+cp "System 6.0.8.img" roms/mac/boot.img
+```
+
+`tools/local_mac.py` checks the ROM (it must be the v3 ROM, checksum
+4D1F8172, the only one umac can patch) and links both into flash as they
+are. Without them the firmware still builds and says what is missing.
+
+`tools/machost` is the same Mac on the development machine: the same
+`src/mac/mac_core.c` and `lib/umac`, a real ROM and disc, emulated time,
+a script of pointer moves, clicks and keys, and PNG screenshots. Thirty
+emulated seconds of boot take under a second:
+
+```bash
+make -C tools/machost
+./tools/machost/machost roms/mac/macplus.rom roms/mac/boot.img \
+    "run 30; shot finder.png; click 471 42; click 471 42; run 2; shot disc.png"
+```
+
+On the device, `d` on the serial console prints the Mac's screen and
+`tools/fbdump.py` turns a captured log into a PNG, so what the machine is
+showing can be checked over the cable. `s` reports the speed as a
+percentage of a real Mac Plus, and the panel's refresh times.
+
 ## The layout of this repo
 
 ```
-src/device/     this board: panel, amplifier, BLE keyboard host, card,
-                serial console. Knows nothing about what is emulated.
-src/machine.h   the only thing that crosses between the two
-src/msx/        the MSX1, on the vendored fMSX core
-src/spectrum/   the ZX Spectrum 48K
-lib/z80/        Marat Fayzullin's Z80, shared by both machines
-lib/fmsx_core/  the rest of fMSX: VDP, PSG, mappers. MSX only.
+src/boards/cyd/        the CYD: panel, amplifier, BLE keyboard host, card,
+                       serial console. Knows nothing about what is emulated.
+src/boards/papermono/  the Paper Mono: e-ink panel, touch, serial console
+src/machine.h          the only thing that crosses between boards and machines
+src/display_mono.h     how a 1-bit machine hands its framebuffer to a board
+src/msx/               the MSX1, on the vendored fMSX core
+src/spectrum/          the ZX Spectrum 48K
+src/mac/               the Macintosh Plus
+lib/z80/               Marat Fayzullin's Z80, shared by MSX and Spectrum
+lib/fmsx_core/         the rest of fMSX: VDP, PSG, mappers. MSX only.
+lib/umac/              umac and Musashi, the Macintosh core
+freeink-sdk/           the Paper Mono's hardware library (git submodule)
 ```
 
-The split is worth keeping. Everything painful about this board - one
-DRAM region big enough for the machine's RAM, a panel that shares a bus
-with the card, an amplifier behind an enable pin - lives in `src/device/`
-and is solved once for both machines.
+The split is worth keeping. Everything painful about the CYD - one DRAM
+region big enough for the machine's RAM, a panel that shares a bus with
+the card, an amplifier behind an enable pin - lives in `src/boards/cyd/`
+and is solved once for both machines, and the Paper Mono came in as a
+second directory beside it without either machine noticing.
 
 ## ROMs: none are in this repository
 
@@ -322,7 +419,7 @@ See `third_party_licenses/` for full texts:
   glue, MIT licensed.
 - C-BIOS binaries (`src/msx/cbios_data.c`): BSD-style license, freely
   redistributable.
-- `src/device/ble_keyboard.cpp` connect pattern: adapted from esp32beans'
+- `src/boards/cyd/ble_keyboard.cpp` connect pattern: adapted from esp32beans'
   BLE_HID_Client, MIT licensed.
 
 Given the fMSX/EMULib non-commercial restriction, this project as a whole

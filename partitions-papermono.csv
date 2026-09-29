@@ -1,0 +1,12 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+#
+# The Paper Mono's table: byte for byte the one CrossPlay's fork flashes
+# (fperuzzo72/crossplay-papermono, partitions.csv), so this firmware and
+# the reader can sit in the two app slots of one device without either
+# rewriting the other's table. Two 7.94MB app slots; nothing uses a
+# filesystem partition.
+nvs,      data, nvs,     0x9000,  0x5000,
+otadata,  data, ota,     0xe000,  0x2000,
+app0,     app,  ota_0,   0x10000, 0x7F0000,
+app1,     app,  ota_1,   0x800000,0x7F0000,
+coredump, data, coredump,0xFF0000,0x10000,

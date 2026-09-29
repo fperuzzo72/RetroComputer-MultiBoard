@@ -22,12 +22,14 @@ touchscreen. PlatformIO + Arduino.
   There is no Spectrum ROM on this machine and the board was unplugged
   when it was written. Do not describe it as working.
 
-The split that makes this possible: `src/device/` is the board and knows
-nothing about what is emulated, `src/msx/` and `src/spectrum/` are
+The split that makes this possible: `src/boards/cyd/` is the board and
+knows nothing about what is emulated, `src/msx/` and `src/spectrum/` are
 machines and know nothing about the board, and `src/machine.h` is the only
-thing that crosses. `lib/z80/` is the CPU, shared; `lib/fmsx_core/` is the
-rest of fMSX and is MSX-only, excluded from the Spectrum build by
-`lib_ignore`.
+thing that crosses. (Until 2026-09-28 the board lived in `src/device/` and
+`src/main.cpp`; they moved, byte-identical builds, when a second board
+arrived. See "The Paper Mono and the Macintosh" below.) `lib/z80/` is
+the CPU, shared; `lib/fmsx_core/` is the rest of fMSX and is MSX-only,
+excluded from the Spectrum build by `lib_ignore`.
 
 ## How it's built (context for future changes)
 
@@ -245,6 +247,118 @@ The tape code stays because the conversion needs it, because Avalon and
 Thrust still ride on it, and because it is the only honest way to load a
 tape a user supplies later.
 
+## The Paper Mono and the Macintosh
+
+A second board, `src/boards/papermono/`: M5Stack Paper Mono, ESP32-S3,
+8MB PSRAM, 800x480 1-bit SSD1677 e-ink, FT6336 touch. Different chip and
+toolchain from the CYD (pioarduino, Arduino core 3.3), with the hardware
+driven by **freeink-sdk, a git submodule pinned to `6dfe245`, the commit
+CrossPlay runs on this same device**. Do not move it to a newer SDK
+without a reason; that commit is the one known to light this panel.
+
+The first machine on it is a **Macintosh Plus** (`pio run -e
+papermono-mac`, `src/mac/`, `lib/umac/`). Status as of 2026-09-28:
+**runs on the device** (flashed to app1 beside CrossPlay in app0; otadata
+selects which). Measured there: 175-181% of a Mac Plus, fast refresh
+~320-400ms, Finder reached and a serial-console double-click opens the
+disc, and **the owner double-clicked the disc icon with a finger** on the
+panel, so the picture is the right way round and touch drives the pointer.
+
+- `src/mac/mac_core.c` is plain C with no board in it; `mac_machine.c` is
+  the ESP32 task loop and the Machine table. The split exists so
+  `tools/machost` can build the same core on the Mac. **Use machost before
+  reasoning about anything the Mac does**: 30 emulated seconds of boot
+  take under a second there, and it takes PNG screenshots.
+- The boot is **~30 emulated seconds**, most of it the ROM testing 4MB of
+  RAM. A screenshot at 20s shows a grey screen and looks like a hang. It
+  is not one; this cost an hour on the first run.
+- Touch is an absolute mouse written into the ROM's cursor globals
+  (MTemp, RawMouse, CrsrNew), and **a button change waits until the
+  `Mouse` global has caught up**. Deliver both at once and the click lands
+  where the cursor was. Verified on the host: menus open, icons
+  double-click.
+- `display_mono.h` is the 1-bit framebuffer handoff: the machine attaches
+  its framebuffer once and never waits; the board compares and refreshes
+  on its own schedule (`panel.cpp`). The Paper Mono driver has no partial
+  window, so every refresh is the whole panel; the waveform, not the 48kB
+  of SPI, is what takes the time. `s` on the console reports refresh times
+  and emulation speed.
+- **The device is held upside down**, buttons along the top, because at
+  the bottom the hand kept pressing them (owner's request, 2026-09-28).
+- **The Mac is 512x342, scaled 1.40x** (nearest-pixel, 719x480 centred).
+  It started at the panel's native 800x480; the owner found it too small
+  to read. `src/boards/papermono/picture.h` holds the scale and the
+  upside-down flag, and both the picture and touch go through it.
+- **Touch is a trackpad** (`trackpad.c`, plain C): drag pushes the
+  pointer with acceleration, tap clicks, tap-tap double-clicks,
+  tap-then-drag holds the button. GPIO2 is the mouse button, GPIO3 a full
+  refresh, read straight off the pins (InputManager's two-button logic
+  reports presses only on release). Replaced pointing straight at things
+  because a finger is too big for a Mac close box. Three bugs were found
+  by `tools/papermono_test` before the device saw any of it: the slop
+  catch-up getting fast-end acceleration (every push overshot), a
+  double tap holding the button 20ms (the Mac saw one click), and the
+  sad Mac below.
+- **Input has its own task (10ms, core 0, above the board task).** The
+  first trackpad build on the device read touch from the same loop as the
+  panel refresh, which blocks ~400ms, and pointer movement keeps the panel
+  refreshing back to back: touch was sampled once in ~450ms. The owner
+  saw a jumping pointer, lost taps, a double-click arriving seconds late
+  and buttons that never registered. The host test could not see any of
+  it, because it has no refresh. `s` now prints the longest gap between
+  input samples; it should stay near 10ms.
+- **Only `FULL_REFRESH` clears ghosting on this panel.** The Paper Mono
+  driver treats `RefreshMode::Full` as its one corrective mode;
+  `HALF_REFRESH` is an ordinary update. The first builds used HALF for
+  "clean" and the owner watched the ghosting pile up with the button doing
+  nothing. With FULL the screen came out clean. But FULL here is not a
+  flashing clean either: this driver has none, and it drives every pixel
+  through the ordinary waveform (~395ms, same as fast), which under the
+  desktop pattern reads as the whole screen blinking. Cleaning after 1.5s
+  idle / 10 fast / cap 60 blinked every ~20s and was too much; now 4s idle
+  after 30 fast, cap 200. `s` prints why each clean ran.
+- **Pointer movement: the first trackpad's is the one to keep.** Held
+  still until the 14px tap slop, then caught up and followed. Smallest
+  nudge ~6 Mac pixels, which the owner found fine ("anda bem o
+  suficiente"). Two finer versions (following from the first pixel;
+  following after a 6px slop without catch-up) felt erratic on the device
+  and were undone. Raw touch samples (`r`) showed the FT6336 is clean: a
+  still finger reports the same point every sample, a moving one 1-6px
+  steps every ~11ms. So jitter was not it; do not re-add filtering for it.
+- **Window refreshes were tried and removed.** Measured: 2.3s per window
+  refresh against ~400ms whole-panel, input blocked up to 2s behind them,
+  the pointer leaping and the screen darkening.
+- **The controller sleeps after 1s without a refresh** (`controllerIdle`).
+  Left awake it holds the drive rails up and a still screen darkened, with
+  the refresh count not moving. `s` counts the sleeps.
+- **The text caret is not shown blinking.** TeachText's caret is one
+  1-pixel column 16 tall, blinking about twice a second (measured with
+  machost); every blink was a refresh and an editor never let the panel
+  rest. `panel.cpp` skips a change that is one bit in one byte column
+  under 24 rows. A typed letter is 6+ pixels wide and goes out at once.
+- Measured on the device (2026-09-28, three minutes of use): input sampled
+  every 11-13ms, fast refresh 398-407ms, emulation 154-206% of a Mac Plus.
+  Tap-then-drag on a menu works and the owner is happy with it; the
+  pointer speed is "good enough".
+- **Never write the cursor globals during boot.** The ROM's RAM test
+  reads its patterns back and a pointer write in the middle is a sad Mac,
+  03FFFF. `mac_core.c` waits for CrsrCouple == 0xFF and Mouse on screen.
+- **Run `tools/papermono_test` after touching picture.h, trackpad.c or
+  the pointer code.** Its probes were wrong three times before they were
+  right (a desktop pattern looks like a title bar; the cursor sprite
+  moving is not the screen changing), so read the PNGs it writes, not
+  only its verdicts.
+- ROM and disc come from `roms/mac/` (gitignored) through
+  `tools/local_mac.py`, which checks for the v3 ROM (4D1F8172) and links
+  both in with `.incbin`. Never commit them.
+- Partition table `partitions-papermono.csv` is CrossPlay's, byte for byte.
+  The Mac goes into **app1 (0x800000)**; CrossPlay stays in app0. Which one
+  boots is otadata at 0xe000: sequence 2 in the second entry picks app1,
+  and the CRC is `zlib.crc32(seq_le32, 0xffffffff)`. The original otadata,
+  the table and a full app0 image are in
+  `~/github/_backups/papermono-2026-09-28/`; writing back `pm_ota.bin`
+  returns to CrossPlay. Never `pio run -t upload` here: it writes app0.
+
 ## Licensing (do not relax this casually)
 
 `LICENSE` at the repo root is MIT but explicitly scoped (see its "NOTE ON
@@ -252,4 +366,7 @@ SCOPE" section) to only the original glue code - not the vendored
 `lib/fmsx_core/` core, which is under Marat Fayzullin's fMSX/EMULib
 license (personal-use-only, not commercial-redistribution-friendly). Full
 texts for every vendored/adapted piece are in `third_party_licenses/`.
+`lib/umac/` is MIT except its disc driver (Basilisk II) and key code
+table (Mini vMac), which are GPLv2; see
+`third_party_licenses/umac_and_musashi.txt`.
 Keep this distinction intact in any future README/LICENSE edits.

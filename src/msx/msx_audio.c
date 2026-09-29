@@ -2,7 +2,7 @@
  *
  * fMSX's Sound.c calls InitAudio/TrashAudio/GetFreeAudio/GetTotalAudio/
  * WriteAudio/PauseAudio and expects a port to supply them. They are
- * nothing but a thin layer over src/device/audio.c, which knows how to
+ * nothing but a thin layer over src/boards/cyd/audio.c, which knows how to
  * put samples on this board's speaker and nothing about the MSX.
  */
 #include "EMULib.h"

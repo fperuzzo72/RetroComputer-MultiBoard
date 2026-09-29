@@ -2,7 +2,7 @@
  *
  * Thin on purpose: it forwards to msx_bridge.c and msx_keys.c, which are
  * the code that was brought up and verified on hardware. What this file
- * adds is the Machine table, so src/device/ can drive an MSX or a
+ * adds is the Machine table, so src/boards/cyd/ can drive an MSX or a
  * Spectrum without knowing which it has.
  */
 #include <stdio.h>
