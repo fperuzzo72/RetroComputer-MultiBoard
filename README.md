@@ -20,9 +20,9 @@ Both run on the hardware. The boot menu picks the machine *and* what it
 starts with - a cartridge, a snapshot, a tape - and everything is in
 flash, so there is no SD card in any of this.
 
-And a second board on the way: the **M5Stack Paper Mono**, an ESP32-S3
-with an 800x480 e-ink panel, carrying a **Macintosh Plus**. See "The
-Macintosh, on the Paper Mono" below.
+The second board is the **M5Stack Paper Mono**, an ESP32-S3 with an
+800x480 e-ink panel, carrying all three: the MSX and the Spectrum, and a
+**Macintosh Plus**. See "The Paper Mono" below.
 
 ## Status, in detail
 
@@ -82,6 +82,49 @@ make -C tools/tapebench
 TRAP=0 ./tools/tapebench/load 48.rom game.tap   # signal only, no shortcut
 ```
 
+## The Paper Mono
+
+`pio run -e papermono` builds one firmware with the MSX, the Spectrum and
+the Macintosh. At power-on a touch menu asks which computer, then what it
+starts with; left untouched for five seconds, the outlined one boots with
+what it had last time.
+
+The device is held with its **buttons along the top**; the picture and
+touch are turned to match.
+
+| | MSX, Spectrum | Macintosh |
+|---|---|---|
+| touch | a tap opens the list of cartridges and snapshots | a trackpad (below) |
+| button, top right (GPIO2) | opens the same list | the mouse button |
+| other button (GPIO3) | full refresh, to clear ghosting | the same |
+| other button held 2 s | restart into the boot menu | the same |
+
+**The keyboard** is the same BLE transport as the CYD's, now shared
+(`src/boards/common/`), paired the way the PaperS3 MicroBASIC pairs: a
+keyboard that asks for a code gets one on the panel, **123456**, to type
+on the keyboard itself followed by Enter. The MSX has its US-International
+dead keys, and so does the Mac (below).
+
+**The 8-bit pictures** are 256x216 at exactly 2x, 512x432 in the middle
+of the panel. The panel has two colours; each machine pixel is four panel
+pixels, so five tones, and the tone is how far a colour stands from the
+border colour. MSX-BASIC's white on blue comes out black on white, a
+Spectrum's ink on paper as it is. The Spectrum's FLASH attribute is held
+steady: blinking it would refresh the whole e-ink panel twice a second.
+The MSX is held to its own 60 frames a second.
+
+Status: **built and run on the development machine, not yet on the
+device** (2026-09-28). `tools/papermono_test` has `zx` and `msx`, which run
+the real machine code through the real picture path and write what the
+panel would show:
+
+```bash
+make -C tools/papermono_test
+./tools/papermono_test/msx 0 /tmp/msx 6          # MSX-BASIC at six seconds
+./tools/papermono_test/zx 8 /tmp/zx 4            # the eighth Spectrum snapshot
+./tools/papermono_test/screens /tmp/menus        # the menus
+```
+
 ## The Macintosh, on the Paper Mono
 
 `pio run -e papermono` builds, among others, a Macintosh Plus for the M5Stack Paper
@@ -137,6 +180,11 @@ written there until the system is keeping those globals, or the ROM's RAM
 test reads it back and stops with a sad Mac (03FFFF); and a button change
 waits until the Mac's own `Mouse` global says the cursor has arrived, or a
 tap clicks wherever the cursor was before.
+
+**The keyboard types US-International** on the Mac too: ' ` ^ ~ " are
+dead keys, and a composed letter goes over as the Mac's own Option
+sequence (Option-e then e), so the Mac draws the accent in its own font.
+`text Ol'a, voc^e` in machost comes out "Olá, você" in TeachText.
 
 The ROM and the boot disc are not in the repository. Put them in
 `roms/mac/`, which git ignores:

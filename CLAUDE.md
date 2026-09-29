@@ -247,6 +247,34 @@ The tape code stays because the conversion needs it, because Avalon and
 Thrust still ride on it, and because it is the only honest way to load a
 tape a user supplies later.
 
+## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
+
+`pio run -e papermono` carries all three, chosen at boot (chooser.cpp,
+ui.cpp). **Built and host-tested, never run on the device** as of the
+morning of 2026-09-29; the last device run was the Mac-only firmware.
+
+- **The 8-bit machines draw through `display8.c`**, the Paper Mono's
+  display.h: 2x, four machine pixels to a panel byte, tone by contrast
+  with the border. `tools/papermono_test` `zx` and `msx` run the real
+  machines through it on the host (tools/hostshim stands in for the
+  ESP-IDF headers, with simulated time); use them before guessing.
+- **One canvas** (panel.cpp): the Mac's picture, display8 and the menus
+  all draw into it, with a message box on top (the BLE pairing code).
+- **Touch**: menus get taps through a queue (board_take_tap); the Mac gets
+  the trackpad; an 8-bit machine gets "a tap opens the selector".
+  GPIO2 is the mouse button on the Mac and opens the selector otherwise.
+  GPIO3 held 2s restarts into the boot menu.
+- **BLE** is src/boards/common/ble_keyboard.cpp with BLE_KEYBOARD_PASSKEY:
+  the PaperS3's pairing (display-only, code 123456 shown on the panel,
+  extended advertising, no connection-parameter updates).
+- **Two collisions** when the Mac and the MSX first linked together: umac's
+  scc.h against fMSX's SCC.h on a case-insensitive disk, and a global
+  `overlay` in both. umac's are renamed; see lib/umac/README.md.
+- The MSX is paced to 60Hz in platform_glue.c (never waits on the CYD);
+  the Spectrum's FLASH is steady under DISPLAY_STEADY.
+- Touch is retried three times at boot (the FT6336 that does not answer
+  after a serial reset).
+
 ## The Paper Mono and the Macintosh
 
 A second board, `src/boards/papermono/`: M5Stack Paper Mono, ESP32-S3,
