@@ -139,10 +139,23 @@ int msx_type_char(unsigned char code) {
 int msx_caps_on(void) { return msxPeek(MSX_CAPST) != 0; }
 
 extern int MSXSoundOn; /* platform_glue.c */
+extern byte *ROMData[MAXSLOTS]; /* MSX.c; not in MSX.h */
 
 void msx_reboot(void) { esp_restart(); }
 
 void msx_insert_cartridge(void) {
+#ifdef HAVE_LOCAL_CART
+    /* MSX-BASIC is no cartridge. Loading the SD path instead fails without
+     * touching the slot, which left the last game in it: back to BASIC
+     * booted that game again. Ejecting resets the machine, but only when
+     * there was something to eject. */
+    if (msx_cart_selected() < 0) {
+        const int had = ROMData[0] != 0;
+        LoadCart(NULL, 0, 0);
+        if (!had) ResetMSX(Mode, RAMPages, VRAMPages);
+        return;
+    }
+#endif
     /* LoadCart() ends by calling ResetMSX(), so this is the whole of it.
      * MAP_GUESS lets the core work out the mapper, which matters: a 128kB
      * Konami cartridge is not a 32kB one with more pages. */

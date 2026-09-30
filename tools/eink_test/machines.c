@@ -102,6 +102,13 @@ int main(int argc, char **argv)
         snprintf(path, sizeof path, "%s-%s.png", argv[2], t);
         png(path);
         printf("  %.1fs, %lu frames: %s\n", hostshim_now_us / 1e6, machine->frames(), path);
+        /* SWITCH=k:e changes to entry e after shot k, as the selector does. */
+        int k, e;
+        if (getenv("SWITCH") && sscanf(getenv("SWITCH"), "%d:%d", &k, &e) == 2 && k == shot) {
+            printf("  switching to entry %d: %s\n", e, machine->entry_name(e));
+            machine->select_entry(e);
+            machine->switch_to(e);
+        }
         if (shot == 0 && argc > 4 && machine->type) {
             printf("  typing \"%s\"\n", argv[4]);
             machine->type(argv[4]);
