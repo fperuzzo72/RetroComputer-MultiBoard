@@ -29,7 +29,17 @@
 #include "canvas.h"
 #include "ui.h"
 
+#if EINK_FAST_PANEL
+/* The PaperS3 driven directly (fastepd.c), no waveform: a changed picture
+ * is handed over and on the glass within tens of milliseconds, so this
+ * never waits and the ghost cleaning below is left to a hold or a button.
+ * Counting "fast refreshes" towards a clean made no sense at ~60 a
+ * second. */
+#include "fastepd.h"
+static uint8_t *frame;
+#else
 static EInkDisplay epd(-1, -1, -1, -1, -1, -1);   /* pins come from the board profile */
+#endif
 
 static const uint8_t *mono_fb;
 static int mono_w, mono_h;
@@ -183,6 +193,11 @@ void panel_message_clear(void) { msg_on = false; }
 
 void panel_begin(void)
 {
+#if EINK_FAST_PANEL
+    frame = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (frame) memset(frame, 0xFF, CANVAS_BYTES);
+    if (fastepd_begin() != 0) Serial.println("panel: the direct drive would not start");
+#else
     epd.begin();
     /* Everything here draws for EINK_PANEL_W x EINK_PANEL_H; if freeink-sdk
      * disagrees about the panel, say so before drawing garbage. */
@@ -191,6 +206,7 @@ void panel_begin(void)
                       epd.getDisplayWidth(), epd.getDisplayHeight(), CANVAS_W, CANVAS_H);
     epd.clearScreen(0xFF);
     epd.displayBuffer(EInkDisplay::FULL_REFRESH);
+#endif
     canvas = (uint8_t *)heap_caps_malloc(CANVAS_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     /* PSRAM too: it is only compared and copied, and 48kB of internal RAM
      * is what the BLE keyboard needs once it connects (26kB was all that
@@ -235,7 +251,12 @@ bool panel_service(void)
     mono_to_canvas();
 
     /* canvas and message into the frame the controller is sent */
+#if EINK_FAST_PANEL
+    uint8_t *out = frame;
+    if (!out) { svc_no_buffer++; return false; }
+#else
     uint8_t *out = epd.getFrameBuffer();
+#endif
     panel_canvas_lock();
     memcpy(out, canvas, CANVAS_BYTES);
     panel_canvas_unlock();
@@ -246,7 +267,11 @@ bool panel_service(void)
     if (changed) last_change_ms = now;
     const bool idle_clean = !changed && fast_since_full >= IDLE_CLEAN_AFTER &&
                             now - last_change_ms >= IDLE_CLEAN_MS;
+#if EINK_FAST_PANEL
+    const bool full = full_requested;
+#else
     const bool full = full_requested || idle_clean || fast_since_full >= FAST_PER_FULL;
+#endif
     if (!full && !changed) {
         svc_unchanged++;
         return false;
@@ -254,6 +279,14 @@ bool panel_service(void)
 
     memcpy(glass, out, CANVAS_BYTES);
     const unsigned long t0 = millis();
+#if EINK_FAST_PANEL
+    if (full_requested) { cleans_button++; fastepd_clean(); full_requested = false; full_refreshes++; }
+    fastepd_show(out);
+    last_refresh_ms = millis() - t0;
+    total_refresh_ms += last_refresh_ms;
+    refreshes++;
+    return true;
+#else
     if (full) {
         if (full_requested) cleans_button++;
         else if (idle_clean) cleans_idle++;
@@ -273,6 +306,7 @@ bool panel_service(void)
     total_refresh_ms += last_refresh_ms;
     refreshes++;
     return true;
+#endif
 }
 
 unsigned long panel_last_full_ms(void) { return last_full_ms; }

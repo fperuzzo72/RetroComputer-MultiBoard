@@ -55,6 +55,9 @@
 #include "chooser.h"
 #include "audio.h"
 #include "ota_slots.h"
+#if EINK_FAST_PANEL
+#include "fastepd.h"
+#endif
 #include "selector.h"
 #include "ble_keyboard.h"
 #include <BoardConfig.h>
@@ -413,6 +416,10 @@ static void console_command(const char *line)
             esp_restart();
         }
         Serial.printf("MSX sound: %s (snd pcm | snd voz | snd off)\n", names[audio_mode()]);
+#if EINK_FAST_PANEL
+    } else if (!strncmp(line, "fe", 2)) {
+        fastepd_command(line + 2);
+#endif
     } else if (!strcmp(line, "o")) {
         if (!machine->pointer) selector_open();
     } else if (!machine->debug_command(line)) {
@@ -502,7 +509,13 @@ static void boardTask(void *arg)
             delay(50);
             esp_restart();
         }
+#if EINK_FAST_PANEL
+        /* Handing a picture over costs nothing here: pace it to the scans. */
+        panel_service();
+        vTaskDelay(pdMS_TO_TICKS(16));
+#else
         if (!panel_service()) vTaskDelay(pdMS_TO_TICKS(20));
+#endif
     }
 }
 
