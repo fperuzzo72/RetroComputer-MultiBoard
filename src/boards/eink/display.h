@@ -30,6 +30,13 @@ extern "C" {
  * it steady instead. */
 #define DISPLAY_STEADY 1
 
+/* How many of a machine's frames are worth drawing, in percent. The panel
+ * shows a new picture every ~400ms at best, and drawing an MSX frame here
+ * costs more than the frame itself (19ms of 16.7, measured on the PaperS3:
+ * the MSX ran at 32fps, slow, and its music with it). One in five is still
+ * twelve pictures a second, several for every refresh. */
+#define DISPLAY_FRAME_PERCENT 20
+
 void display_bridge_init(void);
 
 void display_write_picture(short srcX, short srcY, short width, short height,

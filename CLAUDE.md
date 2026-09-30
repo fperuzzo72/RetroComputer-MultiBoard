@@ -281,15 +281,24 @@ timed out into the MSX. Panel orientation and where taps land are still
 to be checked by eye. PlatformIO's "Checking size" there measures against
 app0's 6MB, not app2's slot.
 
-**Sound on the e-ink boards is the buzzer** (`beeper.h`, `src/boards/eink/
-beeper.c`, RMT on EINK_BEEPER_PIN). The Spectrum hands it the speaker
-bit's flips by T-state, which is its real sound. The MSX (`msx_beeper.c`)
-plays the PSG's loudest voice each frame, tone or noise, with the volume
-as pulse width on a square-root curve; fMSX keeps PSG.Freq/Volume current
-with its own audio off. The Mac has none. Measured on the Paper Mono
-2026-09-30: Nemesis starts the beeper, 0.18ms a frame for all of fMSX's
-sound work. `t x y` on the console taps a menu (in `d`'s pixels), so the
-selector can be driven with nobody at the board.
+**Sound on the e-ink boards is the buzzer.** The Spectrum hands its
+speaker bit's flips by T-state to `beeper.h` (`src/boards/eink/beeper.c`,
+RMT on EINK_BEEPER_PIN), which is its real sound. The MSX plays **fMSX's
+full mix as PCM** (`src/boards/eink/audio.c`), the technique of PaperBoy,
+the PaperS3 Game Boy emulator: LEDC PWM at 32768Hz whose 10-bit duty
+follows the sample, an overflow interrupt taking one sample a period, and
+a task of its own keeping the ring filled through RenderAndPlayAudio(), so
+the sound does not stutter when the emulation is late (AUDIO_PULLS makes
+PlayAllSound() a no-op). The owner found it far better than the first
+version, which `snd voz` on the console still selects: the loudest PSG
+voice as a square wave (`msx_beeper.c`). `snd off` is silence.
+
+**The MSX draws one frame in five on e-ink** (DISPLAY_FRAME_PERCENT, fMSX's
+UPeriod). Drawing a frame cost 19ms of a 16.7ms frame on the PaperS3, the
+MSX ran at 32fps and its music slowed with it; at 20% it makes 60fps, and
+twelve pictures a second is still several for every panel refresh.
+`t x y` on the console taps a menu (in `d`'s pixels), so the selector can
+be driven with nobody at the board.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 

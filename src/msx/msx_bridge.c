@@ -8,6 +8,7 @@
 #include "MSX.h"
 #include "Sound.h"
 #include "msx_bridge.h"
+#include "display.h"
 #include "msx_display.h"
 
 #include "esp_heap_caps.h"
@@ -55,6 +56,9 @@ void msx_run(void) {
         unsigned int rate = InitSound(22050, 30);
         printf("MSX: sound %s (%u Hz)\n", rate ? "on" : "OFF", rate);
     }
+#ifdef DISPLAY_FRAME_PERCENT
+    UPeriod = DISPLAY_FRAME_PERCENT;
+#endif
     StartMSX(Mode, RAMPages, VRAMPages);
     TrashMSX();
     TrashMachine();

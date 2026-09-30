@@ -20,6 +20,8 @@
 #include "MSX.h"
 #include "beeper.h"
 #include "msx_beeper.h"
+#include "Sound.h"
+#include "audio.h"
 
 extern AY8910 PSG;   /* MSX.c; not in MSX.h */
 
@@ -48,6 +50,13 @@ void msx_beeper_silence(void)
 
 void msx_beeper_frame(void)
 {
+    /* The board plays fMSX's own mix (PCM), or has it off: nothing here. */
+    if (GetSndRate() > 0) return;
+#ifdef AUDIO_PULLS
+    static int mode = -1;               /* NVS, read once */
+    if (mode < 0) mode = audio_mode();
+    if (mode != AUDIO_MODE_VOICE) return;
+#endif
     int tone = -1, noise = -1, j;
     for (j = 0; j < 3; j++)
         if (PSG.Freq[j] > 20 && PSG.Freq[j] <= TONE_MAX && PSG.Volume[j] > 0

@@ -4,12 +4,16 @@
 extern "C" {
 #endif
 
-/* The board's sound output.
- *
- * The path, from Freenove's schematic: GPIO26 is AUDIO_IN into an SC8002B
- * amplifier whose SHUTDOWN is GPIO4, active LOW, and the output is a
- * two-pin SP+/SP- header. The board does NOT have a speaker fitted - one
- * has to be connected there. See docs/DISPLAY.md. */
+/* The e-ink boards' sound output: fMSX's mix as PCM on the buzzer, see
+ * audio.c. The ring is filled by audio.c's own task, not by the machine's
+ * frames, hence AUDIO_PULLS. */
+#define AUDIO_PULLS 1
+
+#define AUDIO_MODE_PCM   0   /* fMSX's full mix as PWM (the default) */
+#define AUDIO_MODE_VOICE 1   /* the loudest PSG voice as a square wave */
+#define AUDIO_MODE_OFF   2
+int  audio_mode(void);
+void audio_set_mode(int mode);   /* takes effect at the next start */
 
 /* Bring the DAC up at the given rate. Returns the rate actually used, or
  * 0 if it could not start. */

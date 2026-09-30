@@ -22,6 +22,7 @@
 #include "machine.h"
 #include "msx_display.h"
 #include "msx_beeper.h"
+#include "audio.h"
 
 /* fMSX/MSX.c (LoadFile(), CMOS handling) references this extern global;
  * the reference-platform ports (odroidGo/files.c) define it as their SD
@@ -152,5 +153,10 @@ int MSXSoundOn = 1;
 
 void PlayAllSound(int uSec) {
     if (!MSXSoundOn) return;
+#ifdef AUDIO_PULLS
+    /* The board's audio task mixes at its own rate (boards/eink/audio.c). */
+    (void)uSec;
+    return;
+#endif
     RenderAndPlayAudio((unsigned int)((long long)uSec * GetSndRate() / 1000000));
 }

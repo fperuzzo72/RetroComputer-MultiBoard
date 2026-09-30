@@ -53,6 +53,7 @@
 #include "trackpad.h"
 #include "board_eink.h"
 #include "chooser.h"
+#include "audio.h"
 #include "ota_slots.h"
 #include "selector.h"
 #include "ble_keyboard.h"
@@ -401,6 +402,17 @@ static void console_command(const char *line)
         key(u);
     } else if (!strcmp(line, "d")) {
         dump_picture();
+    } else if (!strncmp(line, "snd", 3)) {
+        static const char *const names[] = { "pcm", "voz", "off" };
+        int m = -1;
+        for (int i = 0; i < 3; i++) if (strstr(line + 3, names[i])) m = i;
+        if (m >= 0) {
+            audio_set_mode(m);
+            Serial.printf("MSX sound: %s from the next start; restarting\n", names[m]);
+            delay(100);
+            esp_restart();
+        }
+        Serial.printf("MSX sound: %s (snd pcm | snd voz | snd off)\n", names[audio_mode()]);
     } else if (!strcmp(line, "o")) {
         if (!machine->pointer) selector_open();
     } else if (!machine->debug_command(line)) {
