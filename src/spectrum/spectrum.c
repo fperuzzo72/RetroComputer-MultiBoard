@@ -445,7 +445,16 @@ static void m_run(void) {
     buildPalette();
     spectrum_keys_reset();
 
-    sRAM = (uint8_t *)heap_caps_malloc(SPEC_RAM_SIZE, MALLOC_CAP_8BIT);
+    /* In PSRAM where there is one. The e-ink boards' internal RAM is what
+     * the BLE stack starts in after the machine, and on the PaperS3 48kB
+     * of it here left BLE's init to fail its malloc and assert, every
+     * time: the Spectrum rebooted into the menu. The ROM copy below stays
+     * internal, where the Z80 fetches most of its opcodes. */
+    sRAM = 0;
+#ifdef BOARD_HAS_PSRAM
+    sRAM = (uint8_t *)heap_caps_malloc(SPEC_RAM_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+#endif
+    if (!sRAM) sRAM = (uint8_t *)heap_caps_malloc(SPEC_RAM_SIZE, MALLOC_CAP_8BIT);
     if (!sRAM) { printf("spectrum: could not allocate 48kB of RAM\n"); return; }
     memset(sRAM, 0, SPEC_RAM_SIZE);
 

@@ -509,6 +509,8 @@ static void input_begin(void)
 static void boot_menu(void)
 {
     int m = machine_chosen_index();
+    /* Chosen from the selector a moment ago: straight into it. */
+    if (selector_take_restart_choice()) { machine_choose(m, -1); return; }
     for (;;) {
         const int pick = chooser_pick_machine(0, m, "Sem toque, em 5 s liga o marcado", 5000);
         if (pick == CHOOSER_TIMEOUT) { machine_choose(m, -1); return; }

@@ -30,6 +30,10 @@ int  selector_active(void);
  * or -1 while it is still open or if it was dismissed. */
 int  selector_frame(void);
 
+/* E-ink boards: whether this boot follows a change of computer from the
+ * selector, which restarts the board. Clears it. */
+int  selector_take_restart_choice(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -21,8 +21,23 @@
 #include "selector.h"
 
 #include "esp_system.h"
+#include "esp_attr.h"
 
 static volatile bool sActive;
+
+/* Set just before the restart that changes computer, read once by the
+ * boot menu: the choice was made here, so the board comes up as that
+ * computer instead of asking again. RTC memory survives esp_restart()
+ * and not a power cut, which is what a restart into the menu needs. */
+#define CHOSEN_MAGIC 0x52455452u   /* "RETR" */
+static RTC_NOINIT_ATTR uint32_t sChosenOnRestart;
+
+int selector_take_restart_choice(void)
+{
+    const int was = sChosenOnRestart == CHOSEN_MAGIC;
+    sChosenOnRestart = 0;
+    return was;
+}
 
 int  selector_active(void) { return sActive ? 1 : 0; }
 void selector_open(void) { sActive = true; }
@@ -38,6 +53,7 @@ int selector_frame(void)
         if (e >= 0) {
             if (m == machine_chosen_index()) { chosen = e; break; }
             machine_choose(m, e);
+            sChosenOnRestart = CHOSEN_MAGIC;
             delay(80);
             esp_restart();
         }
