@@ -29,7 +29,7 @@ void ota_slots_register(void)
     snprintf(key, sizeof key, "ota_%d", slot_of(self));
     Preferences prefs;
     if (!prefs.begin(NVS_NAMES, false)) return;
-    if (prefs.getString(key, "") != "RetroComputer") prefs.putString(key, "RetroComputer");
+    if (!prefs.isKey(key) || prefs.getString(key, "") != "RetroComputer") prefs.putString(key, "RetroComputer");
     prefs.end();
 }
 
@@ -47,7 +47,7 @@ int ota_slots_list(ota_slot_t *out, int max)
         if (esp_ota_get_partition_description(p, &desc) != ESP_OK) continue;   /* empty */
         char key[8];
         snprintf(key, sizeof key, "ota_%d", slot_of(p));
-        String nm = named ? prefs.getString(key, "") : String();
+        String nm = named && prefs.isKey(key) ? prefs.getString(key, "") : String();
         snprintf(out[n].name, sizeof out[n].name, "%s", nm.length() ? nm.c_str() : EINK_OTHER_APP);
         out[n].part = p;
         n++;

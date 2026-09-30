@@ -249,6 +249,9 @@ static void runFrame(void) {
 
     /* The selector owns the panel and the machine stands still under it. */
     if (selector_active()) {
+        /* Standing still: a speaker left on would draw current and say
+         * nothing. */
+        beeper_frame(0, sEdges, 0, SPEC_FRAME_TSTATES, 3500000);
         int chosen = selector_frame();
         if (!selector_active()) {
             sLastBorder = 0xFF;

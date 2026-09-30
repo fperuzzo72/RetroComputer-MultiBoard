@@ -281,6 +281,16 @@ timed out into the MSX. Panel orientation and where taps land are still
 to be checked by eye. PlatformIO's "Checking size" there measures against
 app0's 6MB, not app2's slot.
 
+**Sound on the e-ink boards is the buzzer** (`beeper.h`, `src/boards/eink/
+beeper.c`, RMT on EINK_BEEPER_PIN). The Spectrum hands it the speaker
+bit's flips by T-state, which is its real sound. The MSX (`msx_beeper.c`)
+plays the PSG's loudest voice each frame, tone or noise, with the volume
+as pulse width on a square-root curve; fMSX keeps PSG.Freq/Volume current
+with its own audio off. The Mac has none. Measured on the Paper Mono
+2026-09-30: Nemesis starts the beeper, 0.18ms a frame for all of fMSX's
+sound work. `t x y` on the console taps a menu (in `d`'s pixels), so the
+selector can be driven with nobody at the board.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,

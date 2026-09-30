@@ -326,6 +326,13 @@ static void dump_picture(void)
 
 static void tap(int x, int y, int clicks)
 {
+    /* A menu takes it as a tap on the panel, in the upright picture's
+     * pixels (what `d` dumps); the Mac, as the trackpad's click. */
+    if (ui_mode) {
+        Tap t = { (int16_t)x, (int16_t)y };
+        if (tap_queue) xQueueSend(tap_queue, &t, 0);
+        return;
+    }
     tap_x = x;
     tap_y = y;
     tap_clicks = clicks;

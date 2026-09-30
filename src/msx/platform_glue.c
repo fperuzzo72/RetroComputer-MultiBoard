@@ -21,6 +21,7 @@
 #include "display.h"
 #include "machine.h"
 #include "msx_display.h"
+#include "msx_beeper.h"
 
 /* fMSX/MSX.c (LoadFile(), CMOS handling) references this extern global;
  * the reference-platform ports (odroidGo/files.c) define it as their SD
@@ -77,6 +78,7 @@ void Keyboard(void) {
     /* The keyboard services itself on its own task now; this hook only
      * turns the latest report into this machine's key matrix. */
     msx_keys_frame();
+    msx_beeper_frame();
 
     selector_poll_open();
 
@@ -85,6 +87,7 @@ void Keyboard(void) {
      * from it is exactly "the machine is not running". */
     if (selector_active()) {
         int chosen = -1;
+        msx_beeper_silence();
         while (selector_active()) {
             int e = selector_frame();
             if (e >= 0) chosen = e;
