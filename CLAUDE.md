@@ -216,6 +216,14 @@ over. Without the copy everything still works, only slowly. The copy is
 also about 7% faster than executing from flash, which was measured and is
 not why it is there.
 
+**The trap returns what LD-BYTES returns** (A = the XOR of every byte it
+read, carry if that is 0), because loaders look. Elite asks for three
+bytes short of its block and goes on only if A comes back 0xDC, the
+unread tail's checksum; before 2026-09-30 the trap left A alone and Elite
+asked again forever, and its snapshot was a loop under the loading
+screen. It now stops at its Lenslok screen, which needs the lens that
+came in the box. `FORCE=1 load` snapshots a game the heuristics doubt.
+
 ### tools/tapebench - test this without the board
 
 The whole thing compiles on the host against the real `spectrum_tape.c`,

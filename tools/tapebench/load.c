@@ -182,14 +182,17 @@ int main(int argc, char **argv) {
         if (bench_cpu()->PC.W >= 0x4000) inRam++;
     }
     int pic = pictureBytes();
-    int loaded = (pic > 1000 || inRam > 150);
+    /* FORCE=1 takes the word of whoever ran it: Elite settles on its
+     * Lenslok screen, 626 bytes of picture and its wait for Enter inside
+     * the ROM's interrupt, and both signs say no. */
+    int loaded = (pic > 1000 || inRam > 150 || getenv("FORCE"));
     printf("\ntape %d%%, picture %d/6144, %d%% of frames running from RAM - %s\n",
            spectrum_tape_progress(), pic, inRam / 2,
            loaded ? "LOADED" : "DID NOT LOAD");
     if (!loaded || !out) return loaded ? 0 : 1;
 
     if (!writeSna(out)) return 1;
-    if (!verifySna(out, argv[1])) {
+    if (!getenv("FORCE") && !verifySna(out, argv[1])) {
         printf("%s: written, but does not come back - removed\n", out);
         remove(out);
         return 1;

@@ -132,12 +132,23 @@ static void plantTrap(void) {
 
 /* Hand over the block the tape is sitting on. The ROM asks for a kind of
  * block in A; the wrong kind is not an error but a block for somebody
- * else, and it is passed over with carry clear so the ROM asks again. */
+ * else, and it is passed over with carry clear so the ROM asks again.
+ *
+ * The rest is what LD-BYTES itself does, to the byte, because loaders
+ * look at it: it reads DE bytes, then one more as the parity, XORs all
+ * of them with the flag into H, and returns with A = H and carry set if
+ * H is 0. A block longer than asked for leaves its tail unread, and
+ * then the "parity" is a data byte and H is not 0. Elite asks for three
+ * bytes short of its block and carries on only if A comes back 0xDC; an
+ * earlier version of this handed over the whole block with A untouched,
+ * and Elite asked again forever. A block shorter than asked for runs off
+ * the end of the signal: the ROM times out, carry clear. */
 static void handOverBlock(Z80 *R) {
-    int len, flag, data, i;
+    int len, flag, data, i, n;
     word dest   = R->IX.W;
     word wanted = R->DE.W;
     byte want   = R->AF.B.h;
+    const int load = (R->AF.B.l & C_FLAG) != 0;   /* carry clear is VERIFY */
 
     R->AF.B.l &= (byte)~C_FLAG;
 
@@ -156,13 +167,25 @@ static void handOverBlock(Z80 *R) {
 
     if (flag != want) return;
 
-    len -= 2;                           /* the flag and the checksum */
-    if (len > (int)wanted) len = (int)wanted;
-    for (i = 0; i < len; i++) WrZ80((word)(dest + i), sTape[data + i]);
+    n = len - 1;                        /* what follows the flag */
+    byte h = (byte)flag;
+    int ok = 1;
+    int got = (int)wanted;
+    if (got + 1 > n) { got = n; ok = 0; }
+    for (i = 0; i < got; i++) {
+        const byte b = sTape[data + i];
+        h ^= b;
+        if (load) WrZ80((word)(dest + i), b);
+        else if (RdZ80((word)(dest + i)) != b) { got = i; ok = 0; break; }
+    }
+    R->IX.W = (word)(dest + got);
+    R->DE.W = (word)(wanted - got);
+    if (!ok) return;
 
-    R->IX.W = (word)(dest + len);
-    R->DE.W = (word)(wanted - len);
-    R->AF.B.l |= C_FLAG;
+    h ^= sTape[data + got];             /* the parity, or what stands for it */
+    R->AF.B.h = h;
+    R->AF.B.l = (byte)((R->AF.B.l & ~(C_FLAG | Z_FLAG))
+                       | (h == 0 ? C_FLAG : 0) | (h == 1 ? Z_FLAG : 0));
 }
 
 /* The core calls this where the ED FE sits, with PC already past it. */
