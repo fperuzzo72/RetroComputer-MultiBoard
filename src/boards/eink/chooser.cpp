@@ -3,13 +3,13 @@
 
 #include <Arduino.h>
 
-#include "esp_ota_ops.h"
 #include "esp_system.h"
 
 #include "board_eink.h"
 #include "canvas.h"
 #include "eink_board.h"
 #include "machine.h"
+#include "ota_slots.h"
 #include "panel_eink.h"
 #include "ui.h"
 
@@ -17,39 +17,37 @@
  * Mac's desktop - would ghost through a fast refresh of it. */
 static void show(void) { panel_request_full(); }
 
-/* The other app slot, if it holds a firmware. */
-static const esp_partition_t *other_app(void)
+/* Boot another app slot from now on and restart. Coming back is that
+ * firmware's business (CrossPlay has a RETROCOMPUTER row, CrossPoint lists
+ * this on its Home), or a reflash of otadata. */
+static void boot_other_app(const ota_slot_t *other)
 {
-    const esp_partition_t *other = esp_ota_get_next_update_partition(NULL);
-    esp_app_desc_t desc;
-    if (!other || esp_ota_get_partition_description(other, &desc) != ESP_OK) return NULL;
-    return other;
-}
-
-/* Boot the other slot from now on and restart. Coming back is that
- * firmware's business (CrossPlay has a RETROCOMPUTER row), or a reflash of
- * otadata. */
-static void boot_other_app(const esp_partition_t *other)
-{
-    Serial.printf("boot: switching to %s in %s\n", EINK_OTHER_APP, other->label);
-    if (esp_ota_set_boot_partition(other) != ESP_OK) {
+    Serial.printf("boot: switching to %s in %s\n", other->name, other->part->label);
+    if (ota_slots_select(other->part) != 0) {
         Serial.println("boot: otadata would not take it");
         return;
     }
+    char msg[48];
+    snprintf(msg, sizeof msg, "Abrindo o %s", other->name);
     board_ui(0);
-    panel_message("Voltando ao " EINK_OTHER_APP, NULL);
+    panel_message(msg, NULL);
     delay(1500);
     esp_restart();
 }
 
 int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned long timeout_ms)
 {
-    const char *names[9];
+    const char *names[8 + OTA_SLOTS_MAX];
+    static ota_slot_t others[OTA_SLOTS_MAX];
+    static char labels[OTA_SLOTS_MAX][48];
     const int machines = machine_count < 8 ? machine_count : 8;
     int n = machines;
     for (int i = 0; i < machines; i++) names[i] = machine_list[i]->name;
-    const esp_partition_t *other = other_app();
-    if (other) names[n++] = "Voltar ao " EINK_OTHER_APP;
+    const int apps = ota_slots_list(others, OTA_SLOTS_MAX);
+    for (int i = 0; i < apps; i++) {
+        snprintf(labels[i], sizeof labels[i], "Voltar ao %s", others[i].name);
+        names[n++] = labels[i];
+    }
 
     uint8_t *c = panel_canvas();
     panel_canvas_lock();
@@ -71,7 +69,7 @@ int chooser_pick_machine(int allow_cancel, int mark, const char *note, unsigned 
         /* one touch and the countdown is off: somebody is choosing */
         timeout_ms = 0;
         const int hit = ui_hit_machines(x, y, n, allow_cancel);
-        if (hit >= machines) { boot_other_app(other); continue; }
+        if (hit >= machines) { boot_other_app(&others[hit - machines]); continue; }
         if (hit >= 0) { result = hit; break; }
         if (hit == UI_BACK) { result = -1; break; }
     }

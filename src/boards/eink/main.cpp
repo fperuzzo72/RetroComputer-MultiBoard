@@ -53,6 +53,7 @@
 #include "trackpad.h"
 #include "board_eink.h"
 #include "chooser.h"
+#include "ota_slots.h"
 #include "selector.h"
 #include "ble_keyboard.h"
 #include <BoardConfig.h>
@@ -526,8 +527,9 @@ void setup()
 
     machine_storage_init();
     machine = machine_list[machine_chosen_index()];
-    Serial.printf("\n\nPaper Mono: %d computer(s) built in\n", machine_count);
+    Serial.printf("\n\n" EINK_BOARD_NAME ": %d computer(s) built in\n", machine_count);
     Serial.printf("%s\n", kAppSlotMarker);
+    ota_slots_register();
     Serial.printf("boot: internal %u free, PSRAM %u free\n",
                   heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                   heap_caps_get_free_size(MALLOC_CAP_SPIRAM));

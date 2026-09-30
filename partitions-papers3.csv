@@ -1,11 +1,15 @@
 # Name,     Type, SubType,  Offset,    Size, Flags
 #
-# The M5PaperS3's table, byte for byte the one CrossPoint and the PaperS3
-# MicroBASIC share on the owner's device (MicroWriter-BASIC-PaperS3/editor/
-# partitions.csv), so this firmware can take a slot without rewriting it.
+# The M5PaperS3's table, three apps: the CrossPoint reader, MicroBASIC and
+# this. Byte for byte below this header the one in crosspoint-reader-
+# m5papers3 (partitions_m5papers3.csv) and MicroWriter-BASIC-PaperS3
+# (editor/partitions.csv): one table on the device, three descriptions.
+# Migrated 2026-09-30. Slots sized to each app with room to grow: CrossPoint
+# 5.2MB in 6MB (upstream is at 1.6.5, ours at 1.5.0), MicroBASIC 1.7MB in
+# 2.5MB, this the rest. nvs and otadata did not move.
 nvs,        data, nvs,      0x9000,    0x8000,
 otadata,    data, ota,      0x11000,   0x2000,
-app0,       app,  ota_0,    0x20000,   0x680000,
-app1,       app,  ota_1,    0x6A0000,  0x680000,
-coredump,   data, coredump, 0xD20000,  0x10000,
-spiffs,     data, spiffs,   0xD30000,  0x2D0000,
+app0,       app,  ota_0,    0x20000,   0x600000,
+app1,       app,  ota_1,    0x620000,  0x280000,
+app2,       app,  ota_2,    0x8A0000,  0x750000,
+coredump,   data, coredump, 0xFF0000,  0x10000,

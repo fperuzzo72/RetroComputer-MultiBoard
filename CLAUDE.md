@@ -258,16 +258,28 @@ tape a user supplies later.
 ## The e-ink boards: Paper Mono and PaperS3 (2026-09-29)
 
 `src/boards/eink/` serves both M5Stack devices; `eink_board.h` is the only
-place they differ (panel size, turned round or not, buttons or not).
-`pio run -e papers3` builds for the PaperS3: 960x540 ED047TC1 through
-freeink-sdk's BoardPaperS3 and M5GFX 0.2.26, GT911 touch, the PaperS3
-MicroBASIC's memory settings, its shared partition table, app1 at
-0x6A0000 (where MicroBASIC lives today: where this goes is undecided).
-No readable buttons, so a finger held 1.5s is a full refresh and 5s a
-restart into the boot menu, on both boards. **Neither firmware has run on
-a device**; freeink-sdk's own PaperS3 profile marks panel rotation and
-touch flips "pending hardware validation", so check the orientation and
-where taps land first.
+place they differ (panel size, turned round or not, buttons or not, the
+buzzer's pin). `pio run -e papers3` builds for the PaperS3: 960x540
+ED047TC1 through freeink-sdk's BoardPaperS3 and M5GFX 0.2.26, GT911 touch,
+the PaperS3 MicroBASIC's memory settings. No readable buttons, so a finger
+held 1.5s is a full refresh and 5s a restart into the boot menu, on both
+boards.
+
+**The PaperS3 carries three firmwares since 2026-09-30**: CrossPoint in
+app0 (6MB), MicroBASIC in app1 (2.5MB), this in **app2 at 0x8A0000**
+(7.3MB). `partitions-papers3.csv` is byte-identical below its header to
+crosspoint-reader-m5papers3's and MicroWriter-BASIC-PaperS3's; the
+migration's backup and images are in `~/github/_backups/papers3-2026-09-30/`.
+The boot menu offers every other app slot that holds a firmware
+(`ota_slots.cpp`), named from NVS `ota_names` (CrossPoint and MicroBASIC
+write theirs; this writes "RetroComputer", which is how CrossPoint's Home
+lists it), and switches by writing otadata by hand with `(seq - 1) % <OTA
+slot count>`: esp_ota_set_boot_partition() refuses on the PaperS3, and
+the two siblings used to assume two slots. **First boot on the PaperS3
+2026-09-30**: touch found on the first try, card mounted, the boot menu
+timed out into the MSX. Panel orientation and where taps land are still
+to be checked by eye. PlatformIO's "Checking size" there measures against
+app0's 6MB, not app2's slot.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
