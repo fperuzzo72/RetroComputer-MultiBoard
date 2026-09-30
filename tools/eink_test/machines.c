@@ -34,6 +34,33 @@ void selector_open(void) {}
 void selector_poll_open(void) {}
 int  selector_frame(void) { return -1; }
 
+/* beeper.h: with WAV=file set, what the buzzer would play, as 8-bit mono
+ * 44.1kHz with no header (sox -r 44100 -e unsigned -b 8 -c 1 -t raw). */
+#include "beeper.h"
+void beeper_frame(int level, const uint32_t *edges, int n, uint32_t frame, uint32_t clock_hz)
+{
+    static FILE *f;
+    static unsigned long frames, flips;
+    if (!f) {
+        if (!getenv("WAV")) return;
+        f = fopen(getenv("WAV"), "wb");
+        if (!f) return;
+    }
+    const int samples = (int)((uint64_t)frame * 44100 / clock_hz);
+    int e = 0;
+    for (int i = 0; i < samples; i++) {
+        const uint64_t t = (uint64_t)i * clock_hz / 44100;
+        while (e < n && edges[e] <= t) { level = !level; e++; }
+        fputc(n ? (level ? 0xC0 : 0x40) : 0x80, f);
+    }
+    frames++;
+    flips += (unsigned long)n;
+    if (frames % 250 == 0) {
+        fflush(f);
+        printf("  beeper: %lu frames, %lu flips\n", frames, flips);
+    }
+}
+
 /* ble_keyboard.h, for the MSX's glue */
 void ble_keyboard_poll(void) {}
 int  ble_keyboard_connected(void) { return 0; }

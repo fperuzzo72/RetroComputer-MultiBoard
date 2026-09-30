@@ -21,6 +21,7 @@
 #include "freertos/task.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
+#include "beeper.h"
 
 #include "z80_names.h"
 #include "Z80.h"
@@ -52,6 +53,12 @@ static uint8_t *sRomRam;         /* that copy, when there was room for it */
 uint8_t *spectrum_rom_writable(void) { return sRomRam; }
 static uint8_t  sBorder = 7;
 static uint8_t  sSpeaker;
+/* The beeper's flips this frame, for beeper.h. 1024 is a tone at 25kHz,
+ * well past anything a Spectrum program toggles. */
+#define SPEAKER_EDGES 1024
+static uint32_t sEdges[SPEAKER_EDGES];
+static int      sEdgeCount;
+static uint8_t  sSpeakerAtFrame;
 static volatile int sReady;
 static volatile unsigned long sFrames;
 static int sSoundOn = 1;
@@ -147,10 +154,22 @@ byte InZ80(word Port) {
     return 0xFF;
 }
 
+/* Boards with no one-bit speaker link this; see beeper.h. */
+__attribute__((weak)) void beeper_frame(int level, const uint32_t *edges, int n,
+                                        uint32_t frame, uint32_t clock_hz)
+{
+    (void)level; (void)edges; (void)n; (void)frame; (void)clock_hz;
+}
+
 void OutZ80(word Port, byte V) {
     if (!(Port & 0x0001)) {
+        const uint8_t spk = (V >> 4) & 1;
         sBorder  = V & 0x07;
-        sSpeaker = (V >> 4) & 1;
+        if (spk != sSpeaker && sEdgeCount < SPEAKER_EDGES) {
+            const int t = SPEC_FRAME_TSTATES - sCPU.ICount;
+            sEdges[sEdgeCount++] = (uint32_t)(t < 0 ? 0 : t);
+        }
+        sSpeaker = spk;
     }
 }
 
@@ -313,6 +332,15 @@ static void runFrame(void) {
         sCpuFrames++;
     }
     IntZ80(&sCPU, INT_IRQ);      /* IM1: 50Hz maskable interrupt */
+
+    /* The frame's sound. Not while a tape runs flat out: those frames are
+     * not 20ms long, and the board would only fall behind. */
+    if (sSoundOn && !spectrum_tape_playing())
+        beeper_frame(sSpeakerAtFrame, sEdges, sEdgeCount, SPEC_FRAME_TSTATES, 3500000);
+    else
+        beeper_frame(0, sEdges, 0, SPEC_FRAME_TSTATES, 3500000);
+    sEdgeCount = 0;
+    sSpeakerAtFrame = sSpeaker;
 
     sFrames++;
 

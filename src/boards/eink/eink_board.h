@@ -14,6 +14,7 @@
  *   EINK_UPSIDE_DOWN   held turned round from freeink-sdk's frame
  *   EINK_HAS_BUTTONS   two buttons the firmware can read (GPIO2, GPIO3)
  *   EINK_OTHER_APP     what the boot menu's last choice goes back to
+ *   EINK_BEEPER_PIN    the passive buzzer's gate (freeink-sdk's profile)
  */
 
 #if defined(EINK_BOARD_PAPERS3)
@@ -29,6 +30,7 @@
 /* What lives in the other app slot on the owner's device (the shared
  * table: CrossPoint in app0, this in app1). */
 #define EINK_OTHER_APP    "CrossPoint"
+#define EINK_BEEPER_PIN   21
 
 #else
 
@@ -44,6 +46,7 @@
 #define EINK_UPSIDE_DOWN  1
 #define EINK_HAS_BUTTONS  1
 #define EINK_OTHER_APP    "CrossPlay"
+#define EINK_BEEPER_PIN   42
 
 #endif
 
