@@ -19,7 +19,7 @@
 
 #include "CIA.h"
 #include "CPU6502.h"
-#include "Floppy.h"
+#include "C64Floppy.h" /* NOT UPSTREAM: renamed from Floppy.h, which fMSX has too */
 #include "Hooks.h"
 #include "IDebugBus.h"
 #include "JoystickOnlyTextKeycode.h"

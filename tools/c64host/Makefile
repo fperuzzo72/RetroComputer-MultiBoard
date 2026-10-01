@@ -5,7 +5,7 @@
 #   ./tools/c64host/c64host /tmp/c64 3          # READY. at three seconds
 ROOT := ../..
 LIB  := $(ROOT)/lib/c64/src
-CXXFLAGS := -std=c++17 -O2 -DPLATFORM_LINUX -DBOARD_RETRO -I$(LIB) -I$(ROOT)/src/c64 -w
+CXXFLAGS := -std=c++17 -O2 -DPLATFORM_LINUX -DBOARD_RETRO -I$(LIB) -I$(ROOT)/src/c64 -I$(ROOT)/src/boards/eink -w
 SRC := c64host.cpp $(wildcard $(LIB)/*.cpp) $(LIB)/platform/PlatformFactory.cpp \
        $(LIB)/joystick/JoystickFactory.cpp $(ROOT)/src/c64/c64_keys.cpp $(ROOT)/src/c64/c64_files.cpp
 

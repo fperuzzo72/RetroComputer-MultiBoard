@@ -19,6 +19,9 @@ extern const Machine spectrum_machine;
 #ifdef HAVE_MACHINE_MAC
 extern const Machine mac_machine;
 #endif
+#ifdef HAVE_MACHINE_C64
+extern const Machine c64_machine;
+#endif
 
 const Machine *const machine_list[] = {
 #ifdef HAVE_MACHINE_MSX
@@ -29,6 +32,9 @@ const Machine *const machine_list[] = {
 #endif
 #ifdef HAVE_MACHINE_MAC
     &mac_machine,
+#endif
+#ifdef HAVE_MACHINE_C64
+    &c64_machine,
 #endif
 };
 

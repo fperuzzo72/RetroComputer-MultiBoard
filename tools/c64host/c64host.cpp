@@ -25,6 +25,9 @@
 #include "roms/charset.h"
 #include "c64_keys.h"
 
+/* selector.h, for c64_keys.cpp's F12 */
+extern "C" void selector_open(void) {}
+
 static uint8_t picture[320 * 200];
 static uint8_t border_col = 14;
 static unsigned long pictures, samples;

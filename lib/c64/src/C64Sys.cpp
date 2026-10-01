@@ -22,7 +22,7 @@
 #include "ExtCmdQueue.h"
 #include "ExternalCmds.h"
 #include "FileConfig.h"
-#include "Floppy.h"
+#include "C64Floppy.h" /* NOT UPSTREAM: renamed from Floppy.h, which fMSX has too */
 #include "Hooks.h"
 #include "SID.h"
 #include "VIC.h"
@@ -866,6 +866,15 @@ void C64Sys::run() {
     // get start time of frame, play audio
     if (vic.rasterline == 311) {
       lastMeasuredTime = PlatformManager::getInstance().getTimeUS();
+#if defined(BOARD_RETRO)
+      /* NOT UPSTREAM: give the core back for a tick once a frame. The pacing
+       * above waits by spinning (PlatformESP32::waitUS), so the 6502 never
+       * left its core: the Arduino loop task on the same core never ran,
+       * setup() never reached the BLE keyboard, and what serves the
+       * keyboard stalled too. The next lines catch the tick up, since the
+       * frame is measured from here. */
+      PlatformManager::getInstance().waitMS(1);
+#endif
       sid.playAudio();
       // check for "external commands" once per frame
       check4extcmd();

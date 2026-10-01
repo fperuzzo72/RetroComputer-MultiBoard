@@ -33,6 +33,7 @@ int  selector_frame(void);
 /* E-ink boards: whether this boot follows a change of computer from the
  * selector, which restarts the board. Clears it. */
 int  selector_take_restart_choice(void);
+void selector_restart_into_choice(void);   /* never returns */
 
 #ifdef __cplusplus
 }

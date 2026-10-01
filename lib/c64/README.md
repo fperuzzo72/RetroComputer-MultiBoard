@@ -12,6 +12,9 @@ The drivers it is built with are this project's, in `src/c64/`
 
 ## Local changes, all marked `NOT UPSTREAM`
 
+- `Floppy.h` is `C64Floppy.h`: fMSX has a `Floppy.h` too, and PlatformIO
+  puts every library's include folder on everyone's path.
+
 - `Config.h`: a `BOARD_RETRO` board (our drivers, PSRAM on the ESP32, the
   card's `/c64/` folder) and the SID at 32750Hz, the buzzer's PCM rate,
   an exact 655 samples a 50Hz frame.
@@ -21,6 +24,8 @@ The drivers it is built with are this project's, in `src/c64/`
   (`retro_c64_matrix_read`), so several keys can be down at once; upstream
   takes one key at a time from its Android app.
 
+- `C64Sys.cpp`, `run`: yields its core for a tick once a frame. Upstream
+  paces by spinning, and on a shared core that starved the BLE keyboard.
 - `Floppy.cpp`, `Floppy.h`, `Hooks.cpp`: BASIC's `SAVE"NAME",8` writes
   `/c64/name.prg` (upstream saves only through its Android app). The
   IECOUT hook tells data from bus commands by the caller's return address

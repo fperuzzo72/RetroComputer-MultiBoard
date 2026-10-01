@@ -32,6 +32,15 @@ static volatile bool sActive;
 #define CHOSEN_MAGIC 0x52455452u   /* "RETR" */
 static RTC_NOINIT_ATTR uint32_t sChosenOnRestart;
 
+/* A machine that cannot swap what it runs in place (the C64) remembers the
+ * choice and restarts into it, past the boot menu. */
+void selector_restart_into_choice(void)
+{
+    sChosenOnRestart = CHOSEN_MAGIC;
+    delay(80);
+    esp_restart();
+}
+
 int selector_take_restart_choice(void)
 {
     const int was = sChosenOnRestart == CHOSEN_MAGIC;

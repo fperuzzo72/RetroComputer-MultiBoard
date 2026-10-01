@@ -14,7 +14,7 @@
  For the complete text of the GNU General Public License see
  http://www.gnu.org/licenses/.
 */
-#include "Floppy.h"
+#include "C64Floppy.h" /* NOT UPSTREAM: renamed from Floppy.h, which fMSX has too */
 #include "Config.h"
 #include "fs/FileFactory.h"
 #include "platform/PlatformManager.h"

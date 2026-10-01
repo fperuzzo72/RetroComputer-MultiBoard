@@ -21,6 +21,9 @@ void audio_hold(int pct);        /* test: a fixed duty, in percent */
 /* Bring the DAC up at the given rate. Returns the rate actually used, or
  * 0 if it could not start. */
 unsigned int audio_init(unsigned int rate);
+/* For a machine that writes frames of samples itself rather than being
+ * pulled (the C64). Returns the rate, or 0 with the sound off. */
+unsigned int audio_start_push(unsigned int rate);
 void audio_shutdown(void);
 
 /* Signed 16-bit mono samples. Returns how many were taken. */

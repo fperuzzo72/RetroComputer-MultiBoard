@@ -35,8 +35,11 @@ static void *big(size_t n) { return malloc(n); }
 
 #define PIC_H   216
 #define SCALE   2
+/* The widest picture: the C64's 320. The MSX and the Spectrum are 256;
+ * each call says how wide it is, and the picture is centred for that. */
+#define PIC_W_MAX 320
 /* Whole bytes: a machine pixel is two panel pixels, four to a byte. */
-#define X0      (((DISPLAY_PANEL_W - DISPLAY_PICTURE_W * SCALE) / 2) & ~7)
+#define X0_FOR(w) (((DISPLAY_PANEL_W - (w) * SCALE) / 2) & ~7)
 #define Y0      ((DISPLAY_PANEL_H - PIC_H * SCALE) / 2)
 #define STRIDE  (DISPLAY_PANEL_W / 8)
 
@@ -50,8 +53,9 @@ static unsigned long blit_us, full_repaints;
  * the PaperS3, which once its panel kept up was what held the MSX back.
  * Comparing tones rather than pixels catches a palette or border change
  * too. Forgotten whenever the canvas is wiped. */
-static uint8_t (*shown)[DISPLAY_PICTURE_W];
+static uint8_t (*shown)[PIC_W_MAX];
 static uint8_t shown_ok[PIC_H];
+static int shown_w;                    /* the width those tones were drawn at */
 
 void display8_attach(uint8_t *c) { canvas = c; memset(shown_ok, 0, sizeof shown_ok); }
 void display8_request_repaint(void) { repaint_wanted = 1; memset(shown_ok, 0, sizeof shown_ok); }
@@ -99,8 +103,9 @@ static uint8_t pair_bits(int t, int odd)
  * machine pixel. Four machine pixels make one byte of an upright panel
  * row; the device is held upside down (picture.h), so that byte goes in
  * bit-reversed at the mirrored position. */
-static void put_row(int y, const uint8_t *tones)
+static void put_row(int y, const uint8_t *tones, int w)
 {
+    const int x0 = X0_FOR(w);
     static uint8_t pb[2][5];
     static int pb_ready;
     if (!pb_ready) {
@@ -115,13 +120,13 @@ static void put_row(int y, const uint8_t *tones)
 #else
         uint8_t *row = canvas + uy * STRIDE;
 #endif
-        for (int k = 0; k < DISPLAY_PICTURE_W / 4; k++) {
+        for (int k = 0; k < w / 4; k++) {
             const uint8_t *t = tones + k * 4;
             uint8_t b = (uint8_t)(q[t[0]] << 6 | q[t[1]] << 4 | q[t[2]] << 2 | q[t[3]]);
 #if EINK_UPSIDE_DOWN
-            row[(DISPLAY_PANEL_W - 1 - (X0 + k * 8 + 7)) / 8] = eink_reverse8(b);
+            row[(DISPLAY_PANEL_W - 1 - (x0 + k * 8 + 7)) / 8] = eink_reverse8(b);
 #else
-            row[(X0 + k * 8) / 8] = b;
+            row[(x0 + k * 8) / 8] = b;
 #endif
         }
     }
@@ -141,29 +146,31 @@ void display_write_picture(short srcX, short srcY, short width, short height,
     uint8_t have[256];
     memset(have, 0, sizeof have);
 
-    uint8_t tones[DISPLAY_PICTURE_W];
+    uint8_t tones[PIC_W_MAX];
+    const int pw = width > PIC_W_MAX ? PIC_W_MAX : width < DISPLAY_PICTURE_W ? DISPLAY_PICTURE_W : (width + 3) & ~3;
+    if (pw != shown_w) { memset(shown_ok, 0, sizeof shown_ok); shown_w = pw; }
     for (int r = 0; r < height; r++) {
         const int y = srcY + r;
         if (y < 0 || y >= PIC_H) continue;
         if (!buffer) {
-            memset(tones, 0, sizeof tones);
+            memset(tones, 0, (size_t)pw);
         } else {
             const uint8_t *src = buffer + r * width;
-            const int n = width < DISPLAY_PICTURE_W ? width : DISPLAY_PICTURE_W;
+            const int n = width < pw ? width : pw;
             for (int x = 0; x < n; x++) {
                 const uint8_t i = src[x];
                 if (!have[i]) { lut[i] = (uint8_t)tone(luma(palette[i]), lbg); have[i] = 1; }
                 tones[x] = lut[i];
             }
-            for (int x = n; x < DISPLAY_PICTURE_W; x++) tones[x] = 0;
+            for (int x = n; x < pw; x++) tones[x] = 0;
         }
-        if (!shown) shown = big((size_t)PIC_H * DISPLAY_PICTURE_W);
+        if (!shown) shown = big((size_t)PIC_H * PIC_W_MAX);
         if (shown) {
-            if (shown_ok[y] && !memcmp(shown[y], tones, sizeof tones)) continue;
-            memcpy(shown[y], tones, sizeof tones);
+            if (shown_ok[y] && !memcmp(shown[y], tones, (size_t)pw)) continue;
+            memcpy(shown[y], tones, (size_t)pw);
             shown_ok[y] = 1;
         }
-        put_row(y, tones);
+        put_row(y, tones, pw);
     }
     blit_us += (unsigned long)(now_us() - t0);
 }

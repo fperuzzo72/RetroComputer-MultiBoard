@@ -19,8 +19,9 @@
  *   F2 F4 F6 F8      shift + F1 F3 F5 F7
  *   \ |              the pound sign    _ `        the left arrow
  *
- * F12 turns the arrows and Ctrl into a joystick (fire), on port 2, which
- * is the one most games read; F11 moves it to port 1.
+ * F10 turns the arrows and Ctrl into a joystick (fire), on port 2, which
+ * is the one most games read; F9 moves it to port 1. F12 opens the
+ * selector, as on the other machines.
  */
 #include <cstdint>
 #include <cstring>
@@ -28,6 +29,7 @@
 #include "C64Sys.h"
 #include "retro_c64_drivers.h"
 #include "c64_keys.h"
+#include "selector.h"
 
 /* A C64 key: column (the $DC00 bit) and row (the $DC01 bit). */
 #define K(col, row) (uint8_t)(((col) << 3) | (row))
@@ -153,11 +155,13 @@ void retro_c64_keys_report(const uint8_t r[8])
     uint8_t joy = 0xff;
 
     /* toggles on the press only */
-    if (in_report(r, 0x45) && !in_report(last, 0x45)) {          /* F12 */
+    if (in_report(r, 0x45) && !in_report(last, 0x45))             /* F12 */
+        selector_open();
+    if (in_report(r, 0x43) && !in_report(last, 0x43)) {          /* F10 */
         joy_on = !joy_on;
         if (sys) sys->kbjoystickmode = joy_on ? (uint8_t)joy_port : 0;
     }
-    if (in_report(r, 0x44) && !in_report(last, 0x44)) {          /* F11 */
+    if (in_report(r, 0x42) && !in_report(last, 0x42)) {          /* F9 */
         joy_port = joy_port == 2 ? 1 : 2;
         if (sys && joy_on) sys->kbjoystickmode = (uint8_t)joy_port;
     }
