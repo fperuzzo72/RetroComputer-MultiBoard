@@ -25,6 +25,9 @@ int  fastepd_begin(void);                 /* 0 on success */
 void fastepd_show(const uint8_t *picture);
 void fastepd_clean(void);
 
+/* The panel's rails off before the board is. */
+void fastepd_power_off(void);
+
 /* For the console: `fe`. */
 void fastepd_command(const char *args);
 

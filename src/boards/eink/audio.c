@@ -37,6 +37,7 @@ void audio_test_tone(int hz, int ms) { (void)hz; (void)ms; }
 int  audio_mode(void) { return AUDIO_MODE_VOICE; }
 void audio_set_mode(int mode) { (void)mode; }
 void audio_report(void) {}
+void audio_mute(int on) { (void)on; }
 
 #else
 
@@ -76,6 +77,8 @@ static volatile int running;
 static volatile unsigned long written;
 static volatile int quiet = 1;         /* buzzer off: nothing to play */
 static volatile unsigned long underruns;  /* periods with the ring empty while playing */
+static volatile int muted;             /* `snd mudo`: the buzzer still, the rest running */
+static volatile int held;              /* `snd dc`: a fixed 50% duty, no samples, for tests */
 static intr_handle_t intr;
 
 static IRAM_ATTR void isr(void *arg)
@@ -90,11 +93,12 @@ static IRAM_ATTR void isr(void *arg)
     else {
         const int32_t s = ring[t & RING_MASK];
         atomic_store_explicit(&tail, t + 1, memory_order_release);
-        if (!quiet) {
+        if (!quiet && !muted) {
             int32_t d = (s >> (16 - DUTY_BITS)) + DUTY_MID;
             duty = d < 0 ? 0 : d >= (1 << DUTY_BITS) ? (1 << DUTY_BITS) - 1 : (uint32_t)d;
         }
     }
+    if (held) duty = DUTY_MID;
     ledc_ll_set_duty_int_part(&LEDC, MODE, CHANNEL, duty);
     ledc_ll_ls_channel_update(&LEDC, MODE, CHANNEL);
 }
@@ -198,10 +202,12 @@ int  audio_pause(int on) { (void)on; return 0; }
 unsigned long audio_samples_written(void) { return written; }
 void audio_test_tone(int hz, int ms) { (void)hz; (void)ms; }
 
+void audio_mute(int on) { muted = on == 1; held = on == 2; }
+
 void audio_report(void)
 {
-    printf("audio: %s, ring %lu of %u, %lu samples, %lu empty periods while playing\n",
-           running ? "PCM" : "off", (unsigned long)ring_count(), RING, (unsigned long)written,
+    printf("audio: %s%s, ring %lu of %u, %lu samples, %lu empty periods while playing\n",
+           running ? "PCM" : "off", muted ? " (muted)" : held ? " (held at 50%)" : "", (unsigned long)ring_count(), RING, (unsigned long)written,
            (unsigned long)underruns);
 }
 

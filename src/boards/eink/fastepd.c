@@ -76,6 +76,7 @@ static uint8_t row_active[H];
 static TaskHandle_t task;
 static volatile bool clean_req;
 static volatile bool paused;          /* `fe s`: the panel left as it is, for tests */
+static volatile bool idle_scans;      /* `fe n`: scan zeros without stop, for tests */
 
 static bool flip_x, flip_y;
 
@@ -239,9 +240,17 @@ static void scan_task(void *arg)
     for (;;) {
         if (clean_req) { clean_req = false; do_clean(); }
 
+        /* Tests, by ear: `fe s` stops the scanning (after the scan of zeros
+         * any push needs), `fe n` keeps scanning zeros, driving nothing, so
+         * the bus traffic can be told from the pixels' current. */
+        if (paused || idle_scans) {
+            if (tail || idle_scans) { nop_scan(); frames++; tail = false; vTaskDelay(1); }
+            else ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
+            continue;
+        }
+
         bool work = false;
         for (int r = 0; r < H && !work; r++) work = row_dirty[r] || row_active[r];
-        if (paused && !tail) work = false;
         if (!work && !tail) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             continue;
@@ -362,6 +371,20 @@ void fastepd_show(const uint8_t *pic)
     if (any && task) xTaskNotifyGive(task);
 }
 
+/* The panel's rails off, PaperBoy's order, once no scan is running. */
+void fastepd_power_off(void)
+{
+    paused = true;
+    if (task) xTaskNotifyGive(task);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    gpio_set_level(PIN_GDCK, 0);
+    gpio_set_level(PIN_GDSP, 0);
+    gpio_set_level(PIN_BST_EN, 0);
+    ets_delay_us(100);
+    gpio_set_level(PIN_PWR_EN, 0);
+    ets_delay_us(100);
+}
+
 void fastepd_clean(void)
 {
     clean_req = true;
@@ -374,13 +397,14 @@ void fastepd_command(const char *a)
     if (*a == 'x') flip_x = !flip_x;
     else if (*a == 'y') flip_y = !flip_y;
     else if (*a == 'c') fastepd_clean();
-    else if (*a == 's') { paused = !paused; if (!paused && task) xTaskNotifyGive(task); }
+    else if (*a == 's') { paused = !paused; if (task) xTaskNotifyGive(task); }
+    else if (*a == 'n') { idle_scans = !idle_scans; if (task) xTaskNotifyGive(task); }
     else if (*a == 'z') { int n = atoi(a + 1); if (n >= 1 && n <= 100) zero_row_us = n; }
     else if (*a == 'P') { int n = atoi(a + 1); if (n >= 1 && n <= 10) { scan_prio = n; vTaskPrioritySet(task, n); } }
     printf("fastepd: %lu scans, last %lu rows in %lu us, %lu cleans, flip x %d y %d, "
            "zero row %d us, priority %d%s\n",
            frames, busy_rows, last_frame_us, cleans, flip_x, flip_y, zero_row_us, scan_prio,
-           paused ? ", PAUSED" : "");
+           paused ? ", PAUSED" : idle_scans ? ", SCANNING ZEROS" : "");
     if ((*a == 'x' || *a == 'y') && last_pic) {
         /* the whole picture again, the new way round, on a clean panel */
         fastepd_clean();

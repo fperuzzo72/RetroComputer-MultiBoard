@@ -55,6 +55,9 @@
 #include "chooser.h"
 #include "audio.h"
 #include "ota_slots.h"
+#if EINK_BOARD_PAPERS3
+#include <BoardPaperS3.h>
+#endif
 #if EINK_FAST_PANEL
 #include "fastepd.h"
 #endif
@@ -405,6 +408,9 @@ static void console_command(const char *line)
         key(u);
     } else if (!strcmp(line, "d")) {
         dump_picture();
+    } else if (!strcmp(line, "snd mudo") || !strcmp(line, "snd som") || !strcmp(line, "snd dc")) {
+        audio_mute(line[4] == 'm' ? 1 : line[4] == 'd' ? 2 : 0);
+        audio_report();
     } else if (!strncmp(line, "snd", 3)) {
         static const char *const names[] = { "pcm", "voz", "off" };
         int m = -1;
@@ -420,6 +426,18 @@ static void console_command(const char *line)
 #if EINK_FAST_PANEL
     } else if (!strncmp(line, "fe", 2)) {
         fastepd_command(line + 2);
+#endif
+#if EINK_BOARD_PAPERS3
+    } else if (!strcmp(line, "off")) {
+        /* The PaperS3 switched off from the console: its power latch takes
+         * pulses on GPIO44 (freeink-sdk's BoardPaperS3::powerOff). With USB
+         * plugged in the board may stay powered from it. */
+        Serial.println("off: switching the PaperS3 off");
+        Serial.flush();
+#if EINK_FAST_PANEL
+        fastepd_power_off();
+#endif
+        BoardPaperS3::powerOff();
 #endif
     } else if (!strcmp(line, "o")) {
         if (!machine->pointer) selector_open();
