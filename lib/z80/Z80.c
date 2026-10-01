@@ -75,6 +75,21 @@ INLINE void WrZ80(word A,byte V) { if(Page[A>>14]<ROM) Page[A>>14][A&0x3FFF]=V; 
 #define OpZ80(A) RdZ80(A)
 #endif
 
+/* NOT UPSTREAM: the MSX's Z80 is held one wait state on every M1 (opcode
+ * fetch) cycle, so a NOP takes 5 clocks there, not 4; openMSX counts it.
+ * Without it the machine did ~15% more work per frame than a real one,
+ * and a game that slows itself down when a frame's logic does not fit
+ * (Nemesis) left and re-entered its slowdown at the wrong moments: the
+ * owner saw it "accelerate" for seconds at a time while the frame rate
+ * stayed at 50 (2026-10-01). One per M1: the opcode, and the second byte
+ * of a CB, ED, DD or FD prefix. Only for the MSX: the Spectrum's copy of
+ * this file is compiled without FMSX, and its ULA works differently. */
+#ifdef FMSX
+#define M1_WAIT 1
+#else
+#define M1_WAIT 0
+#endif
+
 #define S(Fl)        R->AF.B.l|=Fl
 #define R(Fl)        R->AF.B.l&=~(Fl)
 #define FLAGS(Rg,Fl) R->AF.B.l=Fl|ZSTable[Rg]
@@ -344,7 +359,7 @@ static void CodesCB(register Z80 *R)
 
   /* Read opcode and count cycles */
   I=OpZ80(R->PC.W++);
-  R->ICount-=CyclesCB[I];
+  R->ICount-=CyclesCB[I]+M1_WAIT;
 
   /* R register incremented on each M1 cycle */
   INCR(1);
@@ -419,7 +434,7 @@ static void CodesED(register Z80 *R)
 
   /* Read opcode and count cycles */
   I=OpZ80(R->PC.W++);
-  R->ICount-=CyclesED[I];
+  R->ICount-=CyclesED[I]+M1_WAIT;
 
   /* R register incremented on each M1 cycle */
   INCR(1);
@@ -447,7 +462,7 @@ static void CodesDD(register Z80 *R)
 #define XX IX
   /* Read opcode and count cycles */
   I=OpZ80(R->PC.W++);
-  R->ICount-=CyclesXX[I];
+  R->ICount-=CyclesXX[I]+M1_WAIT;
 
   /* R register incremented on each M1 cycle */
   INCR(1);
@@ -479,7 +494,7 @@ static void CodesFD(register Z80 *R)
 #define XX IY
   /* Read opcode and count cycles */
   I=OpZ80(R->PC.W++);
-  R->ICount-=CyclesXX[I];
+  R->ICount-=CyclesXX[I]+M1_WAIT;
 
   /* R register incremented on each M1 cycle */
   INCR(1);
@@ -556,7 +571,7 @@ int ExecZ80(register Z80 *R,register int RunCycles)
 
       /* Read opcode and count cycles */
       I=OpZ80(R->PC.W++);
-      R->ICount-=Cycles[I];
+      R->ICount-=Cycles[I]+M1_WAIT;
 
       /* R register incremented on each M1 cycle */
       INCR(1);
@@ -674,7 +689,7 @@ word RunZ80(Z80 *R)
 
     /* Read opcode and count cycles */
     I=OpZ80(R->PC.W++);
-    R->ICount-=Cycles[I];
+    R->ICount-=Cycles[I]+M1_WAIT;
 
     /* R register incremented on each M1 cycle */
     INCR(1);

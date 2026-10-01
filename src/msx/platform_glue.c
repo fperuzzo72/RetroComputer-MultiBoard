@@ -69,6 +69,8 @@ void msx_prof_report(unsigned long *videoUs, unsigned long *soundUs,
     sProf[0] = sProf[1] = sProf[2] = sProfFrames = 0;
 }
 
+static void pace_note(int64_t now, int64_t behind_us);
+
 void Keyboard(void) {
     sProfFrames++;
     /* First frame: the machine is up and everything it needed off the heap
@@ -117,6 +119,7 @@ void Keyboard(void) {
     {
         static int64_t next;
         const int64_t now = esp_timer_get_time();
+        pace_note(now, next ? now - next : 0);
         if (!next || now - next > 100000) next = now;
         next += msx_hz() == 50 ? 20000 : 16667;
         const int64_t wait = next - now;
@@ -139,6 +142,43 @@ unsigned int Mouse(byte N) { (void)N; return 0; }
 /** too is a duplicate symbol at link time. There is no floppy  */
 /** on this build either way.                                   */
 /*****************************************************************/
+
+/* `v` on the console: frames in each of the last 60 wall-clock seconds,
+ * and how far behind its schedule the machine got in each, to see a
+ * speed-up rather than guess at it. */
+#define PACE_SECS 60
+static uint16_t pace_frames[PACE_SECS];
+static int32_t  pace_behind_ms[PACE_SECS];
+static int pace_head, pace_count;
+
+static void pace_note(int64_t now, int64_t behind_us)
+{
+    static int64_t sec_start;
+    static unsigned frames;
+    static int64_t worst;
+    if (!sec_start) sec_start = now;
+    frames++;
+    if (behind_us > worst) worst = behind_us;
+    if (now - sec_start >= 1000000) {
+        pace_frames[pace_head] = (uint16_t)frames;
+        pace_behind_ms[pace_head] = (int32_t)(worst / 1000);
+        pace_head = (pace_head + 1) % PACE_SECS;
+        if (pace_count < PACE_SECS) pace_count++;
+        frames = 0;
+        worst = 0;
+        sec_start = now;
+    }
+}
+
+void msx_pace_report(void)
+{
+    printf("frames a second, oldest first (most behind schedule, ms):\n");
+    for (int i = 0; i < pace_count; i++) {
+        const int k = (pace_head - pace_count + i + PACE_SECS) % PACE_SECS;
+        printf("%3u(%ld)%s", pace_frames[k], (long)pace_behind_ms[k], (i % 10 == 9) ? "\n" : " ");
+    }
+    printf("\n");
+}
 
 /** PlayAllSound() **********************************************/
 /** Hand the core's mixed PSG/SCC/OPLL output to the DAC. fMSX   */

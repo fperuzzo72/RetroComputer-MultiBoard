@@ -74,6 +74,7 @@ void msx_insert_cartridge(void);
  * rate; see docs/DISPLAY.md on why speed is scarce here. */
 /* The VDP's rate, 60 (the Hotbit) or 50 (a European MSX). Set takes
  * effect at the next start. */
+void msx_pace_report(void);   /* `v`: frames in each recent second */
 int  msx_hz(void);
 void msx_set_hz(int hz);
 
