@@ -36,6 +36,7 @@ unsigned long audio_samples_written(void) { return 0; }
 void audio_test_tone(int hz, int ms) { (void)hz; (void)ms; }
 int  audio_mode(void) { return AUDIO_MODE_VOICE; }
 void audio_set_mode(int mode) { (void)mode; }
+void audio_report(void) {}
 
 #else
 
@@ -74,6 +75,7 @@ static _Atomic uint32_t head, tail;
 static volatile int running;
 static volatile unsigned long written;
 static volatile int quiet = 1;         /* buzzer off: nothing to play */
+static volatile unsigned long underruns;  /* periods with the ring empty while playing */
 static intr_handle_t intr;
 
 static IRAM_ATTR void isr(void *arg)
@@ -84,7 +86,8 @@ static IRAM_ATTR void isr(void *arg)
     uint32_t t = atomic_load_explicit(&tail, memory_order_relaxed);
     uint32_t h = atomic_load_explicit(&head, memory_order_acquire);
     uint32_t duty = 0;
-    if (h != t) {
+    if (h == t) { if (!quiet) underruns++; }
+    else {
         const int32_t s = ring[t & RING_MASK];
         atomic_store_explicit(&tail, t + 1, memory_order_release);
         if (!quiet) {
@@ -194,5 +197,12 @@ int  audio_ready(void) { return running; }
 int  audio_pause(int on) { (void)on; return 0; }
 unsigned long audio_samples_written(void) { return written; }
 void audio_test_tone(int hz, int ms) { (void)hz; (void)ms; }
+
+void audio_report(void)
+{
+    printf("audio: %s, ring %lu of %u, %lu samples, %lu empty periods while playing\n",
+           running ? "PCM" : "off", (unsigned long)ring_count(), RING, (unsigned long)written,
+           (unsigned long)underruns);
+}
 
 #endif

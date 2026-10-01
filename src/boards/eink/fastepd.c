@@ -75,6 +75,7 @@ static volatile uint8_t row_dirty[H];
 static uint8_t row_active[H];
 static TaskHandle_t task;
 static volatile bool clean_req;
+static volatile bool paused;          /* `fe s`: the panel left as it is, for tests */
 
 static bool flip_x, flip_y;
 
@@ -240,6 +241,7 @@ static void scan_task(void *arg)
 
         bool work = false;
         for (int r = 0; r < H && !work; r++) work = row_dirty[r] || row_active[r];
+        if (paused && !tail) work = false;
         if (!work && !tail) {
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             continue;
@@ -372,11 +374,13 @@ void fastepd_command(const char *a)
     if (*a == 'x') flip_x = !flip_x;
     else if (*a == 'y') flip_y = !flip_y;
     else if (*a == 'c') fastepd_clean();
+    else if (*a == 's') { paused = !paused; if (!paused && task) xTaskNotifyGive(task); }
     else if (*a == 'z') { int n = atoi(a + 1); if (n >= 1 && n <= 100) zero_row_us = n; }
     else if (*a == 'P') { int n = atoi(a + 1); if (n >= 1 && n <= 10) { scan_prio = n; vTaskPrioritySet(task, n); } }
     printf("fastepd: %lu scans, last %lu rows in %lu us, %lu cleans, flip x %d y %d, "
-           "zero row %d us, priority %d\n",
-           frames, busy_rows, last_frame_us, cleans, flip_x, flip_y, zero_row_us, scan_prio);
+           "zero row %d us, priority %d%s\n",
+           frames, busy_rows, last_frame_us, cleans, flip_x, flip_y, zero_row_us, scan_prio,
+           paused ? ", PAUSED" : "");
     if ((*a == 'x' || *a == 'y') && last_pic) {
         /* the whole picture again, the new way round, on a clean panel */
         fastepd_clean();

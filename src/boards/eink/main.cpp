@@ -416,6 +416,7 @@ static void console_command(const char *line)
             esp_restart();
         }
         Serial.printf("MSX sound: %s (snd pcm | snd voz | snd off)\n", names[audio_mode()]);
+        audio_report();
 #if EINK_FAST_PANEL
     } else if (!strncmp(line, "fe", 2)) {
         fastepd_command(line + 2);

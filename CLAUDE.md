@@ -309,9 +309,12 @@ the default `papers3` build; the Mac and the menus on it are not checked.
 msx_bridge.c, `hz 50|60` on the console, NVS). The Hotbit itself is 60Hz
 (TMS9128, NTSC timing under PAL-M colour; this BIOS says 60 at 0x002B),
 and cartridges time themselves by the VDP interrupt, so at 60 H.E.R.O. and
-The Goonies run a fifth faster than on a European MSX. Measured: 58.8fps
-at 60Hz, 50.00 at 50Hz. The owner found 60 too fast and 50 "perfeito,
-como lembro". That choice is his, not the hardware's.
+The Goonies run a fifth faster than at 50. Measured: 58.8fps at 60Hz,
+50.00 at 50Hz. **The owner's own Hotbit played them at 50**: he found 60
+too fast and 50 "perfeito, como lembro", and says the real one he had ran
+like this. The sources found (msx.org) describe the HB-8000's VDP as 60Hz
+PAL-M, and this BIOS dump says 60; how his ran at 50 is not settled, and
+his memory of the machine outranks a forum post.
 
 **The MSX draws one frame in five on e-ink** (DISPLAY_FRAME_PERCENT, fMSX's
 UPeriod). Drawing a frame cost 19ms of a 16.7ms frame on the PaperS3, the
