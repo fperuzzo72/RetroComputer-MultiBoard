@@ -343,6 +343,42 @@ twelve pictures a second is still several for every panel refresh.
 `t x y` on the console taps a menu (in `d`'s pixels), so the selector can
 be driven with nobody at the board.
 
+## The Commodore 64 (2026-10-01)
+
+`lib/c64/` is retroelec's T-HMI-C64 at dea1a82, **GPLv3**, vendored with
+the owner's consent to what that does to the licence (see LICENSE). Every
+local change says `NOT UPSTREAM` and is listed in `lib/c64/README.md`;
+`src/c64/` holds this project's drivers, chosen by `BOARD_RETRO` in its
+Config.h. Runs on the PaperS3 (BASIC, sound, keyboard, cartridges);
+`tools/c64host` runs it on the Mac with PNGs. **Use c64host first.**
+
+Things that cost time and are not obvious from the code:
+
+- **The KERNAL needs three bytes patched** ($EE13, $ED40, $EDCC: SEI to
+  BRK) for the core's 1541 hooks; unpatched, every LOAD says ?DEVICE NOT
+  PRESENT. Found by diffing against upstream's embedded KERNAL: only those
+  three differ. `tools/make_c64_roms.py` does it.
+- **ATN cannot be read from $DD00** in this core (always $97), so the
+  IECOUT hook tells data from commands by the return address on the stack
+  ($ED1B or $EDE9 means data). That is how SAVE works.
+- **The C64 must yield once a frame** (`waitMS(1)` at raster line 311).
+  Busy-wait pacing starved the Arduino setup task on core 1 and BLE never
+  started: the keyboard did not connect inside the C64.
+- **PlatformManager::initialize() before anything** in lib/c64, and the
+  SID's playAudio gets its size in bytes, not samples.
+- `Floppy.h` was renamed `C64Floppy.h`: fMSX has one too, and the disk is
+  case-insensitive.
+- **Cartridges**: types 0, 5 (Ocean) and 19 (Magic Desk). OneLoad64's
+  root-level .crt files are all type 19, so its whole collection should
+  work; ten were checked on the host. EasyFlash is not implemented and
+  has not been needed. Fast loaders that run code in the drive (Maniac
+  Mansion) cannot work: the 1541 is emulated at the KERNAL's level.
+- **`put` on the console** writes to the card through the USB cable
+  (tools/sd_put.py). Each 2kB block is acknowledged with '+', because
+  without it the RX buffer overflowed and big files came out corrupt, and
+  the board waits with vTaskDelay, because spinning on readBytes tripped
+  the task watchdog.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,

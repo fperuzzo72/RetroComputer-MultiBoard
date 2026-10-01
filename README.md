@@ -21,8 +21,9 @@ starts with - a cartridge, a snapshot, a tape - and everything is in
 flash, so there is no SD card in any of this.
 
 Two more boards are M5Stack's e-ink devices, the **Paper Mono** (800x480)
-and the **PaperS3** (960x540), each carrying all three: the MSX and the
-Spectrum, and a **Macintosh Plus**. See "The e-ink boards" below.
+and the **PaperS3** (960x540), each carrying the MSX, the Spectrum, a
+**Macintosh Plus** and a **Commodore 64**. See "The e-ink boards" and
+"The Commodore 64" below.
 
 ## Status, in detail
 
@@ -340,6 +341,50 @@ On the device, `d` on the serial console prints the Mac's screen and
 showing can be checked over the cable. `s` reports the speed as a
 percentage of a real Mac Plus, and the panel's refresh times.
 
+## The Commodore 64, on the e-ink boards
+
+retroelec's **T-HMI-C64** core (`lib/c64/`, GPLv3, vendored at dea1a82; every
+local change is marked `NOT UPSTREAM` and listed in `lib/c64/README.md`),
+with this project's drivers in `src/c64/`: the VIC's picture through
+display8, a BLE keyboard as the whole key matrix, the SID as PCM on the
+buzzer, files on the card under `/c64/`. Verified on the PaperS3: BASIC
+with sound and keyboard (ESC is RUN/STOP), cartridges, SAVE and LOAD.
+
+The menu lists BASIC plus every `/c64/*.prg`, `*.d64` and `*.crt` on the
+card, names cleaned of " (USA, Europe)" and the like. A `.prg` is loaded
+and run by typing `LOAD"name",8,1` and `RUN`; a `.d64` is attached and
+its first program run the same way. Programs with their own fast loader
+(Maniac Mansion) do not run: the 1541 is emulated at the KERNAL's level,
+not as a drive with its own 6502.
+
+**Cartridges** (`src/c64/c64_cart.cpp`) are read into PSRAM: plain 8K and
+16K (type 0), Ocean (5) and Magic Desk (19). Magic Desk is what
+**OneLoad64** uses for its single-file conversions of disk and tape games,
+so Boulder Dash, Bubble Bobble, Commando, Ghosts'n Goblins, Giana Sisters,
+IK+, Impossible Mission, Paradroid, Uridium and Wizball all boot on the
+host. On the card since 2026-10-01: those ten, plus Pac-Man, Donkey Kong,
+Pitfall II, H.E.R.O., River Raid, Lode Runner, Jumpman Junior, Choplifter,
+Ghostbusters and Gridrunner II.
+
+Keys: F10 turns the cursor keys and right Ctrl into a joystick, F9 picks
+its port, PgUp is RESTORE, F12 the selector.
+
+The ROMs (BASIC, KERNAL, character set, 1541) come from `roms/c64/` and are
+built in by `tools/make_c64_roms.py`, which checks their SHA-1 and patches
+the three KERNAL bytes the 1541 hooks need. Gitignored, like every ROM.
+
+**Putting files on the card over the cable**, without taking it out:
+
+```bash
+python3 tools/sd_put.py --dest /c64/ *.crt
+```
+
+2kB blocks, each acknowledged, and a CRC at the end (about 9kB/s). `ls
+/c64` and `rm /c64/name.crt` on the serial console look and tidy up.
+
+`tools/c64host` runs the same core on the Mac, with PNG screenshots:
+`C64_ROOT=dir CRT=game.crt ./tools/c64host/c64host out 15` (or `D64=`).
+
 ## The layout of this repo
 
 ```
@@ -351,9 +396,11 @@ src/display_mono.h     how a 1-bit machine hands its framebuffer to a board
 src/msx/               the MSX1, on the vendored fMSX core
 src/spectrum/          the ZX Spectrum 48K
 src/mac/               the Macintosh Plus
+src/c64/               the Commodore 64's drivers, cartridges, keys
 lib/z80/               Marat Fayzullin's Z80, shared by MSX and Spectrum
 lib/fmsx_core/         the rest of fMSX: VDP, PSG, mappers. MSX only.
 lib/umac/              umac and Musashi, the Macintosh core
+lib/c64/               T-HMI-C64, the Commodore 64 core (GPLv3)
 freeink-sdk/           the Paper Mono's hardware library (git submodule)
 ```
 
@@ -590,6 +637,9 @@ See `third_party_licenses/` for full texts:
   see `fmsx_and_emulib.txt`).
 - `lib/fmsx_core/video/AVideo.i`: Schuemi's fMSX-go / ESPlay-fMSX video
   glue, MIT licensed.
+- `lib/c64/`: retroelec's T-HMI-C64, **GPLv3**
+  (`t-hmi-c64_gpl3.txt`). See the note in `LICENSE` about what that means
+  next to fMSX in one firmware.
 - C-BIOS binaries (`src/msx/cbios_data.c`): BSD-style license, freely
   redistributable.
 - `src/boards/cyd/ble_keyboard.cpp` connect pattern: adapted from esp32beans'
