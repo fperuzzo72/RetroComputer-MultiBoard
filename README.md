@@ -161,10 +161,10 @@ Never `pio run -t upload`, which writes over the other firmwares' otadata.
 | `snd pcm` | MSX sound: fMSX's whole mix (PSG, SCC, drums) as PWM on the buzzer | yes |
 | `snd voz` | MSX sound: only the loudest PSG voice, as a square wave | |
 | `snd off` | MSX silent | |
-| `hz 50` / `hz 60` | MSX frame rate: 50 (a European MSX, and how the owner's Hotbit played) or 60 (the HB-8000's VDP per msx.org) | 50 |
+| `hz 50` / `hz 60` | MSX frame rate: 50 (a European MSX, and how the owner's Hotbit played) or 60 (the HB-8000's VDP per msx.org) | 50 PaperS3, 60 Paper Mono |
 | `u <pct>` | MSX frames drawn, in percent | 60 on the direct panel, 20 otherwise |
 | `v` / `q` | MSX frames in each of the last 60 s / where a frame's time goes | |
-| `vel <20-100>` | MSX speed in percent of real time (restarts) | 100 |
+| `vel <20-100>` | MSX speed in percent of real time (restarts) | 100 PaperS3, 50 Paper Mono |
 | `c <after> <ms> [cap]` | waveform panels: clean after `after` fast refreshes and `ms` still, and every `cap` regardless | 5, 3000, 200 |
 | `fe` | direct panel: scans, rows, timing; `fe c` clean, `fe x`/`fe y` flip, `fe s` pause, `fe n` scan zeros only, `fe z <us>` row time, `fe P <n>` task priority | |
 | `snd mudo` / `snd som` / `snd dc <pct>` | sound tests: buzzer still, back, held at a fixed duty | |
@@ -202,7 +202,10 @@ to the T-state, through the RMT peripheral.
   drive cannot be done there. An action game is not playable on it: the
   owner tried The Goonies at full speed, at 50% (`vel 50`), with cleans
   every 30 refreshes, and on the build from before any of the sound and
-  speed work (`53a5de8`); all "bem ruim". It is kept current, for
+  speed work (`53a5de8`); all "bem ruim" at first. Then, playing longer
+  at half speed, he found it "bem jogável, apesar da lentidão": so the
+  Paper Mono's MSX defaults to 50% speed, at 60Hz (no hiss to avoid on
+  this panel). It is kept current, for
   MSX-BASIC, slow or strategy games, the music, and the Mac, whose mostly
   still desktop suits a slow panel far better than a game's constant
   motion, however much more the Mac asks of the processor. The PaperS3

@@ -178,13 +178,21 @@ void msx_insert_cartridge(void) {
 #define HZ_NS  "cyd"
 #define HZ_KEY "msxhz"
 
+/* A board may choose other defaults (the e-ink boards' eink_board.h). */
+#ifndef EINK_MSX_HZ
+#define EINK_MSX_HZ 50
+#endif
+#ifndef EINK_MSX_SPEED
+#define EINK_MSX_SPEED 100
+#endif
+
 int msx_hz(void) {
     static int hz;
     if (!hz) {
         nvs_handle_t h;
-        uint8_t v = 50;
+        uint8_t v = EINK_MSX_HZ;
         if (nvs_open(HZ_NS, NVS_READONLY, &h) == ESP_OK) {
-            if (nvs_get_u8(h, HZ_KEY, &v) != ESP_OK) v = 50;
+            if (nvs_get_u8(h, HZ_KEY, &v) != ESP_OK) v = EINK_MSX_HZ;
             nvs_close(h);
         }
         hz = v == 60 ? 60 : 50;
@@ -210,12 +218,12 @@ int msx_speed(void) {
     static int vel;
     if (!vel) {
         nvs_handle_t h;
-        uint8_t v = 100;
+        uint8_t v = EINK_MSX_SPEED;
         if (nvs_open(HZ_NS, NVS_READONLY, &h) == ESP_OK) {
-            if (nvs_get_u8(h, VEL_KEY, &v) != ESP_OK) v = 100;
+            if (nvs_get_u8(h, VEL_KEY, &v) != ESP_OK) v = EINK_MSX_SPEED;
             nvs_close(h);
         }
-        vel = v >= 20 && v <= 100 ? v : 100;
+        vel = v >= 20 && v <= 100 ? v : EINK_MSX_SPEED;
     }
     return vel;
 }

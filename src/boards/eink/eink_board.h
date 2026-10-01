@@ -15,6 +15,8 @@
  *   EINK_HAS_BUTTONS   two buttons the firmware can read (GPIO2, GPIO3)
  *   EINK_OTHER_APP     what the boot menu's last choice goes back to
  *   EINK_BEEPER_PIN    the passive buzzer's gate (freeink-sdk's profile)
+ *   EINK_MSX_HZ        the MSX's frame rate unless `hz` says otherwise
+ *   EINK_MSX_SPEED     its pace in percent of real time unless `vel` does
  */
 
 #if defined(EINK_BOARD_PAPERS3)
@@ -31,6 +33,10 @@
  * table: CrossPoint in app0, this in app1). */
 #define EINK_OTHER_APP    "CrossPoint"
 #define EINK_BEEPER_PIN   21
+/* The panel driven directly keeps up with a game at full speed; 50Hz is
+ * how the owner remembers his Hotbit playing them. */
+#define EINK_MSX_HZ       50
+#define EINK_MSX_SPEED    100
 
 #else
 
@@ -47,6 +53,11 @@
 #define EINK_HAS_BUTTONS  1
 #define EINK_OTHER_APP    "CrossPlay"
 #define EINK_BEEPER_PIN   42
+/* The SSD1677's ~400ms waveform cannot follow a game at full speed: at
+ * half speed the owner found it "bem jogável, apesar da lentidão"
+ * (2026-10-01), and at 60Hz, with no hiss to avoid on this panel. */
+#define EINK_MSX_HZ       60
+#define EINK_MSX_SPEED    50
 
 #endif
 
