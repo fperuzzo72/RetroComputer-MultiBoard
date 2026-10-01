@@ -293,6 +293,18 @@ PlayAllSound() a no-op). The owner found it far better than the first
 version, which `snd voz` on the console still selects: the loudest PSG
 voice as a square wave (`msx_beeper.c`). `snd off` is silence.
 
+**The PaperS3 can drive its panel directly** (`pio run -e papers3-fast`,
+`src/boards/eink/fastepd.c`, after PaperBoy's Modos Smooth Graphics, MIT,
+`third_party_licenses/paperboy_msg.txt`): no M5GFX, no waveform; the ESP32
+clocks the ED047TC1 itself through the LCD peripheral and pushes a changed
+pixel for four scans. **First run on the device 2026-09-30: the owner found
+it "excelente, mais rápido do que no MSX de verdade"**, the right way round
+with no flips. Measured then: an empty scan of 540 rows takes 24ms (~45us a
+row against ~11us of bus time), so there is room to go faster. The i80 bus
+refuses DC -1 and takes PaperBoy's GPIO49 (not a pin on the S3). Not yet
+the default `papers3` build; the Mac and the menus on it are not checked.
+`fe` on the console reports scans and flips the axes.
+
 **The MSX draws one frame in five on e-ink** (DISPLAY_FRAME_PERCENT, fMSX's
 UPeriod). Drawing a frame cost 19ms of a 16.7ms frame on the PaperS3, the
 MSX ran at 32fps and its music slowed with it; at 20% it makes 60fps, and
