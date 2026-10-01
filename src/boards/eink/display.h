@@ -37,8 +37,10 @@ extern "C" {
  * twelve pictures a second, several for every refresh. */
 #if EINK_FAST_PANEL
 /* The PaperS3 driven directly shows ~30-60 pictures a second: more of
- * them are worth drawing. `u` on the console changes it. */
-#define DISPLAY_FRAME_PERCENT 40
+ * them are worth drawing. Measured in The Goonies (2026-09-30): 40% keeps
+ * 60fps with 24 pictures a second, 60% keeps 60fps with 36, 100% drops
+ * the MSX to 51fps. `u` on the console changes it. */
+#define DISPLAY_FRAME_PERCENT 60
 #else
 #define DISPLAY_FRAME_PERCENT 20
 #endif
