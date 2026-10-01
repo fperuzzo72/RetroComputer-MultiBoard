@@ -16,6 +16,8 @@ src/spectrum/spectrum_tape_data.c
 
 # Local ROM images. Other people's, and they stay out of the repo.
 roms/
+# ...but lib/c64's ROM headers are only declarations, and the core needs them
+!lib/c64/src/roms/
 
 # work in progress, kept out of the build
 *.wip
