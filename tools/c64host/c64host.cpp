@@ -9,7 +9,7 @@
  *
  * <text> is typed after the first capture (\n is Return). Files for LOAD
  * are read from $C64_ROOT/c64/ (default ./c64/); D64=<name.d64> puts that
- * disc in drive 8 first.
+ * disc in drive 8 first, CRT=<name.crt> plugs a cartridge in.
  */
 #include <chrono>
 #include <cstdio>
@@ -24,6 +24,7 @@
 #include "platform/PlatformManager.h"
 #include "roms/charset.h"
 #include "c64_keys.h"
+#include "c64_cart.h"
 
 /* selector.h, for c64_keys.cpp's F12 */
 extern "C" void selector_open(void) {}
@@ -106,6 +107,10 @@ int main(int argc, char **argv)
     PlatformManager::initialize(PlatformNS::create());
     static uint8_t ram[65536];
     static C64Sys cpu;
+    if (getenv("CRT")) {
+        const std::string why = retro_cart_load(getenv("CRT"));
+        printf("  cartridge %s: %s\n", getenv("CRT"), why.empty() ? "plugged in" : why.c_str());
+    }
     cpu.init(ram, charset_rom);
     retro_c64_keys_attach(&cpu);
     if (getenv("D64")) printf("  drive 8: %s %s\n", getenv("D64"), cpu.floppy.attach(getenv("D64")) ? "attached" : "NOT attached");

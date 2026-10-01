@@ -12,9 +12,11 @@
  *     the MSX's are;
  *   - the SID's frames of samples go to the board's buzzer as PCM
  *     (audio_start_push), the keyboard to c64_keys.cpp's matrix;
- *   - what it starts with: entry 0 is BASIC, the rest the .prg and .d64
- *     files in /c64/ on the card. A .d64 goes in drive 8; then, once BASIC
- *     is up, LOAD and RUN are typed for you, as a person would.
+ *   - what it starts with: entry 0 is BASIC, the rest the .prg, .d64 and
+ *     .crt files in /c64/ on the card. A cartridge is plugged in before
+ *     power-on (c64_cart.cpp) and starts itself; a .d64 goes in drive 8;
+ *     for a disc or a .prg, once BASIC is up, LOAD and RUN are typed for
+ *     you, as a person would. tools/sd_put.py puts files there over USB.
  */
 #include <cstdio>
 #include <cstring>
@@ -31,6 +33,7 @@
 #include "roms/charset.h"
 
 #include "c64_keys.h"
+#include "c64_cart.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -87,7 +90,8 @@ static int selected = -1;
 static bool wanted(const char *n)
 {
     const char *dot = strrchr(n, '.');
-    return dot && n[0] != '.' && (!strcasecmp(dot, ".prg") || !strcasecmp(dot, ".d64"));
+    return dot && n[0] != '.' &&
+           (!strcasecmp(dot, ".prg") || !strcasecmp(dot, ".d64") || !strcasecmp(dot, ".crt"));
 }
 
 static void list_files(void)
@@ -150,6 +154,11 @@ static const char *m_entry_name(int i)
     label = files[i - 1];
     const size_t dot = label.rfind('.');
     if (dot != std::string::npos) label.erase(dot);
+    /* No-Intro names carry their regions: "Zone Ranger (USA, Europe)" */
+    for (const char *tag : {" (USA, Europe)", " (USA)", " (Europe)", " (Japan)"}) {
+        const size_t at = label.find(tag);
+        if (at != std::string::npos) label.erase(at, strlen(tag));
+    }
     return label.c_str();
 }
 
@@ -252,18 +261,29 @@ static void m_run(void)
     ram = (uint8_t *)heap_caps_malloc(65536, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 #endif
     if (!ram) ram = new uint8_t[65536];
+    if (selected < 0) selected = recall();
+    list_files();
+    /* a cartridge is in the port before the power comes on */
+    if (selected > 0 && selected - 1 < (int)files.size()) {
+        const std::string &f = files[selected - 1];
+        const char *dot = strrchr(f.c_str(), '.');
+        if (dot && !strcasecmp(dot, ".crt")) {
+            const std::string why = retro_cart_load(f);
+            printf("c64: cartridge %s: %s\n", f.c_str(), why.empty() ? "in" : why.c_str());
+        }
+    }
     cpu = new C64Sys();
     cpu->init(ram, charset_rom);
     retro_c64_keys_attach(cpu);
 
-    if (selected < 0) selected = recall();
-    list_files();
     if (selected > 0 && selected - 1 < (int)files.size()) {
         const std::string &f = files[selected - 1];
         const size_t dot = f.rfind('.');
         std::string base = f.substr(0, dot);
         for (auto &c : base) c = (char)tolower(c);
-        if (!strcasecmp(f.c_str() + dot, ".d64")) {
+        if (!strcasecmp(f.c_str() + dot, ".crt")) {
+            /* it started itself */
+        } else if (!strcasecmp(f.c_str() + dot, ".d64")) {
             printf("c64: %s in drive 8: %s\n", f.c_str(), cpu->floppy.attach(f) ? "ok" : "FAILED");
             to_type = "load\"*\",8,1\nrun\n";
         } else {

@@ -15,6 +15,9 @@
  http://www.gnu.org/licenses/.
 */
 #include "C64Sys.h"
+#if defined(BOARD_RETRO)
+#include "c64_cart.h" /* NOT UPSTREAM: src/c64, cartridges */
+#endif
 
 #include "CIA.h"
 #include "CPU6502.h"
@@ -118,6 +121,19 @@ uint8_t C64Sys::getDC01(uint8_t dc00, bool xchgports) {
 }
 
 uint8_t C64Sys::getMem(uint16_t addr) {
+#if defined(BOARD_RETRO)
+  /* NOT UPSTREAM: a cartridge (src/c64/c64_cart.cpp). Its low ROM shows at
+   * $8000 when LORAM and HIRAM are both set in $01, a 16K one's high ROM
+   * at $A000 whenever HIRAM is, in place of BASIC. */
+  if (retro_cart.on && addr >= 0x8000 && addr < 0xc000) {
+    if (addr < 0xa000) {
+      if (retro_cart.roml && (register1 & 3) == 3)
+        return retro_cart.roml[addr & 0x1fff];
+    } else if (retro_cart.romh && (register1 & 2)) {
+      return retro_cart.romh[addr & 0x1fff];
+    }
+  }
+#endif
   if ((!bankARAM) && ((addr >= 0xa000) && (addr <= 0xbfff))) {
     //    basic rom
     return basic_rom[addr - 0xa000];
@@ -401,6 +417,12 @@ void C64Sys::setMem(uint16_t addr, uint8_t val) {
         cia2.setCommonCIAReg(ciaidx, val);
       }
     }
+#if defined(BOARD_RETRO)
+    // NOT UPSTREAM: IO1, where bank-switching cartridges listen
+    else if (addr <= 0xdeff) {
+      retro_cart_io1(addr, val);
+    }
+#endif
   }
   // ** register 1 **
   else if (addr == 0x0001) {

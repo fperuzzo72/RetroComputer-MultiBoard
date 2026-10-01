@@ -42,6 +42,8 @@
  * opens the list.
  */
 #include <Arduino.h>
+#include <SDCardManager.h>
+#include "esp_rom_crc.h"
 #include <InputManager.h>
 
 #include "machine.h"
@@ -358,6 +360,59 @@ static void key(unsigned usage)
     if (ble_started) ble_keyboard_inject(r); else machine->hid_report(r);
 }
 
+/* `put <path> <size>`: the next <size> bytes on the serial line become that
+ * file on the card, so games reach it without taking the card out
+ * (tools/sd_put.py sends them). Answers "ready", then "ok <size> <crc32>"
+ * or "error ...". Not while the Mac runs: it reads the card from another
+ * task, and SdFat is not to be shared. */
+static void sd_put(const char *args)
+{
+    char path[160];
+    unsigned long size = 0;
+    if (sscanf(args, "%159s %lu", path, &size) != 2 || path[0] != '/') {
+        Serial.println("error: put /path size");
+        return;
+    }
+    for (char *c = path; *c; c++) if (*c == '|') *c = ' ';   /* spaces, escaped */
+    SDCardManager &sd = SDCardManager::getInstance();
+    char dir[160];
+    strncpy(dir, path, sizeof dir);
+    char *slash = strrchr(dir, '/');
+    if (slash && slash != dir) { *slash = 0; sd.mkdir(dir); }
+    FsFile f = sd.open(path, O_RDWR | O_CREAT | O_TRUNC);
+    if (!f) { Serial.println("error: cannot create"); return; }
+    Serial.println("ready");
+    /* Block by block, each answered with '+' once it is on the card: the
+     * USB line delivers faster than the card writes, and without the
+     * answer the receive buffer overflowed and bytes were lost. */
+    static uint8_t buf[2048];
+    uint32_t crc = 0;
+    unsigned long got = 0;
+    while (got < size) {
+        const size_t want = size - got < sizeof buf ? size - got : sizeof buf;
+        size_t have = 0;
+        unsigned long last = millis();
+        while (have < want && millis() - last < 5000) {
+            /* readBytes spins while it waits: with nothing to read, give
+             * the core away, or its idle task starves and the task
+             * watchdog restarts the board (it did, 51kB into a 64kB file) */
+            const int avail = Serial.available();
+            if (avail <= 0) { vTaskDelay(1); continue; }
+            const size_t n = Serial.read(buf + have, (size_t)avail < want - have ? (size_t)avail : want - have);
+            if (n) { have += n; last = millis(); }
+        }
+        if (have < want) break;
+        f.write(buf, have);
+        crc = esp_rom_crc32_le(crc, buf, have);
+        got += have;
+        Serial.write('+');
+    }
+    f.sync();
+    f.close();
+    if (got != size) Serial.printf("error: got %lu of %lu\n", got, size);
+    else Serial.printf("ok %lu %08lx\n", got, (unsigned long)crc);
+}
+
 static void console_command(const char *line)
 {
     int a, b;
@@ -446,6 +501,25 @@ static void console_command(const char *line)
 #endif
         BoardPaperS3::powerOff();
 #endif
+    } else if (!strncmp(line, "put ", 4)) {
+        sd_put(line + 4);
+    } else if (!strncmp(line, "rm /", 4)) {
+        /* a file off the card; spaces travel as '|', as for put */
+        char path[160];
+        strncpy(path, line + 3, sizeof path - 1);
+        path[sizeof path - 1] = 0;
+        for (char *c = path; *c; c++) if (*c == '|') *c = ' ';
+        Serial.printf("%s %s\n", SDCardManager::getInstance().remove(path) ? "removed" : "error: cannot remove", path);
+    } else if (!strncmp(line, "ls /", 4)) {
+        FsFile dir = SDCardManager::getInstance().open(line + 3);
+        FsFile e;
+        char n[96];
+        while (dir && e.openNext(&dir, O_RDONLY)) {
+            e.getName(n, sizeof n);
+            Serial.printf("%10lu  %s\n", (unsigned long)e.fileSize(), n);
+            e.close();
+        }
+        if (dir) dir.close();
     } else if (!strcmp(line, "o")) {
         if (!machine->pointer) selector_open();
     } else if (!machine->debug_command(line)) {
@@ -582,6 +656,7 @@ static void boot_menu(void)
 
 void setup()
 {
+    Serial.setRxBufferSize(8192);   /* `put`: files arrive over this line */
     Serial.begin(115200);
     delay(250);
 
