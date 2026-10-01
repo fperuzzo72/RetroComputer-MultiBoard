@@ -25,6 +25,8 @@
  */
 #include "fastepd.h"
 
+#if EINK_FAST_PANEL   /* the PaperS3 only: env papers3-fast */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -381,3 +383,5 @@ void fastepd_command(const char *a)
         fastepd_show(last_pic);
     }
 }
+
+#endif /* EINK_FAST_PANEL */

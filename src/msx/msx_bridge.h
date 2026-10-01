@@ -72,6 +72,11 @@ void msx_insert_cartridge(void);
 
 /* Sound on or off at runtime. Off gives back about a quarter of the frame
  * rate; see docs/DISPLAY.md on why speed is scarce here. */
+/* The VDP's rate, 60 (the Hotbit) or 50 (a European MSX). Set takes
+ * effect at the next start. */
+int  msx_hz(void);
+void msx_set_hz(int hz);
+
 /* Percentage of frames drawn (1-100), or just report it with 0. */
 int msx_draw_percent(int pct);
 void msx_set_sound(int on);

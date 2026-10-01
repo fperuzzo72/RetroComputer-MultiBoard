@@ -20,6 +20,7 @@
 #include "MSX.h"
 #include "beeper.h"
 #include "msx_beeper.h"
+#include "msx_bridge.h"
 #include "Sound.h"
 #include "audio.h"
 
@@ -31,7 +32,7 @@ __attribute__((weak)) void beeper_frame(int level, const uint32_t *edges, int n,
     (void)level; (void)edges; (void)n; (void)frame; (void)clock_hz;
 }
 
-#define FRAME_US   16667               /* the MSX is paced to 60Hz */
+#define FRAME_US   (msx_hz() == 50 ? 20000 : 16667)   /* the MSX's pace */
 #define MAX_EDGES  1024
 #define TONE_MAX   12000               /* above this a buzzer only whines */
 #define NOISE_MAX  8000

@@ -23,6 +23,7 @@
 #include "msx_display.h"
 #include "msx_beeper.h"
 #include "audio.h"
+#include "msx_bridge.h"
 
 /* fMSX/MSX.c (LoadFile(), CMOS handling) references this extern global;
  * the reference-platform ports (odroidGo/files.c) define it as their SD
@@ -117,7 +118,7 @@ void Keyboard(void) {
         static int64_t next;
         const int64_t now = esp_timer_get_time();
         if (!next || now - next > 100000) next = now;
-        next += 16667;
+        next += msx_hz() == 50 ? 20000 : 16667;
         const int64_t wait = next - now;
         if (wait > 1000) vTaskDelay(pdMS_TO_TICKS((wait + 999) / 1000));
         else vTaskDelay(1);

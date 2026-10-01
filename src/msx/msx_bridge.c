@@ -13,6 +13,7 @@
 
 #include "esp_heap_caps.h"
 #include "esp_system.h"
+#include "nvs.h"
 
 int msx_video_prealloc(void) { return PreallocVideo(); }
 
@@ -35,7 +36,8 @@ void msx_run(void) {
 
     /* Brazilian machines are PAL-M: PAL colour encoding on 60Hz/NTSC
      * timing, so NTSC is the right choice for the emulated frame rate. */
-    Mode = MSX_MSX1 | MSX_NTSC;
+    Mode = MSX_MSX1 | (msx_hz() == 50 ? MSX_PAL : MSX_NTSC);
+    printf("MSX: %d Hz\n", msx_hz());
     /* 64kB, which is what a Hotbit HB-8000 has. This only fits because
      * the video layer holds one 24-line band (6kB) instead of a whole
      * frame (55kB) - see docs/MEMORY.md. */
@@ -164,6 +166,38 @@ void msx_insert_cartridge(void) {
      * MAP_GUESS lets the core work out the mapper, which matters: a 128kB
      * Konami cartridge is not a 32kB one with more pages. */
     LoadCart(gameRomPath(), 0, MAP_GUESS);
+}
+
+/* 50Hz by default. The Hotbit is 60Hz (its TMS9128 runs NTSC timing under
+ * PAL-M colour, and its BIOS says 60 at 0x002B), and that is what this
+ * emulated first; but cartridges time themselves by the VDP's interrupt,
+ * so at 60 they run a fifth faster than on a European MSX, music and all,
+ * and the owner found 50 "perfeito, como lembro" (2026-09-30). `hz 60`
+ * on the console gives the Hotbit back; remembered in NVS, taken at the
+ * next start. */
+#define HZ_NS  "cyd"
+#define HZ_KEY "msxhz"
+
+int msx_hz(void) {
+    static int hz;
+    if (!hz) {
+        nvs_handle_t h;
+        uint8_t v = 50;
+        if (nvs_open(HZ_NS, NVS_READONLY, &h) == ESP_OK) {
+            if (nvs_get_u8(h, HZ_KEY, &v) != ESP_OK) v = 50;
+            nvs_close(h);
+        }
+        hz = v == 60 ? 60 : 50;
+    }
+    return hz;
+}
+
+void msx_set_hz(int hz) {
+    nvs_handle_t h;
+    if (nvs_open(HZ_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_u8(h, HZ_KEY, (uint8_t)(hz == 60 ? 60 : 50));
+    nvs_commit(h);
+    nvs_close(h);
 }
 
 /* fMSX's UPeriod: the percentage of frames drawn. */

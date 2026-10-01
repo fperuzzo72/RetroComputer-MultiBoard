@@ -69,7 +69,8 @@ static const char *m_debug_help(void) {
            "  p <row> <bit> <mods>   press one matrix position (1 Shift, 2 Ctrl)\n"
            "  c [n]                  list cartridges, or select one and reboot\n"
            "  q                      where a frame's time goes\n"
-           "  u [pct]                frames drawn, in percent";
+           "  u [pct]                frames drawn, in percent\n"
+           "  hz [50|60]             the VDP's rate (restarts)";
 }
 
 static int m_debug_command(const char *line) {
@@ -97,6 +98,14 @@ static int m_debug_command(const char *line) {
             } else {
                 msx_cart_list();
             }
+            return 1;
+        case 'h':
+            if (sscanf(line, "hz %d", &a) == 1 && (a == 50 || a == 60)) {
+                msx_set_hz(a);
+                printf("MSX at %d Hz from the next start; restarting\n", a);
+                msx_reboot();
+            }
+            printf("MSX at %d Hz (hz 50 | hz 60)\n", msx_hz());
             return 1;
         case 'u':
             a = 0;
