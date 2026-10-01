@@ -53,11 +53,11 @@
 #define EINK_HAS_BUTTONS  1
 #define EINK_OTHER_APP    "CrossPlay"
 #define EINK_BEEPER_PIN   42
-/* The SSD1677's ~400ms waveform cannot follow a game at full speed: at
- * half speed the owner found it "bem jogável, apesar da lentidão"
- * (2026-10-01), and at 60Hz, with no hiss to avoid on this panel. */
+/* 60Hz: no hiss to avoid on this panel (the owner's choice, 2026-10-01).
+ * Full speed: half speed did not make action games playable on the
+ * SSD1677's ~400ms waveform after all, and it slowed the music. */
 #define EINK_MSX_HZ       60
-#define EINK_MSX_SPEED    50
+#define EINK_MSX_SPEED    100
 
 #endif
 
