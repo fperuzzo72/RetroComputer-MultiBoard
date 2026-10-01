@@ -122,10 +122,10 @@ pixels, so five tones, and the tone is how far a colour stands from the
 border colour. MSX-BASIC's white on blue comes out black on white, a
 Spectrum's ink on paper as it is. The Spectrum's FLASH attribute is held
 steady: blinking it would refresh the whole e-ink panel twice a second.
-The MSX is held to its own 60 frames a second.
+The MSX runs at 50 frames a second by default (see below).
 
-Status: **built and run on the development machine, not yet on either
-device** (2026-09-29). `make -C tools/eink_test EINK=PAPERS3 -B` builds the
+Status: **running on both devices** (Paper Mono since 2026-09-28, PaperS3
+since 2026-09-30), the three machines with sound. `make -C tools/eink_test EINK=PAPERS3 -B` builds the
 host tools for the PaperS3's layout. `tools/eink_test` has `zx` and `msx`, which run
 the real machine code through the real picture path and write what the
 panel would show:
@@ -136,6 +136,77 @@ make -C tools/eink_test
 ./tools/eink_test/zx 8 /tmp/zx 4            # the eighth Spectrum snapshot
 ./tools/eink_test/screens /tmp/menus        # the menus
 ```
+
+## e-ink: variants and options
+
+Several choices here were made by measuring and listening on the device,
+and the alternatives were kept: some suit one taste or one board better.
+
+**Builds**
+
+| env | board | panel | slot |
+|---|---|---|---|
+| `papermono` | Paper Mono | the SSD1677's own waveform, ~320-400ms a picture | app1, 0x800000 |
+| `papers3` | PaperS3 | **driven directly** (`fastepd.c`, after PaperBoy's Modos Smooth Graphics): a changed picture on the glass in tens of ms, ~50 scans a second | app2, 0x8A0000 |
+| `papers3-waveform` | PaperS3 | M5GFX's waveform, ~400ms a picture, the way it was until 2026-10-01 | app2, 0x8A0000 |
+
+Flash only the app, into its own slot: `python3 -m esptool --chip esp32s3
+--port /dev/cu.usbmodem101 --baud 921600 write_flash <slot> .pio/build/<env>/firmware.bin`.
+Never `pio run -t upload`, which writes over the other firmwares' otadata.
+
+**Options on the serial console** (115200), no reflash needed:
+
+| command | what | default |
+|---|---|---|
+| `snd pcm` | MSX sound: fMSX's whole mix (PSG, SCC, drums) as PWM on the buzzer | yes |
+| `snd voz` | MSX sound: only the loudest PSG voice, as a square wave | |
+| `snd off` | MSX silent | |
+| `hz 50` / `hz 60` | MSX frame rate: 50 (a European MSX, and how the owner's Hotbit played) or 60 (the HB-8000's VDP per msx.org) | 50 |
+| `u <pct>` | MSX frames drawn, in percent | 60 on the direct panel, 20 otherwise |
+| `v` / `q` | MSX frames in each of the last 60 s / where a frame's time goes | |
+| `fe` | direct panel: scans, rows, timing; `fe c` clean, `fe x`/`fe y` flip, `fe s` pause, `fe n` scan zeros only, `fe z <us>` row time, `fe P <n>` task priority | |
+| `snd mudo` / `snd som` / `snd dc <pct>` | sound tests: buzzer still, back, held at a fixed duty | |
+| `o`, `t x y`, `d` | open the selector, tap a menu at x,y, dump the panel as text (`tools/fbdump.py`) | |
+| `off` | PaperS3: switch off (works with USB plugged in) | |
+
+`snd` and `hz` are remembered and restart the board; the rest act at once.
+The Spectrum's sound is its own beeper, always: the speaker bit's flips,
+to the T-state, through the RMT peripheral.
+
+**What was measured, and why the defaults are what they are**
+
+- *Sound.* The first MSX sound was the loudest voice (`snd voz`): tunes
+  recognisable, "meio ruim". The PCM mix is PaperBoy's technique and the
+  owner found it far better. It is rendered by its own task at the
+  buzzer's rate, so a late frame does not make it stutter.
+- *The hiss.* With the PaperS3 panel driven directly the PCM hissed; with
+  the waveform panel it never did. Found by ear, one test at a time: the
+  ring never ran dry; muted, silence; panel paused, gone; buzzer held at
+  a fixed duty with no sound, hiss at 50% and hardly any at 10%. The
+  panel's current ripples the supply and the buzzer passes it on in
+  proportion to its own mean current. The PWM's centre now follows the
+  sound's level (silence draws nothing): "o chiado praticamente sumiu".
+  It is not the 50Hz: the hiss stopped with the panel paused at 50Hz.
+- *Speed.* Drawing every MSX frame cost more than a frame (19ms of 16.7)
+  and held the machine at 32fps. Drawing only rows that changed, and 60%
+  of frames on the direct panel, gives a steady 50 (or 60) with ~36
+  pictures a second.
+- *The Z80.* The MSX's Z80 waits one clock on every opcode fetch; fMSX
+  did not count it, so the machine did ~15% too much work a frame and
+  Nemesis left its own slowdowns at the wrong moments. Counted now.
+
+**Going back.** Each step is one commit on `multi-board`; build any of
+them with `git checkout <hash>` and the env above.
+
+| commit | what it brought |
+|---|---|
+| `974a74e` | MSX sound as the loudest PSG voice |
+| `2891316` | MSX sound as PCM; one MSX frame in five drawn |
+| `24cfe62` | the PaperS3 panel driven directly (first version) |
+| `3c63415` | faster scans; only changed rows redrawn |
+| `63e6672` | MSX at 50Hz by default |
+| `b64fba4` | the PCM centre follows the sound (the hiss) |
+| `6c17bdc` | the MSX's M1 wait state |
 
 ## The Macintosh, on the Paper Mono
 
