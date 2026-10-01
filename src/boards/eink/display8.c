@@ -20,13 +20,17 @@
 #include "display.h"
 #include "picture.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef ESP_PLATFORM
+#include "esp_heap_caps.h"
 #include "esp_timer.h"
 static int64_t now_us(void) { return esp_timer_get_time(); }
+static void *big(size_t n) { return heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT); }
 #else
 static long long now_us(void) { return 0; }
+static void *big(size_t n) { return malloc(n); }
 #endif
 
 #define PIC_H   216
@@ -40,8 +44,17 @@ static uint8_t *canvas;
 static volatile int repaint_wanted = 1;
 static unsigned long blit_us, full_repaints;
 
-void display8_attach(uint8_t *c) { canvas = c; }
-void display8_request_repaint(void) { repaint_wanted = 1; }
+/* The tones each picture row was last drawn with. A row whose tones have
+ * not changed is not drawn again: most of a frame is the same as the one
+ * before, and converting and writing it all cost ~24ms a drawn frame on
+ * the PaperS3, which once its panel kept up was what held the MSX back.
+ * Comparing tones rather than pixels catches a palette or border change
+ * too. Forgotten whenever the canvas is wiped. */
+static uint8_t (*shown)[DISPLAY_PICTURE_W];
+static uint8_t shown_ok[PIC_H];
+
+void display8_attach(uint8_t *c) { canvas = c; memset(shown_ok, 0, sizeof shown_ok); }
+void display8_request_repaint(void) { repaint_wanted = 1; memset(shown_ok, 0, sizeof shown_ok); }
 
 void display_bridge_init(void) {}
 
@@ -88,7 +101,14 @@ static uint8_t pair_bits(int t, int odd)
  * bit-reversed at the mirrored position. */
 static void put_row(int y, const uint8_t *tones)
 {
+    static uint8_t pb[2][5];
+    static int pb_ready;
+    if (!pb_ready) {
+        for (int o = 0; o < 2; o++) for (int t = 0; t < 5; t++) pb[o][t] = pair_bits(t, o);
+        pb_ready = 1;
+    }
     for (int odd = 0; odd < 2; odd++) {
+        const uint8_t *q = pb[odd];
         int uy = Y0 + y * SCALE + odd;
 #if EINK_UPSIDE_DOWN
         uint8_t *row = canvas + (DISPLAY_PANEL_H - 1 - uy) * STRIDE;
@@ -97,8 +117,7 @@ static void put_row(int y, const uint8_t *tones)
 #endif
         for (int k = 0; k < DISPLAY_PICTURE_W / 4; k++) {
             const uint8_t *t = tones + k * 4;
-            uint8_t b = (uint8_t)(pair_bits(t[0], odd) << 6 | pair_bits(t[1], odd) << 4 |
-                                  pair_bits(t[2], odd) << 2 | pair_bits(t[3], odd));
+            uint8_t b = (uint8_t)(q[t[0]] << 6 | q[t[1]] << 4 | q[t[2]] << 2 | q[t[3]]);
 #if EINK_UPSIDE_DOWN
             row[(DISPLAY_PANEL_W - 1 - (X0 + k * 8 + 7)) / 8] = eink_reverse8(b);
 #else
@@ -138,6 +157,12 @@ void display_write_picture(short srcX, short srcY, short width, short height,
             }
             for (int x = n; x < DISPLAY_PICTURE_W; x++) tones[x] = 0;
         }
+        if (!shown) shown = big((size_t)PIC_H * DISPLAY_PICTURE_W);
+        if (shown) {
+            if (shown_ok[y] && !memcmp(shown[y], tones, sizeof tones)) continue;
+            memcpy(shown[y], tones, sizeof tones);
+            shown_ok[y] = 1;
+        }
         put_row(y, tones);
     }
     blit_us += (unsigned long)(now_us() - t0);
@@ -147,6 +172,7 @@ void display_fill_panel(uint16_t color)
 {
     (void)color;   /* the paper is white whatever the machine's surround */
     full_repaints++;
+    memset(shown_ok, 0, sizeof shown_ok);
     if (canvas) memset(canvas, 0xFF, (size_t)STRIDE * DISPLAY_PANEL_H);
 }
 

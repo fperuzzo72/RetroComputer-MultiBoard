@@ -72,6 +72,8 @@ void msx_insert_cartridge(void);
 
 /* Sound on or off at runtime. Off gives back about a quarter of the frame
  * rate; see docs/DISPLAY.md on why speed is scarce here. */
+/* Percentage of frames drawn (1-100), or just report it with 0. */
+int msx_draw_percent(int pct);
 void msx_set_sound(int on);
 int  msx_sound_on(void);
 

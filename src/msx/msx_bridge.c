@@ -166,6 +166,12 @@ void msx_insert_cartridge(void) {
     LoadCart(gameRomPath(), 0, MAP_GUESS);
 }
 
+/* fMSX's UPeriod: the percentage of frames drawn. */
+int msx_draw_percent(int pct) {
+    if (pct >= 1 && pct <= 100) UPeriod = (byte)pct;
+    return UPeriod;
+}
+
 void msx_set_sound(int on) { MSXSoundOn = on ? 1 : 0; }
 int  msx_sound_on(void)    { return MSXSoundOn; }
 

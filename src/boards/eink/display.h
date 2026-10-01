@@ -35,7 +35,13 @@ extern "C" {
  * costs more than the frame itself (19ms of 16.7, measured on the PaperS3:
  * the MSX ran at 32fps, slow, and its music with it). One in five is still
  * twelve pictures a second, several for every refresh. */
+#if EINK_FAST_PANEL
+/* The PaperS3 driven directly shows ~30-60 pictures a second: more of
+ * them are worth drawing. `u` on the console changes it. */
+#define DISPLAY_FRAME_PERCENT 40
+#else
 #define DISPLAY_FRAME_PERCENT 20
+#endif
 
 void display_bridge_init(void);
 

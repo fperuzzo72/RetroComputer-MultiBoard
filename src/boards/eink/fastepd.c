@@ -26,6 +26,7 @@
 #include "fastepd.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "driver/gpio.h"
@@ -74,6 +75,15 @@ static TaskHandle_t task;
 static volatile bool clean_req;
 
 static bool flip_x, flip_y;
+
+/* What the source drivers' shift register holds: a row of zeros, shifted
+ * already, needs no shifting again. A run of rows that are left alone then
+ * costs a gate step and a latch each, not a DMA transfer: the empty scan
+ * went from 24ms to a few. The row is still held selected for zero_row_us
+ * so that a pixel pushed in the last scan really is given its 0V. */
+static bool sr_zero;
+static int zero_row_us = 10;
+static int scan_prio = 2;
 static const uint8_t *last_pic;
 static uint8_t rev8[256];
 
@@ -95,7 +105,26 @@ static void IRAM_ATTR send_row(const uint8_t *data)
     gpio_set_level(PIN_SDLE, 0);
     gpio_set_level(PIN_GDCK, 1);
     dma_done = false;
+    sr_zero = false;
     esp_lcd_panel_io_tx_color(io, -1, data, LINE + PAD);
+}
+
+/* A row left alone: zeros, shifted only if the register does not hold
+ * them already. */
+static void IRAM_ATTR zero_row(uint8_t *buf)
+{
+    if (!sr_zero) {
+        memset(buf, 0, LINE + PAD);
+        send_row(buf);
+        sr_zero = true;
+        return;
+    }
+    while (!dma_done) {}
+    gpio_set_level(PIN_GDCK, 0);
+    gpio_set_level(PIN_SDLE, 1);
+    gpio_set_level(PIN_SDLE, 0);
+    gpio_set_level(PIN_GDCK, 1);
+    ets_delay_us(zero_row_us);
 }
 
 static void frame_start(void)
@@ -118,8 +147,7 @@ static void frame_start(void)
 
 static void frame_end(void)
 {
-    memset(dma[dma_cur], 0, LINE + PAD);
-    send_row(dma[dma_cur]);           /* latches the last real row */
+    zero_row(dma[dma_cur]);           /* latches the last real row */
     while (!dma_done) {}
 }
 
@@ -146,6 +174,11 @@ static void nop_scan(void)
 
 /* One row of source codes from the picture and the state, updating the
  * state. Returns whether any pixel in it is still being pushed. */
+/* The four state bytes of eight pixels that are at rest in the colours of
+ * picture byte b, as one little-endian word: most of a row that is being
+ * worked on has not changed, and comparing a word skips them. */
+static uint32_t at_rest[256];
+
 static bool IRAM_ATTR work_row(int r, uint8_t *out)
 {
     static const uint8_t reset_mask[4] = { 0xfc, 0xe0, 0x1c, 0x00 };
@@ -154,6 +187,12 @@ static bool IRAM_ATTR work_row(int r, uint8_t *out)
     uint8_t live = 0;
     for (int j = 0; j < STRIDE; j++) {
         uint8_t px = in[j];
+        if (*(const uint32_t *)st == at_rest[px]) {
+            out[0] = out[1] = 0;
+            out += 2;
+            st += 4;
+            continue;
+        }
         for (int k = 0; k < 2; k++) {
             uint8_t o = 0;
             for (int l = 0; l < 2; l++) {
@@ -216,11 +255,12 @@ static void scan_task(void *arg)
                 memset(buf + LINE, 0, PAD);
                 rows++;
                 pushed = true;
+                send_row(buf);
+                dma_cur ^= 1;
             } else {
-                memset(buf, 0, LINE + PAD);
+                zero_row(buf);
+                dma_cur ^= 1;
             }
-            send_row(buf);
-            dma_cur ^= 1;
         }
         frame_end();
         tail = pushed;
@@ -268,10 +308,15 @@ int fastepd_begin(void)
     for (int i = 0; i < 2; i++)
         dma[i] = (uint8_t *)heap_caps_aligned_alloc(16, LINE + PAD + 16, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     target = (uint8_t *)heap_caps_malloc((size_t)STRIDE * H, MALLOC_CAP_SPIRAM);
-    state = (uint8_t *)heap_caps_malloc((size_t)PAIRS * H, MALLOC_CAP_SPIRAM);
+    state = (uint8_t *)heap_caps_aligned_alloc(4, (size_t)PAIRS * H, MALLOC_CAP_SPIRAM);
     if (!dma[0] || !dma[1] || !target || !state) { printf("fastepd: out of memory\n"); return -1; }
     memset(target, 0, (size_t)STRIDE * H);
     memset(state, DONE_BOTH, (size_t)PAIRS * H);
+    for (int b = 0; b < 256; b++)
+        at_rest[b] = (uint32_t)(DONE_BOTH | ((b >> 6) & 3))
+                   | (uint32_t)(DONE_BOTH | ((b >> 4) & 3)) << 8
+                   | (uint32_t)(DONE_BOTH | ((b >> 2) & 3)) << 16
+                   | (uint32_t)(DONE_BOTH | (b & 3)) << 24;
     for (int i = 0; i < 256; i++) {
         uint8_t v = 0;
         for (int b = 0; b < 8; b++) if (i & (1 << b)) v |= (uint8_t)(0x80 >> b);
@@ -287,7 +332,7 @@ int fastepd_begin(void)
     gpio_set_level(PIN_GDSP, 1);
 
     clean_req = true;
-    xTaskCreatePinnedToCore(scan_task, "fastepd", 4096, NULL, 2, &task, 0);
+    xTaskCreatePinnedToCore(scan_task, "fastepd", 4096, NULL, scan_prio, &task, 0);
     printf("fastepd: panel driven directly, %dx%d at %d MHz\n", W, H, XCK / 1000000);
     return 0;
 }
@@ -325,8 +370,11 @@ void fastepd_command(const char *a)
     if (*a == 'x') flip_x = !flip_x;
     else if (*a == 'y') flip_y = !flip_y;
     else if (*a == 'c') fastepd_clean();
-    printf("fastepd: %lu scans, last %lu rows in %lu us, %lu cleans, flip x %d y %d\n",
-           frames, busy_rows, last_frame_us, cleans, flip_x, flip_y);
+    else if (*a == 'z') { int n = atoi(a + 1); if (n >= 1 && n <= 100) zero_row_us = n; }
+    else if (*a == 'P') { int n = atoi(a + 1); if (n >= 1 && n <= 10) { scan_prio = n; vTaskPrioritySet(task, n); } }
+    printf("fastepd: %lu scans, last %lu rows in %lu us, %lu cleans, flip x %d y %d, "
+           "zero row %d us, priority %d\n",
+           frames, busy_rows, last_frame_us, cleans, flip_x, flip_y, zero_row_us, scan_prio);
     if ((*a == 'x' || *a == 'y') && last_pic) {
         /* the whole picture again, the new way round, on a clean panel */
         fastepd_clean();

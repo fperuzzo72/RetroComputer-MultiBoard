@@ -68,7 +68,8 @@ static const char *m_debug_help(void) {
     return "  d <n> <shift> <char>   press dead key n then a character\n"
            "  p <row> <bit> <mods>   press one matrix position (1 Shift, 2 Ctrl)\n"
            "  c [n]                  list cartridges, or select one and reboot\n"
-           "  q                      where a frame's time goes";
+           "  q                      where a frame's time goes\n"
+           "  u [pct]                frames drawn, in percent";
 }
 
 static int m_debug_command(const char *line) {
@@ -96,6 +97,11 @@ static int m_debug_command(const char *line) {
             } else {
                 msx_cart_list();
             }
+            return 1;
+        case 'u':
+            a = 0;
+            sscanf(line + 1, "%d", &a);
+            printf("drawing %d%% of frames\n", msx_draw_percent(a));
             return 1;
         case 'q': {
             /* Where a frame goes. The Z80 is rarely the answer. */
