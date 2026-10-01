@@ -1,0 +1,10 @@
+{
+  "name": "c64",
+  "version": "1.0.0",
+  "description": "retroelec's T-HMI-C64 emulator core, vendored (GPLv3). Built with RetroComputer-MultiBoard's drivers under BOARD_RETRO; see README.md.",
+  "build": {
+    "srcDir": "src",
+    "srcFilter": ["+<*.cpp>", "+<platform/PlatformFactory.cpp>", "+<joystick/JoystickFactory.cpp>"],
+    "includeDir": "src"
+  }
+}

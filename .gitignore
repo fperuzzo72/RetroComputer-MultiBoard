@@ -35,3 +35,7 @@ tools/eink_test/eink_test
 tools/eink_test/screens
 tools/eink_test/zx
 tools/eink_test/msx
+# Commodore's ROMs, generated from roms/c64 by tools/make_c64_roms.py
+src/c64/c64_rom_data.c
+tools/c64host/c64host
+tools/c64host/*.o

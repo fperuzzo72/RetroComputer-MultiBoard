@@ -8,6 +8,9 @@ machine. Each one that is present defines a flag so the firmware uses it:
   src/msx/local_cart_data.c   HAVE_LOCAL_CART   an MSX cartridge
   src/spectrum/spectrum_rom_data.c
                               HAVE_SPECTRUM_ROM the Spectrum 48K ROM
+  src/c64/c64_rom_data.c      HAVE_C64_ROMS     the C64's BASIC, KERNAL,
+                                                CHARGEN and 1541 DOS
+                                                (tools/make_c64_roms.py)
 
 A clone without any of them still builds. The MSX falls back to C-BIOS,
 which runs cartridges but not BASIC; the Spectrum has no fallback and says
@@ -51,3 +54,10 @@ if os.path.isfile(tapes_c):
     print("Spectrum tapes: %s found, embedding them" % os.path.relpath(tapes_c))
 else:
     print("Spectrum tapes: none")
+
+c64_c = os.path.join(env.subst("$PROJECT_SRC_DIR"), "c64", "c64_rom_data.c")
+if os.path.isfile(c64_c):
+    env.Append(CPPDEFINES=["HAVE_C64_ROMS"])
+    print("C64 ROMs: %s found, embedding them" % os.path.relpath(c64_c))
+else:
+    print("C64 ROMs: none (tools/make_c64_roms.py); that machine will say so and stop")
