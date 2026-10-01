@@ -292,6 +292,16 @@ the sound does not stutter when the emulation is late (AUDIO_PULLS makes
 PlayAllSound() a no-op). The owner found it far better than the first
 version, which `snd voz` on the console still selects: the loudest PSG
 voice as a square wave (`msx_beeper.c`). `snd off` is silence.
+**The PCM's centre follows the sound's level, not a fixed 50% duty**
+(2026-10-01). With the PaperS3's direct-drive panel scanning, the owner
+heard a hiss. Found by ear, step by step: the ring never ran dry (`snd`);
+muted, silence (`snd mudo`); with the panel paused, gone (`fe s`); held at
+a fixed duty with no sound, it hissed at 50% and hardly at 10% (`snd dc
+N`). So the panel's current ripples the supply and the buzzer turns it
+into noise in proportion to its own mean current. Now the centre rises
+with 2ms of lookahead and falls over ~60ms: silence draws nothing, a quiet
+passage about a sixth of what it did, peaks the same (host test, no
+clipping). The owner: "o chiado praticamente sumiu".
 
 **The PaperS3 can drive its panel directly** (`pio run -e papers3-fast`,
 `src/boards/eink/fastepd.c`, after PaperBoy's Modos Smooth Graphics, MIT,

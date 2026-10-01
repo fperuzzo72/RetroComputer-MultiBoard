@@ -16,7 +16,17 @@
  * plays whatever the PSG is set to, continuously. PaperBoy decouples its
  * APU the same way.
  *
- * Silence is the buzzer off, not a 50% duty. The other mode (audio_mode
+ * The duty does not sit at 50% with the sound swinging round it, as
+ * PaperBoy's does. Measured on the PaperS3 (2026-10-01): the direct-drive
+ * panel makes the supply ripple, and the buzzer turns the ripple into a
+ * hiss in proportion to the current it carries; held at a fixed 50% it
+ * hissed, at 10% hardly. So the centre follows the sound's own level, with
+ * 2ms of lookahead so it is up before a loud note arrives and a 60ms
+ * release: between notes and in quiet passages the buzzer carries almost
+ * nothing, and when it is loud the music covers the rest. Peaks reach the
+ * same duty as before. The ring therefore holds duties, not samples.
+ *
+ * Silence is the buzzer off. The other mode (audio_mode
  * AUDIO_MODE_VOICE) leaves fMSX's sound off and msx_beeper.c plays the
  * loudest PSG voice as a square wave through beeper.h; `snd` on the serial
  * console switches, remembered in NVS.
@@ -38,6 +48,7 @@ int  audio_mode(void) { return AUDIO_MODE_VOICE; }
 void audio_set_mode(int mode) { (void)mode; }
 void audio_report(void) {}
 void audio_mute(int on) { (void)on; }
+void audio_hold(int pct) { (void)pct; }
 
 #else
 
@@ -69,16 +80,17 @@ void audio_mute(int on) { (void)on; }
 #define RING       4096u               /* 125ms */
 #define RING_MASK  (RING - 1u)
 #define TARGET     1536u               /* ~47ms kept queued */
-#define QUIET_RUN  3277                /* 100ms of zeros turns the buzzer off */
+#define LOOK       64                  /* lookahead, 2ms */
 
 static int16_t DRAM_ATTR ring[RING];
 static _Atomic uint32_t head, tail;
 static volatile int running;
 static volatile unsigned long written;
-static volatile int quiet = 1;         /* buzzer off: nothing to play */
+static volatile int32_t centre;        /* the duty the sound swings about, now */
 static volatile unsigned long underruns;  /* periods with the ring empty while playing */
 static volatile int muted;             /* `snd mudo`: the buzzer still, the rest running */
-static volatile int held;              /* `snd dc`: a fixed 50% duty, no samples, for tests */
+static volatile int held;              /* `snd dc [pct]`: a fixed duty, no samples, for tests */
+static volatile uint32_t held_duty = DUTY_MID;
 static intr_handle_t intr;
 
 static IRAM_ATTR void isr(void *arg)
@@ -89,16 +101,13 @@ static IRAM_ATTR void isr(void *arg)
     uint32_t t = atomic_load_explicit(&tail, memory_order_relaxed);
     uint32_t h = atomic_load_explicit(&head, memory_order_acquire);
     uint32_t duty = 0;
-    if (h == t) { if (!quiet) underruns++; }
+    if (h == t) { if (centre) underruns++; }
     else {
-        const int32_t s = ring[t & RING_MASK];
+        duty = (uint16_t)ring[t & RING_MASK];
         atomic_store_explicit(&tail, t + 1, memory_order_release);
-        if (!quiet && !muted) {
-            int32_t d = (s >> (16 - DUTY_BITS)) + DUTY_MID;
-            duty = d < 0 ? 0 : d >= (1 << DUTY_BITS) ? (1 << DUTY_BITS) - 1 : (uint32_t)d;
-        }
+        if (muted) duty = 0;
     }
-    if (held) duty = DUTY_MID;
+    if (held) duty = held_duty;
     ledc_ll_set_duty_int_part(&LEDC, MODE, CHANNEL, duty);
     ledc_ll_ls_channel_update(&LEDC, MODE, CHANNEL);
 }
@@ -181,14 +190,39 @@ void audio_shutdown(void) { running = 0; }
 
 unsigned int audio_write(const short *samples, unsigned int count)
 {
-    static int zeros;
+    static int16_t look[LOOK];         /* the next LOOK samples, in duty units */
+    static int pos, peak, peak_age;
+    static int32_t cq;                 /* the centre, in 1/65536 of a duty step */
     uint32_t h = atomic_load_explicit(&head, memory_order_relaxed);
     const uint32_t free_ = RING - ring_count();
     if (count > free_) count = free_;
     for (unsigned int i = 0; i < count; i++) {
-        ring[(h + i) & RING_MASK] = samples[i];
-        if (samples[i]) { zeros = 0; quiet = 0; }
-        else if (++zeros >= QUIET_RUN) quiet = 1;
+        const int x = samples[i] >> (16 - DUTY_BITS);        /* -512..511 */
+        const int out = look[pos];
+        look[pos] = (int16_t)x;
+        pos = (pos + 1) % LOOK;
+
+        /* the loudest of the samples about to go out */
+        const int ax = x < 0 ? -x : x;
+        if (ax >= peak) { peak = ax; peak_age = 0; }
+        else if (++peak_age >= LOOK) {
+            peak = 0;
+            for (int k = 0; k < LOOK; k++) {
+                const int a = look[k] < 0 ? -look[k] : look[k];
+                if (a > peak) peak = a;
+            }
+            peak_age = 0;
+        }
+        const int32_t want = (int32_t)(peak ? peak + 4 : 0) << 16;
+        if (want > cq) cq += ((want - cq) >> 3) + 1;       /* up within the lookahead */
+        else cq -= (cq - want) >> 11;                      /* down over ~60ms */
+
+        const int32_t c = (cq + 0x8000) >> 16;
+        int32_t d = c ? c + out : 0;
+        if (d < 0) d = 0;
+        if (d > (1 << DUTY_BITS) - 1) d = (1 << DUTY_BITS) - 1;
+        ring[(h + i) & RING_MASK] = (int16_t)d;
+        centre = c;
     }
     atomic_store_explicit(&head, h + count, memory_order_release);
     written += count;
@@ -203,11 +237,12 @@ unsigned long audio_samples_written(void) { return written; }
 void audio_test_tone(int hz, int ms) { (void)hz; (void)ms; }
 
 void audio_mute(int on) { muted = on == 1; held = on == 2; }
+void audio_hold(int pct) { held_duty = (uint32_t)((1 << DUTY_BITS) * pct / 100); held = 1; muted = 0; }
 
 void audio_report(void)
 {
     printf("audio: %s%s, ring %lu of %u, %lu samples, %lu empty periods while playing\n",
-           running ? "PCM" : "off", muted ? " (muted)" : held ? " (held at 50%)" : "", (unsigned long)ring_count(), RING, (unsigned long)written,
+           running ? "PCM" : "off", muted ? " (muted)" : held ? " (held at a fixed duty)" : "", (unsigned long)ring_count(), RING, (unsigned long)written,
            (unsigned long)underruns);
 }
 

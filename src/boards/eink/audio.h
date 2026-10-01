@@ -16,6 +16,7 @@ int  audio_mode(void);
 void audio_set_mode(int mode);   /* takes effect at the next start */
 void audio_report(void);         /* for `snd` on the console */
 void audio_mute(int on);         /* tests: 1 the buzzer still, 2 a fixed 50%, 0 back */
+void audio_hold(int pct);        /* test: a fixed duty, in percent */
 
 /* Bring the DAC up at the given rate. Returns the rate actually used, or
  * 0 if it could not start. */

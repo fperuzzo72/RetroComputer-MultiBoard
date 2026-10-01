@@ -408,6 +408,9 @@ static void console_command(const char *line)
         key(u);
     } else if (!strcmp(line, "d")) {
         dump_picture();
+    } else if (sscanf(line, "snd dc %d", &a) == 1 && a >= 0 && a <= 100) {
+        audio_hold(a);
+        audio_report();
     } else if (!strcmp(line, "snd mudo") || !strcmp(line, "snd som") || !strcmp(line, "snd dc")) {
         audio_mute(line[4] == 'm' ? 1 : line[4] == 'd' ? 2 : 0);
         audio_report();
