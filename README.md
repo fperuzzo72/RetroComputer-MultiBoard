@@ -22,8 +22,8 @@ flash, so there is no SD card in any of this.
 
 Two more boards are M5Stack's e-ink devices, the **Paper Mono** (800x480)
 and the **PaperS3** (960x540), each carrying the MSX, the Spectrum, a
-**Macintosh Plus** and a **Commodore 64**. See "The e-ink boards" and
-"The Commodore 64" below.
+**Macintosh Plus**, a **Commodore 64** and a **PC with MS-DOS**. See "The
+e-ink boards", "The Commodore 64" and "The PC" below.
 
 ## Status, in detail
 
@@ -385,6 +385,50 @@ python3 tools/sd_put.py --dest /c64/ *.crt
 `tools/c64host` runs the same core on the Mac, with PNG screenshots:
 `C64_ROOT=dir CRT=game.crt ./tools/c64host/c64host out 15` (or `D64=`).
 
+## The PC (MS-DOS), on the e-ink boards
+
+An IBM PC-compatible with an 8086, **text mode only so far**: M5PaperDOS's
+8086 core (`lib/pc8086/`, MIT, after 8086tiny; local changes in its
+README) with this project's glue in `src/pc/`. Verified on the PaperS3
+on 2026-10-01: MS-DOS 6.22 boots from the card, `dir` and `ver` answer,
+WordStar 3 opens, and on the host it saves a document.
+
+It boots a **disk image from the card**: every `/pc/*.img` and the
+`/msdos.img` M5PaperDOS kept at the card's root (left where it is, so
+that firmware still finds it). A hard disk image boots as C:; one of
+floppy size (2.88MB or less) as A:, with the first hard disk beside it as
+C:. Writes go into the image, so what is saved stays. With several, the
+selector lists them.
+
+The screen is the VGA's own text, 80x25 cells of 8x16 (640x400), handed
+to the board as a 1-bit picture and scaled to the panel like the Mac's.
+Colour becomes black and white by contrast: the brighter of a cell's two
+colours is paper, so DOS's grey on black and EDIT's white on blue both
+come out black on white, and a highlighted menu bar white on black. The
+cursor is a steady underline. CGA and VGA graphics are not drawn yet.
+
+Speed: **about 590 thousand instructions a second** at the DOS prompt and
+750 thousand in a tight loop, about twice an IBM PC XT (4.77MHz, roughly
+0.33 MIPS). The core is a C interpreter, measured to spend all its time
+in the CPU; see `lib/pc8086/README.md` for what was taken out to get here.
+
+Keys are a US PC keyboard (`src/pc/pc_keys.c`); F12 or a tap opens the
+selector. Console: `w dir` types `dir` and Enter (`|` for a space, `wn`
+without the Enter), `s` gives the speed. `tools/pchost` runs the same PC on
+the Mac and prints the screen:
+
+```bash
+make -C tools/pchost PCFLAGS=-DPC8086_LEAN
+PC_ROOT=dir ./tools/pchost/pchost /pc/c.img 10 $'ver\r'
+```
+
+(`PBM=file.pbm` also writes the picture the board would get.)
+
+**WordStar on the owner's image** is installed to open documents on A:
+(the routine at WS.COM offset 1E1Dh returns drive 1). Patching that byte
+to 0, the current drive, makes it open and save on C:, verified on the
+host with a copy; the card's own WS.COM has not been touched.
+
 ## The layout of this repo
 
 ```
@@ -397,10 +441,12 @@ src/msx/               the MSX1, on the vendored fMSX core
 src/spectrum/          the ZX Spectrum 48K
 src/mac/               the Macintosh Plus
 src/c64/               the Commodore 64's drivers, cartridges, keys
+src/pc/                the PC: start-up, text screen, keys, card files
 lib/z80/               Marat Fayzullin's Z80, shared by MSX and Spectrum
 lib/fmsx_core/         the rest of fMSX: VDP, PSG, mappers. MSX only.
 lib/umac/              umac and Musashi, the Macintosh core
 lib/c64/               T-HMI-C64, the Commodore 64 core (GPLv3)
+lib/pc8086/            M5PaperDOS's 8086 core, after 8086tiny (MIT)
 freeink-sdk/           the Paper Mono's hardware library (git submodule)
 ```
 
@@ -637,6 +683,8 @@ See `third_party_licenses/` for full texts:
   see `fmsx_and_emulib.txt`).
 - `lib/fmsx_core/video/AVideo.i`: Schuemi's fMSX-go / ESPlay-fMSX video
   glue, MIT licensed.
+- `lib/pc8086/`: M5PaperDOS's 8086 core and 8086tiny's BIOS, MIT
+  (`m5paperdos_8086tiny.txt`).
 - `lib/c64/`: retroelec's T-HMI-C64, **GPLv3**
   (`t-hmi-c64_gpl3.txt`). See the note in `LICENSE` about what that means
   next to fMSX in one firmware.

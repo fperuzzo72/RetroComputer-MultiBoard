@@ -1,0 +1,29 @@
+lib/pc8086 is M5PaperDOS's 8086 emulator core, whose CPU and BIOS follow
+8086tiny, and whose BIOS image is 8086tiny's.
+
+M5PaperDOS - https://github.com/omeriko9/M5PaperDOS (vendored through the
+fork https://github.com/fperuzzo72/M5Paper_8086). Its README states
+"License: MIT"; the repository carries no separate license file.
+
+8086tiny - https://github.com/adriancable/8086tiny
+Copyright (c) 2013-2014 Adrian Cable. MIT License.
+
+The MIT License, as it applies to both:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

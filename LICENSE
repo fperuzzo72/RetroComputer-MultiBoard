@@ -41,6 +41,9 @@ code table from Mini vMac, and those parts are GPLv2. See
 third_party_licenses/umac_and_musashi.txt. The freeink-sdk submodule is
 its own repository under its own MIT license.
 
+The PC's 8086 core under lib/pc8086/ is M5PaperDOS's, after 8086tiny,
+both MIT (third_party_licenses/m5paperdos_8086tiny.txt).
+
 The Commodore 64 core vendored under lib/c64/ is retroelec's T-HMI-C64,
 GPLv3 (third_party_licenses/t-hmi-c64_gpl3.txt). A firmware built with it
 (every e-ink build) is a combined work under the GPLv3 as far as that core

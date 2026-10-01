@@ -1,0 +1,14 @@
+{
+  "name": "pc8086",
+  "version": "1.0.0",
+  "description": "M5PaperDOS's 8086 core (after 8086tiny), vendored, MIT. Built with RetroComputer-MultiBoard's glue in src/pc; see README.md.",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "include",
+    "flags": [
+      "-O2",
+      "-DLOG_LOCAL_LEVEL=1",
+      "-DPC8086_LEAN"
+    ]
+  }
+}

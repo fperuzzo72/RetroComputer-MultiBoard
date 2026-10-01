@@ -379,6 +379,39 @@ Things that cost time and are not obvious from the code:
   the board waits with vTaskDelay, because spinning on readBytes tripped
   the task watchdog.
 
+## The PC, MS-DOS in text mode (2026-10-01)
+
+`lib/pc8086/` is M5PaperDOS's 8086 core (MIT, after 8086tiny), from the
+owner's fork ~/github/M5Paper_8086; `src/pc/` is the glue; `tools/pchost`
+runs it on the Mac in real time and prints the screen. **Use pchost
+first**, with `PCLOG=1` or `2` for the core's own logs (build without
+`PC8086_LEAN` to get its per-instruction trace back).
+
+- **The core's headers stay off the include path** (memory.h, video.h,
+  disk.h would shadow others): library.json points includeDir at an
+  empty folder and src/pc/pc8086.h includes them by relative path.
+- **Speed was the tracing, not the emulation.** 352k instructions/s at
+  first; the profile (`s` on the console) showed 99% in the CPU. The
+  trace ring, CPU context and IVT watch per instruction, now under
+  `PC8086_LEAN`: 562k. `-O2` for the library (Arduino builds -Os): 588k,
+  746k in a tight loop. Tried and measured useless: the dispatcher in
+  IRAM (+1%, and internal heap fell to 9kB, BLE needs it), byte-wise
+  operand fetch instead of unaligned 16-bit loads (no change). About 2x
+  an IBM XT, enough for DOS and WordStar.
+- **INT 16h/00 must wait.** Upstream returned AX=0 with no key; WordStar 3
+  calls 00 without checking 01 first and typed garbage. Now the INT runs
+  again until a key arrives (bios.c, NOT UPSTREAM).
+- The BIOS is high-level: INT 10h/13h/16h are C (bios.c), intercepted at
+  the `CD xx` opcode, so a program that hooks one of them is bypassed.
+  Not seen to matter yet.
+- **WordStar on /msdos.img opens documents on A:**: its WS.COM returns
+  drive 1 at offset 1E1Dh (`mov al,1`). Found by watching the FCB's drive
+  byte. That is the install, not the emulator; byte 1E1Eh to 0 fixes it
+  (tested on a copy). The owner's card stays untouched until they say so.
+- The image's AUTOEXEC.BAT and CONFIG.SYS have Unix line endings, which
+  is why DOS echoes them in a staircase at boot.
+- Graphics (CGA, mode 13h) are not drawn: pc_text.c says so on screen.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,

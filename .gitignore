@@ -41,3 +41,5 @@ tools/eink_test/msx
 src/c64/c64_rom_data.c
 tools/c64host/c64host
 tools/c64host/*.o
+tools/pchost/pchost
+tools/pchost/*.o

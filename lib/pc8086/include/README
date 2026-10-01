@@ -1,0 +1,4 @@
+Deliberately empty. The core's headers are memory.h, video.h, disk.h,
+bios.h, ports.h: names that would shadow system and other libraries'
+headers if this library put its src/ on every file's include path. The
+glue in src/pc/ includes them by relative path (src/pc/pc8086.h).
