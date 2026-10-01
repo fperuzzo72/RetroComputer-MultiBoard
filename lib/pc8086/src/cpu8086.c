@@ -1017,6 +1017,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, res < dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t src, dst, res;
@@ -1036,6 +1037,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, res < dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1051,6 +1053,7 @@ prefix_done:
                 cpu->regs16[REG_AX] = res;
                 SET_FLAG_IF(FLAG_CF, res < dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t dst = cpu->regs8[0];  // AL
@@ -1059,6 +1062,7 @@ prefix_done:
                 cpu->regs8[0] = res;
                 SET_FLAG_IF(FLAG_CF, res < dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1181,6 +1185,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, sum > 0xFFFF);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 int ri = i_reg < 4 ? i_reg * 2 : (i_reg - 4) * 2 + 1;
@@ -1203,6 +1208,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, sum > 0xFF);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1220,6 +1226,7 @@ prefix_done:
                 cpu->regs16[REG_AX] = res;
                 SET_FLAG_IF(FLAG_CF, sum > 0xFFFF);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t dst = cpu->regs8[0];
@@ -1229,6 +1236,7 @@ prefix_done:
                 cpu->regs8[0] = res;
                 SET_FLAG_IF(FLAG_CF, sum > 0xFF);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1270,6 +1278,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, (uint32_t)src + borrow > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 int ri = i_reg < 4 ? i_reg * 2 : (i_reg - 4) * 2 + 1;
@@ -1289,6 +1298,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, (uint16_t)src + borrow > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1305,6 +1315,7 @@ prefix_done:
                 cpu->regs16[REG_AX] = res;
                 SET_FLAG_IF(FLAG_CF, (uint32_t)src + borrow > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t dst = cpu->regs8[0];
@@ -1313,6 +1324,7 @@ prefix_done:
                 cpu->regs8[0] = res;
                 SET_FLAG_IF(FLAG_CF, (uint16_t)src + borrow > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1434,6 +1446,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t src, dst, res;
@@ -1453,6 +1466,7 @@ prefix_done:
                 }
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1468,6 +1482,7 @@ prefix_done:
                 cpu->regs16[REG_AX] = res;
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t dst = cpu->regs8[0];
@@ -1476,6 +1491,7 @@ prefix_done:
                 cpu->regs8[0] = res;
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1600,6 +1616,7 @@ prefix_done:
                 res = dst - src;
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t src, dst, res;
@@ -1615,6 +1632,7 @@ prefix_done:
                 res = dst - src;
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1629,6 +1647,7 @@ prefix_done:
                 uint16_t res = dst - src;
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 16);
             } else {
                 uint8_t dst = cpu->regs8[0];
@@ -1636,6 +1655,7 @@ prefix_done:
                 uint8_t res = dst - src;
                 SET_FLAG_IF(FLAG_CF, src > dst);
                 SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                 set_pzs_flags(cpu, res, 8);
             }
             break;
@@ -1664,6 +1684,7 @@ prefix_done:
             uint16_t old = cpu->regs16[reg];
             cpu->regs16[reg]++;
             SET_FLAG_IF(FLAG_OF, old == 0x7FFF);
+            SET_FLAG_IF(FLAG_AF, (old & 0x0F) == 0x0F);  /* NOT UPSTREAM: AF, see README */
             set_pzs_flags(cpu, cpu->regs16[reg], 16);
             break;
         }
@@ -1675,6 +1696,7 @@ prefix_done:
             uint16_t old = cpu->regs16[reg];
             cpu->regs16[reg]--;
             SET_FLAG_IF(FLAG_OF, old == 0x8000);
+            SET_FLAG_IF(FLAG_AF, (old & 0x0F) == 0);  /* NOT UPSTREAM: AF, see README */
             set_pzs_flags(cpu, cpu->regs16[reg], 16);
             break;
         }
@@ -1922,6 +1944,7 @@ prefix_done:
                     res = dst + src;
                     SET_FLAG_IF(FLAG_CF, res < dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs8[i_rm < 4 ? i_rm * 2 : (i_rm - 4) * 2 + 1] = res;
                     else mem_write_byte(ea, res);
                     set_pzs_flags(cpu, res, 8);
@@ -1937,6 +1960,7 @@ prefix_done:
                     res = dst + src + ((cpu->flags & FLAG_CF) ? 1 : 0);
                     SET_FLAG_IF(FLAG_CF, (uint16_t)dst + src + ((cpu->flags & FLAG_CF) ? 1 : 0) > 0xFF);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs8[i_rm < 4 ? i_rm * 2 : (i_rm - 4) * 2 + 1] = res;
                     else mem_write_byte(ea, res);
                     set_pzs_flags(cpu, res, 8);
@@ -1945,6 +1969,7 @@ prefix_done:
                     res = dst - src - ((cpu->flags & FLAG_CF) ? 1 : 0);
                     SET_FLAG_IF(FLAG_CF, (uint16_t)src + ((cpu->flags & FLAG_CF) ? 1 : 0) > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs8[i_rm < 4 ? i_rm * 2 : (i_rm - 4) * 2 + 1] = res;
                     else mem_write_byte(ea, res);
                     set_pzs_flags(cpu, res, 8);
@@ -1960,6 +1985,7 @@ prefix_done:
                     res = dst - src;
                     SET_FLAG_IF(FLAG_CF, src > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs8[i_rm < 4 ? i_rm * 2 : (i_rm - 4) * 2 + 1] = res;
                     else mem_write_byte(ea, res);
                     set_pzs_flags(cpu, res, 8);
@@ -1975,6 +2001,7 @@ prefix_done:
                     res = dst - src;
                     SET_FLAG_IF(FLAG_CF, src > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 8);
                     break;
             }
@@ -1998,6 +2025,7 @@ prefix_done:
                     res = dst + src;
                     SET_FLAG_IF(FLAG_CF, res < dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2013,6 +2041,7 @@ prefix_done:
                     res = dst + src + ((cpu->flags & FLAG_CF) ? 1 : 0);
                     SET_FLAG_IF(FLAG_CF, (uint32_t)dst + src + ((cpu->flags & FLAG_CF) ? 1 : 0) > 0xFFFF);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2021,6 +2050,7 @@ prefix_done:
                     res = dst - src - ((cpu->flags & FLAG_CF) ? 1 : 0);
                     SET_FLAG_IF(FLAG_CF, (uint32_t)src + ((cpu->flags & FLAG_CF) ? 1 : 0) > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2036,6 +2066,7 @@ prefix_done:
                     res = dst - src;
                     SET_FLAG_IF(FLAG_CF, src > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2051,6 +2082,7 @@ prefix_done:
                     res = dst - src;
                     SET_FLAG_IF(FLAG_CF, src > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     break;
             }
@@ -2074,6 +2106,7 @@ prefix_done:
                     res = dst + src;
                     SET_FLAG_IF(FLAG_CF, res < dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2089,6 +2122,7 @@ prefix_done:
                     res = dst + src + ((cpu->flags & FLAG_CF) ? 1 : 0);
                     SET_FLAG_IF(FLAG_CF, (uint32_t)dst + src + ((cpu->flags & FLAG_CF) ? 1 : 0) > 0xFFFF);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ res) & (src ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2097,6 +2131,7 @@ prefix_done:
                     res = dst - src - ((cpu->flags & FLAG_CF) ? 1 : 0);
                     SET_FLAG_IF(FLAG_CF, (uint32_t)src + ((cpu->flags & FLAG_CF) ? 1 : 0) > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2112,6 +2147,7 @@ prefix_done:
                     res = dst - src;
                     SET_FLAG_IF(FLAG_CF, src > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
                     set_pzs_flags(cpu, res, 16);
@@ -2127,6 +2163,7 @@ prefix_done:
                     res = dst - src;
                     SET_FLAG_IF(FLAG_CF, src > dst);
                     SET_FLAG_IF(FLAG_OF, ((dst ^ src) & (dst ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     break;
             }
@@ -2494,6 +2531,7 @@ prefix_done:
                     uint16_t res = src - dst;
                     SET_FLAG_IF(FLAG_CF, dst > src);
                     SET_FLAG_IF(FLAG_OF, ((src ^ dst) & (src ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     cpu->regs16[REG_SI] += (cpu->flags & FLAG_DF) ? -2 : 2;
                     cpu->regs16[REG_DI] += (cpu->flags & FLAG_DF) ? -2 : 2;
@@ -2503,6 +2541,7 @@ prefix_done:
                     uint8_t res = src - dst;
                     SET_FLAG_IF(FLAG_CF, dst > src);
                     SET_FLAG_IF(FLAG_OF, ((src ^ dst) & (src ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 8);
                     cpu->regs16[REG_SI] += (cpu->flags & FLAG_DF) ? -1 : 1;
                     cpu->regs16[REG_DI] += (cpu->flags & FLAG_DF) ? -1 : 1;
@@ -2547,6 +2586,7 @@ prefix_done:
                     uint16_t res = src - dst;
                     SET_FLAG_IF(FLAG_CF, dst > src);
                     SET_FLAG_IF(FLAG_OF, ((src ^ dst) & (src ^ res)) & 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     cpu->regs16[REG_DI] += (cpu->flags & FLAG_DF) ? -2 : 2;
                 } else {
@@ -2555,6 +2595,7 @@ prefix_done:
                     uint8_t res = src - dst;
                     SET_FLAG_IF(FLAG_CF, dst > src);
                     SET_FLAG_IF(FLAG_OF, ((src ^ dst) & (src ^ res)) & 0x80);
+                    SET_FLAG_IF(FLAG_AF, (dst ^ src ^ res) & 0x10);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 8);
                     cpu->regs16[REG_DI] += (cpu->flags & FLAG_DF) ? -1 : 1;
                 }
@@ -3380,6 +3421,7 @@ prefix_done:
                     uint8_t res = -val;
                     SET_FLAG_IF(FLAG_CF, val != 0);
                     SET_FLAG_IF(FLAG_OF, val == 0x80);
+                    SET_FLAG_IF(FLAG_AF, (val & 0x0F) != 0);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 8);
                     if (i_mod == 3) cpu->regs8[ri] = res;
                     else mem_write_byte(ea, res);
@@ -3475,6 +3517,7 @@ prefix_done:
                     uint16_t res = -val;
                     SET_FLAG_IF(FLAG_CF, val != 0);
                     SET_FLAG_IF(FLAG_OF, val == 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (val & 0x0F) != 0);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
@@ -3555,6 +3598,7 @@ prefix_done:
                     uint8_t val = (i_mod == 3) ? cpu->regs8[ri] : mem_read_byte(ea);
                     uint8_t res = val + 1;
                     SET_FLAG_IF(FLAG_OF, val == 0x7F);
+                    SET_FLAG_IF(FLAG_AF, (val & 0x0F) == 0x0F);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 8);
                     if (i_mod == 3) cpu->regs8[ri] = res;
                     else mem_write_byte(ea, res);
@@ -3564,6 +3608,7 @@ prefix_done:
                     uint8_t val = (i_mod == 3) ? cpu->regs8[ri] : mem_read_byte(ea);
                     uint8_t res = val - 1;
                     SET_FLAG_IF(FLAG_OF, val == 0x80);
+                    SET_FLAG_IF(FLAG_AF, (val & 0x0F) == 0);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 8);
                     if (i_mod == 3) cpu->regs8[ri] = res;
                     else mem_write_byte(ea, res);
@@ -3587,6 +3632,7 @@ prefix_done:
                     uint16_t val = (i_mod == 3) ? cpu->regs16[i_rm] : mem_read_word(ea);
                     uint16_t res = val + 1;
                     SET_FLAG_IF(FLAG_OF, val == 0x7FFF);
+                    SET_FLAG_IF(FLAG_AF, (val & 0x0F) == 0x0F);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);
@@ -3596,6 +3642,7 @@ prefix_done:
                     uint16_t val = (i_mod == 3) ? cpu->regs16[i_rm] : mem_read_word(ea);
                     uint16_t res = val - 1;
                     SET_FLAG_IF(FLAG_OF, val == 0x8000);
+                    SET_FLAG_IF(FLAG_AF, (val & 0x0F) == 0);  /* NOT UPSTREAM: AF, see README */
                     set_pzs_flags(cpu, res, 16);
                     if (i_mod == 3) cpu->regs16[i_rm] = res;
                     else mem_write_word(ea, res);

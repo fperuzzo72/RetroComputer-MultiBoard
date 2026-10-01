@@ -31,6 +31,11 @@ run loop (`pc_core.c`), the screen (`pc_text.c`), the keyboard
   again, as a real BIOS does. Upstream returns AX=0 at once; WordStar 3
   reads a key without asking first, took that 0 for a keystroke and
   filled its prompts with garbage.
+- `cpu8086.c`: **the auxiliary carry (AF)** is set by ADD, ADC, SUB, SBB,
+  CMP, CMPS, SCAS, INC, DEC and NEG, 47 places, each marked. Upstream only
+  DAA, DAS, AAA, AAS and SAHF touched it, so DAA worked on whatever AF
+  was left over: DEBUG's hex dumps came out as "H<<=" for "B001" (its
+  nibble-to-ASCII is ADD 90h, DAA, ADC 40h, DAA).
 - `cpu8086.c`, `memory.c`: under `PC8086_LEAN` (set in `library.json`),
   the per-instruction trace ring, CPU context and debug checks, and the
   interrupt-table write watch are left out. On the PaperS3 at the DOS

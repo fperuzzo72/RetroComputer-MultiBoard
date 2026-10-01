@@ -424,10 +424,14 @@ PC_ROOT=dir ./tools/pchost/pchost /pc/c.img 10 $'ver\r'
 
 (`PBM=file.pbm` also writes the picture the board would get.)
 
-**WordStar on the owner's image** is installed to open documents on A:
-(the routine at WS.COM offset 1E1Dh returns drive 1). Patching that byte
-to 0, the current drive, makes it open and save on C:, verified on the
-host with a copy; the card's own WS.COM has not been touched.
+**WordStar on the owner's image** was installed to open documents on A:
+(the routine at WS.COM offset 1E1Dh returned drive 1). On 2026-10-01,
+with the owner's go-ahead, that byte was changed to 0, the current drive,
+on the card itself, with DEBUG inside the emulated PC (`e 1f1e 0`, `w`).
+WordStar now opens documents on C:; on the host it also saves them.
+
+The PC has no clock of its own on the board yet: files saved there are
+dated 1980.
 
 ## The layout of this repo
 

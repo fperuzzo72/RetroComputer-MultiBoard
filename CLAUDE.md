@@ -406,8 +406,11 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
   Not seen to matter yet.
 - **WordStar on /msdos.img opens documents on A:**: its WS.COM returns
   drive 1 at offset 1E1Dh (`mov al,1`). Found by watching the FCB's drive
-  byte. That is the install, not the emulator; byte 1E1Eh to 0 fixes it
-  (tested on a copy). The owner's card stays untouched until they say so.
+  byte. That is the install, not the emulator. Byte 1E1Eh set to 0 on
+  the card on 2026-10-01 with the owner's OK, through DEBUG in the PC.
+- **AF was never set by arithmetic** (upstream): DAA then used a stale AF
+  and DEBUG printed hex wrong ("H<<=" for "B001"). Now set in 47 places.
+  If digits or BCD come out odd in a program, think flags first.
 - The image's AUTOEXEC.BAT and CONFIG.SYS have Unix line endings, which
   is why DOS echoes them in a staircase at boot.
 - Graphics (CGA, mode 13h) are not drawn: pc_text.c says so on screen.
