@@ -71,6 +71,22 @@ int main(int argc, char **argv)
     snprintf(p, sizeof p, "%s-machines-4.png", argv[1]); png(p);
     ui_draw_machines(canvas, machines, 3, 0, 0, "Sem toque, em 5 s liga o marcado");
     snprintf(p, sizeof p, "%s-machines.png", argv[1]); png(p);
+    /* more than four: two columns, filled down the left first */
+    const char *six[] = { "MSX1 (Hotbit HB-8000)", "ZX Spectrum 48K", "Macintosh Plus", "Commodore 64",
+                          "Voltar ao CrossPoint", "Voltar ao MicroBASIC" };
+    ui_draw_machines(canvas, six, 6, 1, 0, "Sem toque, em 5 s liga o marcado");
+    snprintf(p, sizeof p, "%s-machines-6.png", argv[1]); png(p);
+    ui_draw_machines(canvas, six, 5, 0, 1, NULL);
+    snprintf(p, sizeof p, "%s-machines-5.png", argv[1]); png(p);
+    {
+        int x, y, w, h, hits = 1;
+        /* left column top, left column last, right column top */
+        hits &= ui_hit_machines(CANVAS_W / 4, 100, 6, 0) == 0;
+        hits &= ui_hit_machines(CANVAS_W / 4, CANVAS_H - 120, 6, 0) == 2;
+        hits &= ui_hit_machines(CANVAS_W * 3 / 4, 100, 6, 0) == 3;
+        (void)x; (void)y; (void)w; (void)h;
+        check(hits, "two columns answer where they are drawn");
+    }
     /* positions relative to the panel, so the same checks hold on both
      * boards (make EINK=PAPERS3 for the PaperS3) */
     const int W = CANVAS_W, H = CANVAS_H, FOOT = H - 50;

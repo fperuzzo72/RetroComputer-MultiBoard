@@ -16,14 +16,22 @@ static int inside(int x, int y, int bx, int by, int bw, int bh)
 
 /* --- which computer ------------------------------------------------- */
 
+/* Up to four choices, one column of wide bands. More than that (five
+ * computers and the other app slots, the owner's request of 2026-10-01),
+ * two columns, filled down the left first: the computers come first in
+ * the list, so they keep the left and the ways out end the right. */
+#define UI_ONE_COLUMN_MAX 4
+
 static void machine_band(int i, int n, int *x, int *y, int *w, int *h)
 {
     const int top = HEAD_H, bottom = FOOT_Y - 8, gap = 14;
-    *h = (bottom - top - gap * (n - 1)) / n;
+    const int cols = n > UI_ONE_COLUMN_MAX ? 2 : 1;
+    const int rows = (n + cols - 1) / cols;
+    *h = (bottom - top - gap * (rows - 1)) / rows;
     if (*h > 110) *h = 110;
-    *x = M;
-    *w = CANVAS_W - 2 * M;
-    *y = top + i * (*h + gap);
+    *w = (CANVAS_W - 2 * M - gap * (cols - 1)) / cols;
+    *x = M + (i / rows) * (*w + gap);
+    *y = top + (i % rows) * (*h + gap);
 }
 
 static void back_button(uint8_t *c)
@@ -43,7 +51,7 @@ void ui_draw_machines(uint8_t *c, const char *const *names, int n, int mark,
         int x, y, w, h;
         machine_band(i, n, &x, &y, &w, &h);
         canvas_frame(c, x, y, w, h, i == mark ? 8 : 3, 1);
-        canvas_text_in(c, x, y, w, h, names[i], 2, 1);
+        canvas_text_in(c, x, y, w, h, names[i], n > UI_ONE_COLUMN_MAX ? 1 : 2, 1);
     }
     if (allow_back) back_button(c);
     if (note) canvas_text(c, allow_back ? M + 220 : M, FOOT_Y + 14, note, 1, 1);
