@@ -300,7 +300,9 @@ python3 tools/make_mac_disc.py ~/Downloads/umac0.img roms/mac/boot.img 1440 "Pap
 
 The card holds more: every `.img`, `.dsk` or `.hfv` in a `mac` folder at
 its root is a choice in the Mac's menu, read and written in place, so what
-is saved stays after a power cycle. **A card with no disc on it is given a
+is saved stays after a power cycle (confirmed on the Paper Mono,
+2026-10-01: a MacWrite document saved, the board switched off and on, and
+the document was there). **A card with no disc on it is given a
 copy of the built-in one** the first time the Mac starts, and the Mac boots
 from that copy: nobody has to take the card out to begin. The choice of
 disc is remembered.
