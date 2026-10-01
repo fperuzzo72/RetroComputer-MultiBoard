@@ -8,7 +8,8 @@
  *   c64host <out-prefix> <seconds>[,<seconds>...] [<text>]
  *
  * <text> is typed after the first capture (\n is Return). Files for LOAD
- * are read from $C64_ROOT/c64/ (default ./c64/).
+ * are read from $C64_ROOT/c64/ (default ./c64/); D64=<name.d64> puts that
+ * disc in drive 8 first.
  */
 #include <chrono>
 #include <cstdio>
@@ -104,6 +105,7 @@ int main(int argc, char **argv)
     static C64Sys cpu;
     cpu.init(ram, charset_rom);
     retro_c64_keys_attach(&cpu);
+    if (getenv("D64")) printf("  drive 8: %s %s\n", getenv("D64"), cpu.floppy.attach(getenv("D64")) ? "attached" : "NOT attached");
     PlatformManager::getInstance().startIntervalTimer([&]() { cpu.scanKeyboard(); }, 8000);
     PlatformManager::getInstance().startIntervalTimer([&]() { cpu.cia1.updateTOD(); cpu.cia2.updateTOD(); }, 100000);
     std::thread([&]() { cpu.run(); }).detach();

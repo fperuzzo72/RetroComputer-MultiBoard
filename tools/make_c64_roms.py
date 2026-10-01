@@ -9,6 +9,13 @@ declares in lib/c64/src/roms/*.h. Checks each against the SHA-1 of the dump
 this was built and tested with, and says so if one differs (it still
 writes it: another revision may well work).
 
+The KERNAL gets three bytes changed, as T-HMI-C64's own copy has them:
+the SEI that opens IECIN ($EE13), IECOUT ($ED40) and the wait for the
+clock line ($EDCC) becomes a BRK, which lib/c64's Hooks.cpp catches and
+answers from the emulated 1541. Without them the KERNAL talks to a serial
+bus nobody is on: ?DEVICE NOT PRESENT. Found by comparing the two dumps:
+these three bytes are the only difference.
+
 Neither the ROMs nor the generated file are in the repository: they are
 Commodore's, and only on the owner's machine (from VICE's C64 and DRIVES
 folders). tools/local_bios.py turns HAVE_C64_ROMS on when the file exists.
@@ -39,6 +46,12 @@ def main():
             sys.exit("%s is %d bytes, expected %d" % (name, len(data), size))
         if hashlib.sha1(data).hexdigest() != sha:
             print("note: %s is not the tested dump (%s)" % (name, hashlib.sha1(data).hexdigest()))
+        if sym == "kernal_rom":
+            data = bytearray(data)
+            for addr in (0xEE13, 0xED40, 0xEDCC):
+                if data[addr - 0xE000] != 0x78:
+                    sys.exit("kernal: $%04X is $%02X, expected SEI ($78)" % (addr, data[addr - 0xE000]))
+                data[addr - 0xE000] = 0x00
         out.append("const unsigned char %s[%d] = {" % (sym, size))
         for i in range(0, size, 16):
             out.append("  " + ", ".join("0x%02x" % b for b in data[i:i + 16]) + ",")

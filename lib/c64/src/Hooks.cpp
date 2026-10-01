@@ -43,8 +43,19 @@ bool Hooks::handlehooks(uint16_t pc) {
     return true;
   } else if (pc == IECOUTHOOK + 1) {
     uint8_t a = ram[0x95];
-    PlatformManager::getInstance().log(LOG_INFO, TAG, "iecout hook: %x", a);
-    cpu->floppy.iecout(a);
+    /* NOT UPSTREAM: tell a SAVE's data from bus commands, so the drive can
+     * write it (Floppy.cpp, "saving"). $DD00 cannot say: this hook skips
+     * the code that drives ATN. Where the send routine was called from
+     * can. The KERNAL reaches $ED40 by JSR only to send data, from CIOUT
+     * ($EDE7) and when it flushes the last buffered byte ahead of a
+     * command ($ED19); command bytes fall through into it from $ED36. So
+     * a return address of $ED1B or $EDE9 on the stack is data. The
+     * per-byte log line is gone with it: a SAVE sends thousands. */
+    const uint8_t sp = cpu->getSP();
+    const uint16_t ret = ram[0x100 + (uint8_t)(sp + 1)] |
+                         (ram[0x100 + (uint8_t)(sp + 2)] << 8);
+    const bool data = ret == 0xed1b || ret == 0xede9;
+    cpu->floppy.iecout(a, !data);
     ram[0xa5] = 0;
     ram[0x90] = cpu->floppy.lastStatus;
     cpu->setPC(0xee82);

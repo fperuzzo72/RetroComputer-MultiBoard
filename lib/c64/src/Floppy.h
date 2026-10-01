@@ -164,7 +164,11 @@ public:
   bool attach(const std::string &filename);
   void detach();
   uint8_t iecin();
-  void iecout(uint8_t value);
+  /* NOT UPSTREAM: atn says whether the byte went out under ATN (a bus
+   * command) or not (data); see Floppy.cpp, "saving". */
+  void iecout(uint8_t value, bool atn = true);
+  std::unique_ptr<FileDriver> savefile;
+  bool saving = false;
   uint16_t load(const std::string &filename, uint8_t *ram);
   bool save(const std::string &filename, uint8_t *ram, uint16_t startaddr,
             uint16_t endaddr);

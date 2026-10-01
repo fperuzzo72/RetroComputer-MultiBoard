@@ -56,7 +56,8 @@ public:
 class RetroC64Sound : public SoundDriver {
 public:
   void init() override {}
-  void playAudio(int16_t *samples, size_t size) override { retro_c64_audio(samples, size); }
+  /* size is in bytes (SID::playAudio passes NUMSAMPLESPERFRAME * 2) */
+  void playAudio(int16_t *samples, size_t size) override { retro_c64_audio(samples, size / sizeof(int16_t)); }
 };
 
 /* Files: the board's card on the device (c64_files.cpp), stdio on the

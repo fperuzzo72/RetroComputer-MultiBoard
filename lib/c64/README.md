@@ -21,4 +21,17 @@ The drivers it is built with are this project's, in `src/c64/`
   (`retro_c64_matrix_read`), so several keys can be down at once; upstream
   takes one key at a time from its Android app.
 
-`tools/c64host` builds it on the development machine.
+- `Floppy.cpp`, `Floppy.h`, `Hooks.cpp`: BASIC's `SAVE"NAME",8` writes
+  `/c64/name.prg` (upstream saves only through its Android app). The
+  IECOUT hook tells data from bus commands by the caller's return address
+  on the 6502 stack (`$ED1B`, `$EDE9`: data), since it skips the code
+  that drives ATN. Its per-byte log line is gone.
+
+The KERNAL needs three bytes changed to reach the 1541 at all: the SEI at
+`$EE13`, `$ED40` and `$EDCC` becomes a BRK that `Hooks.cpp` catches.
+Upstream's embedded KERNAL has them; `tools/make_c64_roms.py` applies them
+to the owner's clean dump (they are the only difference between the two).
+
+`tools/c64host` builds it on the development machine. A disc whose loader
+sends its own code into the drive (Maniac Mansion) does not load: this
+1541 answers DOS commands, it does not run drive code.

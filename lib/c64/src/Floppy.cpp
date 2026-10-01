@@ -741,7 +741,15 @@ bool wildcard_match(const char *text, const char *pattern) {
   return !*pattern;
 }
 
-void Floppy::iecout(uint8_t value) {
+void Floppy::iecout(uint8_t value, bool atn) {
+  /* NOT UPSTREAM: SAVE to a folder, not only LOAD. Upstream saves only
+   * through its Android app's command; a BASIC SAVE"NAME",8 went over the
+   * bus and was dropped. The program's bytes come here without ATN on the
+   * channel opened with secondary address 1, and go to PATH/name.prg. */
+  if (!atn && saving && listening && currentSecondary == 1 && !collectName) {
+    savefile->write(&value, 1);
+    return;
+  }
   if (collectName) {
     if (value == 0x3f) {
       // end of filename
@@ -789,6 +797,25 @@ void Floppy::iecout(uint8_t value) {
             channels[currentSecondary].buffersize = 0;
           }
         }
+      } else if (currentSecondary == 1) { // NOT UPSTREAM: "direct" save
+        for (auto &c : name) {
+          c = tolower(c);
+        }
+        if (!name.empty() && name[0] == '@' ) {
+          name.erase(0, name.find(':') == std::string::npos ? 1 : name.find(':') + 1);
+        }
+        lastStatus = 0;
+        setError(0);
+        if (!savefile) {
+          savefile = FileSys::create();
+        }
+        std::string filename = Config::PATH + name + ".prg";
+        saving = savefile->open(filename, "wb");
+        if (!saving) {
+          lastStatus = 0x42;
+          setError(62);
+        }
+        channels[1].isOpen = saving;
       } else { // "direct" load
         for (auto &c : name) {
           c = tolower(c);
@@ -847,6 +874,10 @@ void Floppy::iecout(uint8_t value) {
       }
     } else if (cmd == 0xe0) {
       currentSecondary = value & 0x0f;
+      if (currentSecondary == 1 && saving) { // NOT UPSTREAM: end of a SAVE
+        savefile->close();
+        saving = false;
+      }
       releaseBufferForChannel(currentSecondary);
       channels[currentSecondary].hasChannelName = false;
       channels[currentSecondary].isOpen = false;
