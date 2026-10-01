@@ -382,12 +382,16 @@ static void console_command(const char *line)
         input_gap_max = 0;
         machine->debug_command("s");
     } else if (sscanf(line, "c %d %d", &a, &b) == 2) {
+        int cap;
         panel_set_idle_clean(a, (unsigned long)b);
-        Serial.printf("clean: a full refresh after %d fast ones and %dms still\n", a, b);
+        if (sscanf(line, "c %*d %*d %d", &cap) == 1) panel_set_clean_cap(cap);
+        Serial.printf("clean: a full refresh after %d fast ones and %dms still, and every %d regardless\n",
+                      a, b, panel_get_clean_cap());
     } else if (!strcmp(line, "c")) {
         int after; unsigned long ms;
         panel_get_idle_clean(&after, &ms);
-        Serial.printf("clean: a full refresh after %d fast ones and %lums still\n", after, ms);
+        Serial.printf("clean: a full refresh after %d fast ones and %lums still, and every %d regardless\n",
+                      after, ms, panel_get_clean_cap());
     } else if (!strcmp(line, "b")) {
         if (ble_started) ble_keyboard_status(); else Serial.println("BLE: not started yet");
     } else if (!strcmp(line, "bl")) {

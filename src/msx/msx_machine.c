@@ -71,7 +71,8 @@ static const char *m_debug_help(void) {
            "  q                      where a frame's time goes\n"
            "  u [pct]                frames drawn, in percent\n"
            "  hz [50|60]             the VDP's rate (restarts)\n"
-           "  v                      frames in each of the last 60 seconds";
+           "  v                      frames in each of the last 60 seconds\n"
+           "  vel [20-100]           speed in percent of real time (restarts)";
 }
 
 static int m_debug_command(const char *line) {
@@ -101,6 +102,15 @@ static int m_debug_command(const char *line) {
             }
             return 1;
         case 'v':
+            if (sscanf(line, "vel %d", &a) == 1) {
+                if (a >= 20 && a <= 100) {
+                    msx_set_speed(a);
+                    printf("MSX at %d%% speed from the next start; restarting\n", a);
+                    msx_reboot();
+                }
+                printf("MSX at %d%% speed (vel 20-100)\n", msx_speed());
+                return 1;
+            }
             msx_pace_report();
             return 1;
         case 'h':

@@ -121,7 +121,7 @@ void Keyboard(void) {
         const int64_t now = esp_timer_get_time();
         pace_note(now, next ? now - next : 0);
         if (!next || now - next > 100000) next = now;
-        next += msx_hz() == 50 ? 20000 : 16667;
+        next += (msx_hz() == 50 ? 20000 : 16667) * 100 / msx_speed();
         const int64_t wait = next - now;
         if (wait > 1000) vTaskDelay(pdMS_TO_TICKS((wait + 999) / 1000));
         else vTaskDelay(1);

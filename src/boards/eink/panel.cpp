@@ -62,7 +62,7 @@ static volatile bool full_requested;
  * still is cleaned anyway after FAST_PER_FULL. Starting values. */
 static int IDLE_CLEAN_AFTER = 5;
 static unsigned long IDLE_CLEAN_MS = 3000;
-static const int FAST_PER_FULL = 200;
+static int FAST_PER_FULL = 200;
 
 /* `c AFTER MS` on the console changes the first two while the owner looks
  * at the glass: tuning this by reflashing costs a cycle per guess. */
@@ -71,6 +71,12 @@ void panel_set_idle_clean(int after, unsigned long ms)
     IDLE_CLEAN_AFTER = after < 1 ? 1 : after;
     IDLE_CLEAN_MS = ms;
 }
+
+/* `c AFTER MS CAP`: also the cap, for a game that never sits still and so
+ * is only ever cleaned by it (the Paper Mono darkening in The Goonies,
+ * 2026-10-01). */
+void panel_set_clean_cap(int cap) { FAST_PER_FULL = cap < 2 ? 2 : cap; }
+int  panel_get_clean_cap(void) { return FAST_PER_FULL; }
 
 void panel_get_idle_clean(int *after, unsigned long *ms)
 {

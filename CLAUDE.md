@@ -329,6 +329,13 @@ like this. The sources found (msx.org) describe the HB-8000's VDP as 60Hz
 PAL-M, and this BIOS dump says 60; how his ran at 50 is not settled, and
 his memory of the machine outranks a forum post.
 
+**Action games are not playable on the Paper Mono** (2026-10-01, the
+owner's verdict after The Goonies at 100% and 50% speed, frequent cleans,
+and the 53a5de8 build from before the sound and speed work: "bem ruim"
+every time). Its waveform refresh is ~400ms and cannot be bypassed. It
+stays current as a curiosity: BASIC, slow games, music, the Mac. `vel`
+(MSX speed, NVS) and the cap in `c AFTER MS CAP` came out of that test.
+
 **The MSX draws one frame in five on e-ink** (DISPLAY_FRAME_PERCENT, fMSX's
 UPeriod). Drawing a frame cost 19ms of a 16.7ms frame on the PaperS3, the
 MSX ran at 32fps and its music slowed with it; at 20% it makes 60fps, and

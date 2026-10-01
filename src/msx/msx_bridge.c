@@ -200,6 +200,35 @@ void msx_set_hz(int hz) {
     nvs_close(h);
 }
 
+/* The machine's pace, in percent of real time. On the Paper Mono's
+ * waveform panel, ~3 pictures a second, a game at full speed jumps too far
+ * between them to play (The Goonies, 2026-10-01); slowed down it moves
+ * less between pictures, music slowed with it. Remembered in NVS. */
+#define VEL_KEY "msxvel"
+
+int msx_speed(void) {
+    static int vel;
+    if (!vel) {
+        nvs_handle_t h;
+        uint8_t v = 100;
+        if (nvs_open(HZ_NS, NVS_READONLY, &h) == ESP_OK) {
+            if (nvs_get_u8(h, VEL_KEY, &v) != ESP_OK) v = 100;
+            nvs_close(h);
+        }
+        vel = v >= 20 && v <= 100 ? v : 100;
+    }
+    return vel;
+}
+
+void msx_set_speed(int pct) {
+    nvs_handle_t h;
+    if (pct < 20 || pct > 100) return;
+    if (nvs_open(HZ_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_u8(h, VEL_KEY, (uint8_t)pct);
+    nvs_commit(h);
+    nvs_close(h);
+}
+
 /* fMSX's UPeriod: the percentage of frames drawn. */
 int msx_draw_percent(int pct) {
     if (pct >= 1 && pct <= 100) UPeriod = (byte)pct;

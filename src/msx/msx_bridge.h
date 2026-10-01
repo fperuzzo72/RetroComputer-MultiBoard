@@ -76,6 +76,9 @@ void msx_insert_cartridge(void);
  * effect at the next start. */
 void msx_pace_report(void);   /* `v`: frames in each recent second */
 int  msx_hz(void);
+/* Pace in percent of real time, 20-100; set takes effect at the next start. */
+int  msx_speed(void);
+void msx_set_speed(int pct);
 void msx_set_hz(int hz);
 
 /* Percentage of frames drawn (1-100), or just report it with 0. */
