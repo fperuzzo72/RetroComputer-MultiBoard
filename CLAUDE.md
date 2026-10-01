@@ -303,7 +303,7 @@ with 2ms of lookahead and falls over ~60ms: silence draws nothing, a quiet
 passage about a sixth of what it did, peaks the same (host test, no
 clipping). The owner: "o chiado praticamente sumiu".
 
-**The PaperS3 can drive its panel directly** (`pio run -e papers3-fast`,
+**The PaperS3 drives its panel directly** (`pio run -e papers3`,
 `src/boards/eink/fastepd.c`, after PaperBoy's Modos Smooth Graphics, MIT,
 `third_party_licenses/paperboy_msg.txt`): no M5GFX, no waveform; the ESP32
 clocks the ED047TC1 itself through the LCD peripheral and pushes a changed
@@ -311,8 +311,11 @@ pixel for four scans. **First run on the device 2026-09-30: the owner found
 it "excelente, mais rápido do que no MSX de verdade"**, the right way round
 with no flips. Measured then: an empty scan of 540 rows takes 24ms (~45us a
 row against ~11us of bus time), so there is room to go faster. The i80 bus
-refuses DC -1 and takes PaperBoy's GPIO49 (not a pin on the S3). Not yet
-the default `papers3` build; the Mac and the menus on it are not checked.
+refuses DC -1 and takes PaperBoy's GPIO49 (not a pin on the S3). **The
+default `papers3` build since 2026-10-01**, after the owner found the Mac
+("sensacional, mouse fluindo"), the menus and the Spectrum good on it;
+`papers3-waveform` keeps the M5GFX way. README "e-ink: variants and
+options" lists every build, console option and the commit of each step.
 `fe` on the console reports scans and flips the axes.
 
 **The MSX runs at 50Hz by default since 2026-09-30** (`msx_hz()` in
