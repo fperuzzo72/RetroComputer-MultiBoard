@@ -414,6 +414,16 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
 - The image's AUTOEXEC.BAT and CONFIG.SYS have Unix line endings, which
   is why DOS echoes them in a staircase at boot.
 - Graphics (CGA, mode 13h) are not drawn: pc_text.c says so on screen.
+- **lib/pc8086's font has only 0x00-0x7F** and 12 line pieces above;
+  everything else drew blank (Volkov Commander's frames). The real one is
+  code page 437 from the owner's EGA.CPI (tools/make_pc_font.py,
+  HAVE_PC_FONT, gitignored like the ROMs).
+- **Floppy images** (tools/make_pc_floppy.py): the DOS boot sector wants
+  IO.SYS and MSDOS.SYS as the first two root entries. `mformat -v` puts
+  the label first, and mtools writes VFAT entries in front even with
+  MTOOLS_NO_VFAT; both gave "Non-System disk". The script strips them.
+- Paper Mono: 455k instructions/s against the PaperS3's 587k, not looked
+  into.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 

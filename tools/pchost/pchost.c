@@ -1,7 +1,7 @@
 /* pchost - the PC (src/pc/pc_core.c and lib/pc8086) on the development
  * machine, in real time. Prints the text screen.
  *
- *   PC_ROOT=dir ./pchost /pc/c.img SECONDS ["text to type\n"]
+ *   PC_ROOT=dir [FLOPPY=1] ./pchost /pc/c.img SECONDS ["text to type\n"]
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +34,9 @@ static void dump(void)
 int main(int argc, char **argv)
 {
     if (argc < 3) { fprintf(stderr, "usage: pchost /path/c.img SECONDS [text]\n"); return 2; }
-    if (!pc_core_init(argv[1], NULL)) { fprintf(stderr, "pc: %s\n", pc_core_error()); return 1; }
+    /* FLOPPY=1: the image is A: (and boots), with no C: */
+    const bool floppy = getenv("FLOPPY") != NULL;
+    if (!(floppy ? pc_core_init(NULL, argv[1]) : pc_core_init(argv[1], NULL))) { fprintf(stderr, "pc: %s\n", pc_core_error()); return 1; }
     const int secs = atoi(argv[2]);
     const char *type = argc > 3 ? argv[3] : NULL;
     for (int t = 0; t < secs * 10; t++) {

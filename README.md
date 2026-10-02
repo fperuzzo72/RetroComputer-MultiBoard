@@ -412,6 +412,23 @@ Speed: **about 590 thousand instructions a second** at the DOS prompt and
 0.33 MIPS). The core is a C interpreter, measured to spend all its time
 in the CPU; see `lib/pc8086/README.md` for what was taken out to get here.
 
+**The font** is the VGA's code page 437, taken at build time from the
+EGA.CPI of your own MS-DOS (in C:\DOS), like the ROMs: never in the
+repository. Without it the PC draws with lib/pc8086's font, which has no
+accented letters and no double frames:
+
+```bash
+mkdir -p roms/pc && mcopy -i "msdos.img@@32256" ::DOS/EGA.CPI roms/pc/
+python3 tools/make_pc_font.py
+```
+
+**A floppy to start with.** A 31MB hard disk image takes an hour over the
+cable; `tools/make_pc_floppy.py HD.img OUT.img` makes a bootable 1.44MB
+one from it (MS-DOS 6.22, EDIT and QBASIC, DEBUG and the usual tools,
+WordStar, Volkov Commander) that goes over in two and a half minutes. On
+the Paper Mono since 2026-10-02 as `/pc/MS-DOS 6.22.img`: it boots as A:,
+measured there at 455 thousand instructions a second.
+
 Keys are a US PC keyboard (`src/pc/pc_keys.c`); F12 or a tap opens the
 selector. Console: `w dir` types `dir` and Enter (`|` for a space, `wn`
 without the Enter), `s` gives the speed. `tools/pchost` runs the same PC on

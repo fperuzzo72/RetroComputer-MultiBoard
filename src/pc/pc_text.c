@@ -7,6 +7,10 @@
  * black text on white, and a highlighted menu item (black on grey) as
  * white on black, which is what made it stand out in the first place.
  *
+ * The font is code page 437 from the owner's own EGA.CPI when the build
+ * has it (HAVE_PC_FONT, tools/make_pc_font.py); lib/pc8086's own has only
+ * 0x00-0x7F and a few line pieces, the rest blank.
+ *
  * The cursor is a steady underline: a blinking one would keep an e-ink
  * panel refreshing for nothing. Only cells that changed are redrawn. */
 #include "pc_text.h"
@@ -22,6 +26,13 @@ static const uint8_t luma[16] = {
     85, 105, 185, 205, 135, 155, 240, 255,
 };
 
+#ifdef HAVE_PC_FONT
+extern const uint8_t pc_font_cp437[256 * 16];
+static const uint8_t *glyph(uint8_t c) { return pc_font_cp437 + c * 16; }
+#else
+static const uint8_t *glyph(uint8_t c) { return font8x16_get_glyph(c); }
+#endif
+
 static uint8_t shown[80 * 25 * 2];
 static uint8_t shown_cols, shown_cursor_row = 0xFF, shown_cursor_col;
 static bool valid;
@@ -33,7 +44,7 @@ static void draw_cell(uint8_t *fb, int cols, int row, int col, uint8_t ch, uint8
     const uint8_t fg = attr & 15, bg = (attr >> 4) & 15;
     const bool inverse = luma[fg] < luma[bg];
     const bool blank = fg == bg;
-    const uint8_t *g = font8x16_get_glyph(ch);
+    const uint8_t *g = glyph(ch);
     const int wide = cols == 40;   /* 40 columns: each cell twice as wide */
     for (int y = 0; y < 16; y++) {
         uint8_t bits = blank ? 0 : g[y];
