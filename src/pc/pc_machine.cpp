@@ -178,6 +178,7 @@ static void show_message(const char *line)
 
 /* As panel.cpp's: internal heap the PC's slices took and kept, summed. */
 static long heap_lost_in_pc;
+static bool draw_frozen;   /* `fz`: the PC runs, the screen is not drawn */
 
 static void loop_forever(void)
 {
@@ -204,7 +205,7 @@ static void loop_forever(void)
         const uint64_t now = (uint64_t)esp_timer_get_time();
         if (now - last_draw >= 50000) {
             last_draw = now;
-            if (pc_text_render(fb)) frames++;
+            if (!draw_frozen && pc_text_render(fb)) frames++;
             display_mono_vsync();
         }
         heap_lost_in_pc += heap_before - (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
@@ -302,6 +303,11 @@ static int m_debug_command(const char *line)
     }
     if (!strcmp(line, "cp")) {
         printf("pc: code page %d (cp 860 Portuguese, cp 437 US)\n", pc_keys_codepage());
+        return 1;
+    }
+    if (!strcmp(line, "fz")) {
+        draw_frozen = !draw_frozen;
+        printf("pc: screen %s\n", draw_frozen ? "frozen, the PC runs on" : "drawn again");
         return 1;
     }
     if (!strcmp(line, "s")) {

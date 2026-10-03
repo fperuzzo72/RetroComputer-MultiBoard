@@ -424,6 +424,19 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
   MTOOLS_NO_VFAT; both gave "Non-System disk". The script strips them.
 - Paper Mono: 455k instructions/s against the PaperS3's 587k, not looked
   into.
+- **An internal heap leak, open** (2026-10-02, Paper Mono). After 80
+  minutes of Volkov Commander's star-field screen saver (11,700 fast
+  refreshes) internal heap was at 28 bytes, the PC's loop had stopped and
+  touch did nothing (the selector is opened from that loop). Measured
+  since: idle DOS loses nothing; DOS scrolling (a .BAT doing `dir` in a
+  loop) about 460 bytes a minute; VC's saver, no disk at all, 3kB in 11
+  minutes; 160 forced full refreshes with the PC idle, one 428-byte step.
+  So: screen changes while the PC runs, not the card. Not yet split
+  between the panel's fast refresh and the PC side: `fz` on the console
+  freezes the PC's drawing while it runs on, for exactly that test (a
+  QBASIC loop printing at random places is the load to use; typing on the
+  board stops VC's saver and spoils the run). `s` sums the heap lost
+  across refreshes and across PC slices, but the two overlap in time.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
