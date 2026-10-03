@@ -11,7 +11,7 @@ machine. Each one that is present defines a flag so the firmware uses it:
   src/c64/c64_rom_data.c      HAVE_C64_ROMS     the C64's BASIC, KERNAL,
                                                 CHARGEN and 1541 DOS
                                                 (tools/make_c64_roms.py)
-  src/pc/pc_font_data.c       HAVE_PC_FONT      the PC's full code page 437
+  src/pc/pc_font_data.c       HAVE_PC_FONT      the PC's code pages 437 and 860
                                                 font, from EGA.CPI
                                                 (tools/make_pc_font.py)
 
@@ -68,6 +68,6 @@ else:
 pc_font_c = os.path.join(env.subst("$PROJECT_SRC_DIR"), "pc", "pc_font_data.c")
 if os.path.isfile(pc_font_c):
     env.Append(CPPDEFINES=["HAVE_PC_FONT"])
-    print("PC font: %s found, the full code page 437" % os.path.relpath(pc_font_c))
+    print("PC font: %s found, code pages 437 and 860" % os.path.relpath(pc_font_c))
 else:
     print("PC font: none, the PC draws with lib/pc8086's (no accents, no double frames)")
