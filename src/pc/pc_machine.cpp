@@ -121,6 +121,27 @@ static const char *m_entry_name(int i)
     return label.c_str();
 }
 
+/* The code page, remembered: 860 unless 437 was asked for. */
+static void load_codepage(void)
+{
+    nvs_handle_t h;
+    int32_t cp = 860;
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
+        nvs_get_i32(h, "pccp", &cp);
+        nvs_close(h);
+    }
+    pc_keys_set_codepage((int)cp);
+}
+
+static void save_codepage(int cp)
+{
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_i32(h, "pccp", cp);
+    nvs_commit(h);
+    nvs_close(h);
+}
+
 static void m_select_entry(int i) { selected = i; remember(i); }
 static int  m_selected_entry(void) { return selected < 0 ? recall() : selected; }
 
@@ -155,6 +176,9 @@ static void show_message(const char *line)
     printf("pc: %s\n", line);
 }
 
+/* As panel.cpp's: internal heap the PC's slices took and kept, summed. */
+static long heap_lost_in_pc;
+
 static void loop_forever(void)
 {
     uint64_t last_draw = 0;
@@ -171,6 +195,7 @@ static void loop_forever(void)
             display_mono_attach(fb, PC_FB_W, PC_FB_H);
             if (chosen >= 0) m_switch_to(chosen);
         }
+        const long heap_before = (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
         pc_core_run(20000);
         if (typed < to_type.size()) {
             const char c = to_type[typed++];
@@ -182,12 +207,14 @@ static void loop_forever(void)
             if (pc_text_render(fb)) frames++;
             display_mono_vsync();
         }
+        heap_lost_in_pc += heap_before - (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
         vTaskDelay(1);
     }
 }
 
 static void m_run(void)
 {
+    load_codepage();
     fb = (uint8_t *)heap_caps_malloc(PC_FB_W / 8 * PC_FB_H, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     memset(fb, 0, PC_FB_W / 8 * PC_FB_H);
     display_mono_attach(fb, PC_FB_W, PC_FB_H);
@@ -265,15 +292,28 @@ static int m_debug_command(const char *line)
         m_type(s.c_str());
         return 1;
     }
+    int cp;
+    if (sscanf(line, "cp %d", &cp) == 1 && (cp == 437 || cp == 860)) {
+        pc_keys_set_codepage(cp);
+        save_codepage(cp);
+        pc_text_invalidate();
+        printf("pc: code page %d, for the screen and the accents\n", cp);
+        return 1;
+    }
+    if (!strcmp(line, "cp")) {
+        printf("pc: code page %d (cp 860 Portuguese, cp 437 US)\n", pc_keys_codepage());
+        return 1;
+    }
     if (!strcmp(line, "s")) {
         char p[160];
         pc_core_profile(p, sizeof p);
-        printf("pc: %lu instructions/s; %s\n", (unsigned long)pc_core_ips(), p);
+        printf("pc: %lu instructions/s; %s; internal heap lost in the PC's slices %ld bytes\n",
+               (unsigned long)pc_core_ips(), p, heap_lost_in_pc);
         return 1;
     }
     return 0;
 }
-static const char *m_debug_help(void) { return "s  instructions per second\nw TEXT  type TEXT and Enter ( | for space); wn TEXT without Enter\n"; }
+static const char *m_debug_help(void) { return "s  instructions per second\nw TEXT  type TEXT and Enter ( | for space); wn TEXT without Enter\ncp 860|437  code page for the screen and the accents\n"; }
 
 extern "C" const Machine pc_machine = {
     "PC (MS-DOS)",

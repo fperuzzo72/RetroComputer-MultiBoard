@@ -379,7 +379,10 @@ the three KERNAL bytes the 1541 hooks need. Gitignored, like every ROM.
 python3 tools/sd_put.py --dest /c64/ *.crt
 ```
 
-2kB blocks, each acknowledged, and a CRC at the end (about 9kB/s). `ls
+2kB blocks, each acknowledged, and a CRC at the end (about 9kB/s). The
+board writes `name.part` and renames it only when all of it arrived, so a
+failed transfer leaves the old file alone; still, do not replace the disk
+image of the machine that is running (it restarted the Paper Mono once). `ls
 /c64` and `rm /c64/name.crt` on the serial console look and tidy up.
 
 `tools/c64host` runs the same core on the Mac, with PNG screenshots:
@@ -429,8 +432,15 @@ WordStar, Volkov Commander) that goes over in two and a half minutes. On
 the Paper Mono since 2026-10-02 as `/pc/MS-DOS 6.22.img`: it boots as A:,
 measured there at 455 thousand instructions a second.
 
-Keys are a US PC keyboard (`src/pc/pc_keys.c`); F12 or a tap opens the
-selector. Console: `w dir` types `dir` and Enter (`|` for a space, `wn`
+**Keys are US-International** (`src/pc/pc_keys.c`), as on the other
+machines: ' ` ^ ~ " are dead keys, the letter after one gets the accent, a
+space after one is the accent itself, ' then c is ç. The accented letter
+is a byte of **code page 860, Portuguese**, which has every letter
+Portuguese needs (ã õ Á Ê Ç ...) and the same frames as 437; `cp 437` on
+the console switches screen and keyboard to the US code page, which has no
+ã or õ. The floppy's CONFIG.SYS says `COUNTRY=055`: Brazilian dates
+(dd/mm/yy) and decimal comma. Messages stay in English: the owner's MS-DOS
+6.22 is the US one. F12 or a tap opens the selector. Console: `w dir` types `dir` and Enter (`|` for a space, `wn`
 without the Enter), `s` gives the speed. `tools/pchost` runs the same PC on
 the Mac and prints the screen:
 
@@ -439,7 +449,11 @@ make -C tools/pchost PCFLAGS=-DPC8086_LEAN
 PC_ROOT=dir ./tools/pchost/pchost /pc/c.img 10 $'ver\r'
 ```
 
-(`PBM=file.pbm` also writes the picture the board would get.)
+(`PBM=file.pbm` also writes the picture the board would get; `HID="..."`
+types as the BLE keyboard does, dead keys and all, with a key table of its
+own, which is how a lost character in pc_keys.c's table was caught: every
+key after the backslash typed its neighbour on the device, and typing
+through the same table both ways had hidden it.)
 
 **WordStar on the owner's image** was installed to open documents on A:
 (the routine at WS.COM offset 1E1Dh returned drive 1). On 2026-10-01,

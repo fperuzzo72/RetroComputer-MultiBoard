@@ -15,7 +15,9 @@ which cost a try here:
     even with MTOOLS_NO_VFAT, so they are stripped from the root after.
 
 The boot code is taken from the hard disk's partition boot sector, keeping
-the floppy's own BPB, drive number 0. WordStar's document drive is set to
+the floppy's own BPB, drive number 0. The country is Brazil (055: dates
+as dd/mm/yy, a decimal comma), the owner's choice wherever a system
+offers one. WordStar's document drive is set to
 the current one (WS.COM offset 1E1Eh, see README "The PC").
 """
 import os
@@ -24,7 +26,7 @@ import subprocess
 import sys
 import tempfile
 
-DOS = ["ATTRIB.EXE", "CHKDSK.EXE", "CHOICE.COM", "DEBUG.EXE", "DELTREE.EXE",
+DOS = ["COUNTRY.SYS", "ATTRIB.EXE", "CHKDSK.EXE", "CHOICE.COM", "DEBUG.EXE", "DELTREE.EXE",
        "DOSKEY.COM", "EDIT.COM", "FC.EXE", "FIND.EXE", "FORMAT.COM", "LABEL.EXE",
        "MEM.EXE", "MORE.COM", "MOVE.EXE", "QBASIC.EXE", "SORT.EXE", "SYS.COM",
        "TREE.COM", "XCOPY.EXE"]
@@ -59,7 +61,7 @@ def main():
     if ws[0x1E1D:0x1E20] in (b"\xB0\x01\xC3", b"\xB0\x00\xC3"):
         ws[0x1E1E] = 0
         open(os.path.join(tmp, "WS.COM"), "wb").write(ws)
-    open(os.path.join(tmp, "CONFIG.SYS"), "wb").write(b"FILES=20\r\nBUFFERS=10\r\n")
+    open(os.path.join(tmp, "CONFIG.SYS"), "wb").write(b"FILES=20\r\nBUFFERS=10\r\nCOUNTRY=055,,A:\\DOS\\COUNTRY.SYS\r\n")
     open(os.path.join(tmp, "AUTOEXEC.BAT"), "wb").write(
         b"@ECHO OFF\r\nPATH A:\\DOS;A:\\WS;A:\\VC\r\nPROMPT $P$G\r\n")
 

@@ -379,7 +379,12 @@ static void sd_put(const char *args)
     strncpy(dir, path, sizeof dir);
     char *slash = strrchr(dir, '/');
     if (slash && slash != dir) { *slash = 0; sd.mkdir(dir); }
-    FsFile f = sd.open(path, O_RDWR | O_CREAT | O_TRUNC);
+    /* Into PATH.part, and over PATH only once all of it has arrived: a
+     * transfer that stopped halfway used to leave half a disk image under
+     * the real name, and the machine booting from it read garbage. */
+    char part[168];
+    snprintf(part, sizeof part, "%s.part", path);
+    FsFile f = sd.open(part, O_RDWR | O_CREAT | O_TRUNC);
     if (!f) { Serial.println("error: cannot create"); return; }
     Serial.println("ready");
     /* Block by block, each answered with '+' once it is on the card: the
@@ -409,8 +414,14 @@ static void sd_put(const char *args)
     }
     f.sync();
     f.close();
-    if (got != size) Serial.printf("error: got %lu of %lu\n", got, size);
-    else Serial.printf("ok %lu %08lx\n", got, (unsigned long)crc);
+    if (got != size) {
+        sd.remove(part);
+        Serial.printf("error: got %lu of %lu, %s left as it was\n", got, size, path);
+        return;
+    }
+    if (sd.exists(path) && !sd.remove(path)) { Serial.printf("error: cannot replace %s\n", path); return; }
+    if (!sd.rename(part, path)) { Serial.printf("error: cannot rename %s\n", part); return; }
+    Serial.printf("ok %lu %08lx\n", got, (unsigned long)crc);
 }
 
 static void console_command(const char *line)

@@ -7,8 +7,9 @@
  * black text on white, and a highlighted menu item (black on grey) as
  * white on black, which is what made it stand out in the first place.
  *
- * The font is code page 437 from the owner's own EGA.CPI when the build
- * has it (HAVE_PC_FONT, tools/make_pc_font.py); lib/pc8086's own has only
+ * The font is the owner's own EGA.CPI when the build has it (HAVE_PC_FONT,
+ * tools/make_pc_font.py): code page 860, Portuguese, or 437 (pc_keys.c
+ * says which, since what the keyboard types has to match); lib/pc8086's own has only
  * 0x00-0x7F and a few line pieces, the rest blank.
  *
  * The cursor is a steady underline: a blinking one would keep an e-ink
@@ -19,6 +20,7 @@
 
 #include "pc8086.h"
 #include "pc_core.h"
+#include "pc_keys.h"
 
 /* Luma of the 16 CGA colours, 0-255 */
 static const uint8_t luma[16] = {
@@ -28,7 +30,11 @@ static const uint8_t luma[16] = {
 
 #ifdef HAVE_PC_FONT
 extern const uint8_t pc_font_cp437[256 * 16];
-static const uint8_t *glyph(uint8_t c) { return pc_font_cp437 + c * 16; }
+extern const uint8_t pc_font_cp860[256 * 16];
+static const uint8_t *glyph(uint8_t c)
+{
+    return (pc_keys_codepage() == 437 ? pc_font_cp437 : pc_font_cp860) + c * 16;
+}
 #else
 static const uint8_t *glyph(uint8_t c) { return font8x16_get_glyph(c); }
 #endif

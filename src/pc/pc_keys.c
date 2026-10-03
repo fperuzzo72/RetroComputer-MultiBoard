@@ -1,7 +1,15 @@
 /* pc_keys.c - the PC's keyboard: HID usages to scancode set 1 (what an
  * XT/AT keyboard sends after the controller's translation), plus the
- * ASCII the BIOS puts in its buffer beside each, from the US layout.
- * Plain C, no board. */
+ * character the BIOS puts in its buffer beside each. Plain C, no board.
+ *
+ * The layout is US-International, as on the owner's other machines (the
+ * MSX, the Mac, MicroBASIC): ' ` ^ ~ " are dead keys, the letter after one
+ * gets the accent, the accent and a space is the accent on its own, and
+ * ' then c is c-cedilla. The accented letter is a byte of the code page the
+ * screen is drawn in (pc_text.c): 860, Portuguese, by default, which has
+ * every letter Portuguese needs and the same frames as 437; or 437, which
+ * has no a-tilde, o-tilde or accented capitals but the first five, and
+ * types the accent and the letter for those. */
 #include "pc_keys.h"
 
 #include <string.h>
@@ -26,20 +34,41 @@ static const uint16_t sc[0x68] = {
     [0x64] = 0x56,
 };
 
-/* HID usage -> ASCII unshifted / shifted, 0x04-0x38 */
-static const char plain[] = "abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\b\t -=[]\\\;'`,./";
-static const char shifted[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()\r\x1b\b\t _+{}||:\"~<>?";
+/* HID usage -> character, unshifted and shifted, US layout. One entry a
+ * key, written out: a string of these once lost a character to an escape
+ * ("\\\;" is one backslash and a ';'), and every key after the backslash
+ * typed its neighbour. */
+static const char plain[0x39] = {
+    [0x04] = 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    [0x1E] = '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+    [0x28] = '\r', 0x1B, '\b', '\t', ' ', '-', '=', '[', ']', '\\', '\\', ';', '\'',
+    '`', ',', '.', '/',
+};
+static const char shifted[0x39] = {
+    [0x04] = 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    [0x1E] = '!', '@', '#', '$', '%', '^', '&', '*', '(', ')',
+    [0x28] = '\r', 0x1B, '\b', '\t', ' ', '_', '+', '{', '}', '|', '|', ':', '"',
+    '~', '<', '>', '?',
+};
 
 static uint8_t last_mod;
 static uint8_t last_keys[6];
 static bool caps;
+static int codepage = 860;
+static char dead;               /* the pending dead key, or 0 */
+static uint8_t dead_usage;      /* and the key it came from */
+
+void pc_keys_set_codepage(int cp) { codepage = cp == 437 ? 437 : 860; }
+int  pc_keys_codepage(void) { return codepage; }
 
 static uint8_t ascii_of(uint8_t usage, uint8_t mod)
 {
     const bool shift = mod & 0x22, ctrl = mod & 0x11, alt = mod & 0x44;
     if (alt) return 0;
     if (usage >= 0x04 && usage <= 0x38) {
-        char c = (shift ? shifted : plain)[usage - 0x04];
+        char c = (shift ? shifted : plain)[usage];
         if (usage <= 0x1D) {
             if (ctrl) return (uint8_t)(usage - 0x04 + 1);
             if (caps) c = (c >= 'a') ? (char)(c - 32) : (char)(c + 32);
@@ -53,11 +82,91 @@ static uint8_t ascii_of(uint8_t usage, uint8_t mod)
     return 0;
 }
 
+/* --- US-International ------------------------------------------------- */
+
+static char dead_of(uint8_t usage, uint8_t mod)
+{
+    const bool shift = mod & 0x22;
+    if (mod & 0x55) return 0;                       /* Ctrl or Alt: a command */
+    if (usage == 0x34) return shift ? '"' : '\'';
+    if (usage == 0x35) return shift ? '~' : '`';
+    if (usage == 0x23 && shift) return '^';
+    return 0;
+}
+
+/* The accented letter in the screen's code page, or 0 if it has none. */
+static uint8_t compose(char d, char c)
+{
+    static const struct { char d, c; uint8_t cp437, cp860; } t[] = {
+        { '\'', 'a', 0xA0, 0xA0 }, { '\'', 'e', 0x82, 0x82 }, { '\'', 'i', 0xA1, 0xA1 },
+        { '\'', 'o', 0xA2, 0xA2 }, { '\'', 'u', 0xA3, 0xA3 }, { '\'', 'c', 0x87, 0x87 },
+        { '\'', 'A', 0,    0x86 }, { '\'', 'E', 0x90, 0x90 }, { '\'', 'I', 0,    0x8B },
+        { '\'', 'O', 0,    0x9F }, { '\'', 'U', 0,    0x96 }, { '\'', 'C', 0x80, 0x80 },
+        { '`',  'a', 0x85, 0x85 }, { '`',  'e', 0x8A, 0x8A }, { '`',  'i', 0x8D, 0x8D },
+        { '`',  'o', 0x95, 0x95 }, { '`',  'u', 0x97, 0x97 }, { '`',  'A', 0,    0x91 },
+        { '^',  'a', 0x83, 0x83 }, { '^',  'e', 0x88, 0x88 }, { '^',  'i', 0x8C, 0    },
+        { '^',  'o', 0x93, 0x93 }, { '^',  'u', 0x96, 0    }, { '^',  'A', 0,    0x8F },
+        { '^',  'E', 0,    0x89 }, { '^',  'O', 0,    0x8C },
+        { '~',  'a', 0,    0x84 }, { '~',  'o', 0,    0x94 }, { '~',  'n', 0xA4, 0xA4 },
+        { '~',  'A', 0,    0x8E }, { '~',  'O', 0,    0x99 }, { '~',  'N', 0xA5, 0xA5 },
+        { '"',  'a', 0x84, 0    }, { '"',  'e', 0x89, 0    }, { '"',  'i', 0x8B, 0    },
+        { '"',  'o', 0x94, 0    }, { '"',  'u', 0x81, 0x81 }, { '"',  'y', 0x98, 0    },
+        { '"',  'A', 0x8E, 0    }, { '"',  'O', 0x99, 0    }, { '"',  'U', 0x9A, 0x9A },
+    };
+    for (unsigned i = 0; i < sizeof t / sizeof t[0]; i++)
+        if (t[i].d == d && t[i].c == c) return codepage == 437 ? t[i].cp437 : t[i].cp860;
+    return 0;
+}
+
+/* A key down and up with this character in the BIOS buffer. */
+static void tap(uint8_t usage, uint8_t ch)
+{
+    const uint16_t s = sc[usage];
+    pc_core_key((uint8_t)s, ch, (s & E) != 0, true);
+    pc_core_key((uint8_t)s, 0, (s & E) != 0, false);
+}
+
+/* --- reports ----------------------------------------------------------- */
+
 static void send(uint8_t usage, uint8_t mod, bool pressed)
 {
     if (usage >= sizeof sc / sizeof sc[0] || !sc[usage]) return;
     const uint16_t s = sc[usage];
     pc_core_key((uint8_t)s, pressed ? ascii_of(usage, mod) : 0, (s & E) != 0, pressed);
+}
+
+/* A key going down, through the dead keys. */
+static void press(uint8_t usage, uint8_t mod)
+{
+    const char d = dead_of(usage, mod);
+    if (dead) {
+        const char was = dead;
+        const uint8_t was_usage = dead_usage;
+        dead = 0;
+        const uint8_t c = ascii_of(usage, mod);
+        if (usage == 0x2C && !(mod & 0x55)) {      /* space: the accent itself */
+            tap(was_usage, (uint8_t)was);
+            return;
+        }
+        const uint8_t composed = c ? compose(was, (char)c) : 0;
+        if (composed) {
+            tap(usage, composed);
+            return;
+        }
+        if (usage >= 0xE0 || (usage >= 0x39 && !c)) {   /* a key with no character */
+            dead = was;
+            dead_usage = was_usage;
+            send(usage, mod, true);
+            return;
+        }
+        tap(was_usage, (uint8_t)was);                  /* no accent: both as typed */
+    }
+    if (d) {
+        dead = d;
+        dead_usage = usage;
+        return;
+    }
+    send(usage, mod, true);
 }
 
 static void modifier(uint8_t bit, uint8_t s, bool ext, uint8_t mod)
@@ -85,16 +194,19 @@ bool pc_keys_report(const uint8_t r[8])
         if (k < 0x04 || memchr(last_keys, k, 6)) continue;
         if (k == 0x45) { f12 = true; continue; }
         if (k == 0x39) caps = !caps;
-        send(k, mod, true);
+        press(k, mod);
     }
     memcpy(last_keys, keys, 6);
     last_mod = mod;
     return f12;
 }
 
+/* --- typing, for the console and tools/pchost: plain US, no dead keys --- */
+
 bool pc_keys_type(char c)
 {
-    if (c >= 1 && c <= 26 && c != '\b' && c != '\t' && c != '\r' && c != '\n') {
+    if (c == '\n') c = '\r';
+    if (c >= 1 && c <= 26 && c != '\b' && c != '\t' && c != '\r') {
         /* a control character: Ctrl and its letter, as WordStar wants */
         const uint8_t usage = (uint8_t)(0x04 + c - 1);
         pc_core_key(0x1D, 0, false, true);
@@ -105,18 +217,18 @@ bool pc_keys_type(char c)
     }
     for (int pass = 0; pass < 2; pass++) {
         const char *t = pass ? shifted : plain;
-        const char *p = c == '\n' ? strchr(t, '\r') : strchr(t, c);
-        if (!p || !c) continue;
-        const uint8_t usage = (uint8_t)(0x04 + (p - t));
-        const uint8_t mod = pass ? 0x02 : 0;
-        const bool was_caps = caps;
-        caps = false;
-        if (pass) pc_core_key(0x2A, 0, false, true);
-        send(usage, mod, true);
-        send(usage, mod, false);
-        if (pass) pc_core_key(0x2A, 0, false, false);
-        caps = was_caps;
-        return true;
+        for (uint8_t usage = 0x04; usage <= 0x38; usage++) {
+            if (t[usage] != c || !c) continue;
+            const uint8_t mod = pass ? 0x02 : 0;
+            const bool was_caps = caps;
+            caps = false;
+            if (pass) pc_core_key(0x2A, 0, false, true);
+            send(usage, mod, true);
+            send(usage, mod, false);
+            if (pass) pc_core_key(0x2A, 0, false, false);
+            caps = was_caps;
+            return true;
+        }
     }
     return false;
 }

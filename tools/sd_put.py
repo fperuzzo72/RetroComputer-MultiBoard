@@ -6,8 +6,10 @@
 Uses the firmware's `put <path> <size>` console command (main.cpp): the
 board answers "ready", takes the bytes and answers "ok <size> <crc32>",
 checked here. Each 2kB block is answered with '+' once it is on the card.
-Spaces in names travel as '|'. Best done from the boot menu
-or an 8-bit machine, not while the Mac is reading its disc.
+Spaces in names travel as '|'. The board writes FILE.part and puts it in
+place only once all of it arrived, so a failed transfer leaves the old
+file as it was. Still, do not replace the disk image the running machine
+(the Mac, the PC) has open: send it from another machine.
 """
 import argparse
 import os

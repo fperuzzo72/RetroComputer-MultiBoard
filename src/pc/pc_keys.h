@@ -17,6 +17,11 @@ bool pc_keys_report(const uint8_t report[8]);
  * console and tools/pchost. False if it has no key. */
 bool pc_keys_type(char c);
 
+/* The code page accented letters are typed in, and the screen drawn in:
+ * 860 (Portuguese, the default) or 437. */
+void pc_keys_set_codepage(int cp);
+int  pc_keys_codepage(void);
+
 #ifdef __cplusplus
 }
 #endif
