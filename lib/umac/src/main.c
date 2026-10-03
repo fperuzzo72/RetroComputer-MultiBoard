@@ -43,6 +43,7 @@
 #include "machw.h"
 #include "m68k.h"
 #include "via.h"
+#include "umac_rtc.h"   /* NOT UPSTREAM */
 #include "umac_scc.h"
 #include "rom.h"
 #include "disc.h"
@@ -171,7 +172,7 @@ static void     via_rb_changed(uint8_t val)
         // 4 = mouse4 (in, mouse X2)
         // 3 = mouse7 (in, 0 = button pressed)
         // [2:0] = RTC controls
-        (void)val;
+        umac_rtc_port(val);     /* NOT UPSTREAM: the clock chip, src/rtc.c */
 }
 
 static uint8_t  via_ra_in(void)
@@ -185,7 +186,7 @@ static uint8_t via_mouse_pressed = 0;
 
 static uint8_t  via_rb_in(void)
 {
-        uint8_t v = via_quadbits;
+        uint8_t v = via_quadbits | umac_rtc_data();   /* NOT UPSTREAM: RTC data, bit 0 */
         // Mouse not pressed!
         if (!via_mouse_pressed)
                 v |= (1 << 3);

@@ -468,7 +468,10 @@ CrossPoint sets it, and shown in Brasilia's time (UTC-3). The PC's BIOS
 gives DOS its date (INT 1Ah) and starts its tick count at the time of day,
 as an AT's POST did, so DOS boots with the right date and time. `rtc` on
 the console shows the clock; `rtc 2026-10-03 11:56:00` (local time) sets
-it. Verified on the PaperS3 on 2026-10-03.
+it. Verified on the PaperS3 on 2026-10-03. The Macintosh reads the same
+clock: umac had no clock chip, so one is emulated now
+(`lib/umac/src/rtc.c`), with its 20 bytes of parameter RAM (volume, mouse
+speed, key repeat, the alarm) kept in NVS across power cycles.
 
 ## The layout of this repo
 

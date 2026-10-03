@@ -17,12 +17,14 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_timer.h"
 
 #include "umac.h"
+#include "umac_rtc.h"
 #include "media.h"
 #include "nvs.h"
 
@@ -79,6 +81,42 @@ static int card_write(void *ctx, uint8_t *data, unsigned offset, unsigned len)
     return media_write(ctx, data, offset, len);
 }
 
+/* --- the clock chip's parameter RAM, kept across power cycles --------------
+ * Sound volume, mouse speed, key repeat, the alarm: 20 bytes the Mac keeps
+ * in its clock chip (umac's src/rtc.c, not upstream). Started from NVS and
+ * written back a couple of seconds after the Mac last changed them, so a
+ * run of writes is one NVS write. The time itself is the board's clock. */
+#define NVS_PRAM "macpram"
+static volatile int pram_dirty;
+static uint64_t pram_dirty_since;
+
+static void pram_written(void)
+{
+    if (!pram_dirty) pram_dirty_since = (uint64_t)esp_timer_get_time();
+    pram_dirty = 1;
+}
+
+static void pram_load(void)
+{
+    nvs_handle_t h;
+    size_t len = 20;
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) return;
+    if (nvs_get_blob(h, NVS_PRAM, umac_rtc_pram(), &len) == ESP_OK)
+        printf("mac: parameter RAM from NVS\n");
+    nvs_close(h);
+}
+
+static void pram_save_if_due(uint64_t now)
+{
+    if (!pram_dirty || now - pram_dirty_since < 2000000) return;
+    pram_dirty = 0;
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_blob(h, NVS_PRAM, umac_rtc_pram(), 20);
+    nvs_commit(h);
+    nvs_close(h);
+}
+
 static void loop_forever(void)
 {
     display_mono_attach(mac_framebuffer(), DISP_WIDTH, DISP_HEIGHT);
@@ -98,6 +136,7 @@ static void loop_forever(void)
          * one tick every 100ms or the task watchdog would. 1%. */
         if (now - last_yield >= 100000) {
             last_yield = now;
+            pram_save_if_due(now);
             vTaskDelay(1);
         }
     }
@@ -105,6 +144,8 @@ static void loop_forever(void)
 
 static void m_run(void)
 {
+    pram_load();
+    umac_rtc_pram_written = pram_written;
 #ifdef HAVE_MAC_MEDIA
     const uint8_t *rom = mac_rom_image;
     const size_t rom_len = (size_t)(mac_rom_image_end - mac_rom_image);
@@ -203,6 +244,19 @@ static void m_switch_to(int entry) { (void)entry; umac_reset(); }
  * and a tenth of that is the percentage of a real Mac Plus. */
 static int m_debug_command(const char *line)
 {
+    if (!strcmp(line, "hora")) {
+        /* the Mac's Time global (0x20C): seconds since 1904, local time */
+        uint8_t *ram = mac_ram();
+        if (!ram) return 1;
+        const uint32_t s = (uint32_t)ram[0x20C] << 24 | (uint32_t)ram[0x20D] << 16 |
+                           (uint32_t)ram[0x20E] << 8 | ram[0x20F];
+        const time_t t = (time_t)s - (time_t)2082844800u;
+        struct tm g;
+        gmtime_r(&t, &g);
+        printf("mac: the Mac's clock says %04d-%02d-%02d %02d:%02d:%02d\n", g.tm_year + 1900,
+               g.tm_mon + 1, g.tm_mday, g.tm_hour, g.tm_min, g.tm_sec);
+        return 1;
+    }
     static unsigned long last_steps;
     static uint64_t last_us;
     if (strcmp(line, "s") != 0) return 0;
@@ -222,7 +276,7 @@ static int m_debug_command(const char *line)
     return 1;
 }
 
-static const char *m_debug_help(void) { return "s  speed and cursor\n"; }
+static const char *m_debug_help(void) { return "s  speed and cursor\nhora  the Mac's clock\n"; }
 
 static void m_pointer(int x, int y, int button) { mac_pointer(x, y, button); }
 

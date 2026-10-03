@@ -424,6 +424,11 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
   MTOOLS_NO_VFAT; both gave "Non-System disk". The script strips them.
 - Paper Mono: 455k instructions/s against the PaperS3's 587k, not looked
   into.
+- **The Mac has a clock chip now** (lib/umac/src/rtc.c, not upstream):
+  umac ignored it and the Mac said 1904. Its parameter RAM is kept in NVS
+  ("macpram"). machost reads the Time global (0x20C) to check it; on the
+  board `hora` prints it. Verified 2026-10-03 on the PaperS3, two seconds
+  from the board's clock.
 - **The clock** (clock.cpp): the RTC holds **UTC** (CrossPoint sets it;
   measured three hours ahead of the Mac in Brasilia), the system TZ is
   `<-03>3`, the PC's BIOS reads localtime(). DOS takes its *date* from

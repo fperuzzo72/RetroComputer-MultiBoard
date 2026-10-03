@@ -28,6 +28,16 @@ marked in the source:
   `__not_in_flash_func` on the Pico: those handlers and the bus functions
   run from internal RAM, not through the flash cache. The firmware's link
   map shows 200 `m68k_op_*` at 0x403..., the other 1,799 in flash.
+- **The real-time clock** (`src/rtc.c`, `include/umac_rtc.h`, two calls
+  in `src/main.c`): umac ignored the clock chip's three VIA lines, so the
+  Mac read zeros and its clock said 1904 at every start. The chip is
+  emulated now: its serial protocol, the seconds since 1904 in local time
+  (from the host's clock, plus whatever the Mac set), the write-protect
+  register and the 20 bytes of parameter RAM, which the board keeps in NVS.
+  Two details found on the host: the ROM reads the seconds through both of
+  their addresses (z000aa01 and z001aa01, compared), and it samples the
+  last bit after the eighth rising edge, so the chip must leave it on the
+  line. `-DUMAC_RTC_DEBUG` logs the traffic.
 - **`umac_kbd_pending()`** (`src/main.c`, `include/umac.h`): the emulated
   keyboard holds one event, and a second arriving before the Mac has read
   the first overwrites it. `src/mac/mac_core.c` queues keys and asks this
