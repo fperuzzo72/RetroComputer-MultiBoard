@@ -214,7 +214,16 @@ void bios_init(void)
     }
     
     // Initialize timer
-    timer_ticks = 0;
+    /* NOT UPSTREAM: from the time of day, as an AT's POST does from its
+     * clock. DOS takes its time from this count (and its date from INT 1Ah
+     * 04h); upstream started it at 0 and every boot was midnight. */
+    {
+        time_t now = time(NULL);
+        struct tm *lt = localtime(&now);
+        const uint32_t secs = (uint32_t)(lt->tm_hour * 3600 + lt->tm_min * 60 + lt->tm_sec);
+        timer_ticks = (uint32_t)((uint64_t)secs * 0x1800B0u / 86400u);
+        mem_write_dword(BDA_TIMER_COUNT, timer_ticks);
+    }
     
     // Initialize keyboard buffer
     kb_head = kb_tail = 0;

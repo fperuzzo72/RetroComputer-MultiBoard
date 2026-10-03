@@ -31,6 +31,9 @@ run loop (`pc_core.c`), the screen (`pc_text.c`), the keyboard
   again, as a real BIOS does. Upstream returns AX=0 at once; WordStar 3
   reads a key without asking first, took that 0 for a keystroke and
   filled its prompts with garbage.
+- `bios.c`: the tick count starts at the time of day (localtime), as an
+  AT's POST does from its clock; upstream started it at 0, and DOS, which
+  takes its time from it, booted at midnight every time.
 - `cpu8086.c`: **the auxiliary carry (AF)** is set by ADD, ADC, SUB, SBB,
   CMP, CMPS, SCAS, INC, DEC and NEG, 47 places, each marked. Upstream only
   DAA, DAS, AAA, AAS and SAHF touched it, so DAA worked on whatever AF

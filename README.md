@@ -461,8 +461,14 @@ with the owner's go-ahead, that byte was changed to 0, the current drive,
 on the card itself, with DEBUG inside the emulated PC (`e 1f1e 0`, `w`).
 WordStar now opens documents on C:; on the host it also saves them.
 
-The PC has no clock of its own on the board yet: files saved there are
-dated 1980.
+**The clock** is the board's own real-time clock (both boards have one on
+the touch panel's I2C bus; freeink-sdk's Rtc), read at boot into the
+system time (`src/boards/eink/clock.cpp`). It is kept in UTC, as
+CrossPoint sets it, and shown in Brasilia's time (UTC-3). The PC's BIOS
+gives DOS its date (INT 1Ah) and starts its tick count at the time of day,
+as an AT's POST did, so DOS boots with the right date and time. `rtc` on
+the console shows the clock; `rtc 2026-10-03 11:56:00` (local time) sets
+it. Verified on the PaperS3 on 2026-10-03.
 
 ## The layout of this repo
 

@@ -57,6 +57,7 @@
 #include "chooser.h"
 #include "audio.h"
 #include "ota_slots.h"
+#include "clock.h"
 #if EINK_BOARD_PAPERS3
 #include <BoardPaperS3.h>
 #endif
@@ -512,6 +513,8 @@ static void console_command(const char *line)
 #endif
         BoardPaperS3::powerOff();
 #endif
+    } else if (!strcmp(line, "rtc") || !strncmp(line, "rtc ", 4)) {
+        clock_command(line + 3, i2c_lock);
     } else if (!strncmp(line, "put ", 4)) {
         sd_put(line + 4);
     } else if (!strncmp(line, "rm /", 4)) {
@@ -685,6 +688,7 @@ void setup()
     panel_begin();
     display8_attach(panel_canvas());
     input_begin();
+    clock_begin();      /* same I2C bus as touch: before the input task reads it */
     media_begin();
     tap_queue = xQueueCreate(8, sizeof(Tap));
 

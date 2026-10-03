@@ -424,6 +424,12 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
   MTOOLS_NO_VFAT; both gave "Non-System disk". The script strips them.
 - Paper Mono: 455k instructions/s against the PaperS3's 587k, not looked
   into.
+- **The clock** (clock.cpp): the RTC holds **UTC** (CrossPoint sets it;
+  measured three hours ahead of the Mac in Brasilia), the system TZ is
+  `<-03>3`, the PC's BIOS reads localtime(). DOS takes its *date* from
+  INT 1Ah 04h but its *time* from the BDA tick count, which is why the
+  ticks now start at the time of day. Read before the input task starts:
+  the RTC shares the touch panel's bus; the console's `rtc` takes i2c_lock.
 - **An internal heap leak, open** (2026-10-02, Paper Mono). After 80
   minutes of Volkov Commander's star-field screen saver (11,700 fast
   refreshes) internal heap was at 28 bytes, the PC's loop had stopped and
