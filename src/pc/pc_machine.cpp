@@ -176,9 +176,6 @@ static void show_message(const char *line)
     printf("pc: %s\n", line);
 }
 
-/* As panel.cpp's: internal heap the PC's slices took and kept, summed. */
-static long heap_lost_in_pc;
-static bool draw_frozen;   /* `fz`: the PC runs, the screen is not drawn */
 
 static void loop_forever(void)
 {
@@ -196,7 +193,6 @@ static void loop_forever(void)
             display_mono_attach(fb, PC_FB_W, PC_FB_H);
             if (chosen >= 0) m_switch_to(chosen);
         }
-        const long heap_before = (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
         pc_core_run(20000);
         if (typed < to_type.size()) {
             const char c = to_type[typed++];
@@ -205,10 +201,9 @@ static void loop_forever(void)
         const uint64_t now = (uint64_t)esp_timer_get_time();
         if (now - last_draw >= 50000) {
             last_draw = now;
-            if (!draw_frozen && pc_text_render(fb)) frames++;
+            if (pc_text_render(fb)) frames++;
             display_mono_vsync();
         }
-        heap_lost_in_pc += heap_before - (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
         vTaskDelay(1);
     }
 }
@@ -305,16 +300,10 @@ static int m_debug_command(const char *line)
         printf("pc: code page %d (cp 860 Portuguese, cp 437 US)\n", pc_keys_codepage());
         return 1;
     }
-    if (!strcmp(line, "fz")) {
-        draw_frozen = !draw_frozen;
-        printf("pc: screen %s\n", draw_frozen ? "frozen, the PC runs on" : "drawn again");
-        return 1;
-    }
     if (!strcmp(line, "s")) {
         char p[160];
         pc_core_profile(p, sizeof p);
-        printf("pc: %lu instructions/s; %s; internal heap lost in the PC's slices %ld bytes\n",
-               (unsigned long)pc_core_ips(), p, heap_lost_in_pc);
+        printf("pc: %lu instructions/s; %s\n", (unsigned long)pc_core_ips(), p);
         return 1;
     }
     return 0;

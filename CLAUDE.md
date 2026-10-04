@@ -435,20 +435,16 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
   INT 1Ah 04h but its *time* from the BDA tick count, which is why the
   ticks now start at the time of day. Read before the input task starts:
   the RTC shares the touch panel's bus; the console's `rtc` takes i2c_lock.
-- **An internal heap leak, open** (2026-10-02, Paper Mono). After 80
-  minutes of Volkov Commander's star-field screen saver (11,700 fast
-  refreshes) internal heap was at 28 bytes, the PC's loop had stopped and
-  touch did nothing (the selector is opened from that loop). Measured
-  since: idle DOS loses nothing; DOS scrolling (a .BAT doing `dir` in a
-  loop) about 460 bytes a minute; VC's saver, no disk at all, 3kB in 11
-  minutes; 160 forced full refreshes with the PC idle, one 428-byte step.
-  So: screen changes while the PC runs, not the card. Not yet split
-  between the panel's fast refresh and the PC side: `fz` on the console
-  freezes the PC's drawing while it runs on, for exactly that test (a
-  QBASIC loop printing at random places is the load to use; typing on the
-  board stops VC's saver and spoils the run). `s` sums the heap lost
-  across refreshes and across PC slices, but the two overlap in time.
-
+- **The internal heap leak was BLE, not the panel or the PC** (found
+  2026-10-03). NimBLE kept every advertising device its scan heard, and
+  the e-ink boards scan for as long as no keyboard is connected: after 80
+  minutes of Volkov Commander's screen saver the Paper Mono had 28 bytes
+  left, the PC's loop stopped and touch did nothing. The screen saver was
+  a coincidence; the time was what mattered, and a run with a keyboard
+  connected (scan stopped) looked clean, which sent the hunt after the
+  panel first. Proven: with `scan->setMaxResults(0)` the heap held at
+  20.7-20.9kB for 8 minutes while 150 adverts came in; before, it fell
+  all the time. The same fix made the CYD's keyboard pair at all.
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,

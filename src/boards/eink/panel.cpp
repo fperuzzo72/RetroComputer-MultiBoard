@@ -225,13 +225,8 @@ void panel_begin(void)
         Serial.printf("panel: buffers FAILED (canvas %p, glass %p)\n", (void *)canvas, (void *)glass);
 }
 
-/* Internal heap the refreshes took and did not give back, summed: other
- * tasks allocate meanwhile, so one refresh says little, thousands do. */
-static long heap_lost_in_refresh;
-
 void panel_diag(void)
 {
-    Serial.printf("panel: internal heap lost across refreshes %ld bytes\n", heap_lost_in_refresh);
     Serial.printf("panel: canvas %p glass %p, service %lu calls, %lu without buffers, %lu unchanged, controller %s\n",
                   (void *)canvas, (void *)glass, svc_calls, svc_no_buffer, svc_unchanged,
                   controller_awake ? "awake" : "asleep");
@@ -298,7 +293,6 @@ bool panel_service(void)
     refreshes++;
     return true;
 #else
-    const long heap_before = (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
     if (full) {
         if (full_requested) cleans_button++;
         else if (idle_clean) cleans_idle++;
@@ -312,7 +306,6 @@ bool panel_service(void)
         epd.displayBuffer(EInkDisplay::FAST_REFRESH);
         fast_since_full++;
     }
-    heap_lost_in_refresh += heap_before - (long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
     last_refresh_ms = millis() - t0;
     last_refresh_end = millis();
     controller_awake = true;
