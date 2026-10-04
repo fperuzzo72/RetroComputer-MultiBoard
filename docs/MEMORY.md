@@ -68,6 +68,15 @@ for `msx_memory_claimed()`), for the same reason.
 
 ## The margin, and what to do if it runs out
 
+**Measured 2026-10-03** (MSX with a 128kB cartridge from flash): 26kB free
+before BLE, 10.6kB after `NimBLEDevice::init()` (NimBLE takes 15kB), 8.3kB
+with a keyboard connected and paired by passkey. A 4kB stack for a BLE
+service task no longer fits there: it was never created, and a keyboard
+that was found was never connected. The CYD now services the keyboard from
+its console task (`BLE_KEYBOARD_NO_TASK`). The scan also keeps no results
+(`setMaxResults(0)`): NimBLE's default keeps every device it hears, and a
+busy room filled the heap and aborted the BLE task.
+
 About **13kB of heap is left** once the machine is running and NimBLE is
 scanning. Connecting a keyboard costs a few kB more on top of that
 (the client object plus the discovered GATT attributes).

@@ -360,7 +360,15 @@ static void consoleTask(void *arg) {
                 line[len++] = c;
             }
         }
+#ifdef BLE_KEYBOARD_NO_TASK
+        /* The keyboard is looked after here: no room for a task of its own
+         * (BLE_KEYBOARD_NO_TASK in ble_keyboard.cpp). 5ms, so that a key
+         * pressed and let go quickly is still seen. */
+        ble_keyboard_poll();
+        vTaskDelay(pdMS_TO_TICKS(5));
+#else
         vTaskDelay(pdMS_TO_TICKS(20));
+#endif
     }
 }
 

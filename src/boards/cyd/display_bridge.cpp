@@ -110,7 +110,39 @@ static volatile uint32_t sBlitUs = 0;
 extern "C" unsigned long display_blit_us(void) { return sBlitUs; }
 extern "C" void display_blit_us_reset(void) { sBlitUs = 0; }
 
+#ifdef BLE_KEYBOARD_PASSKEY
+#include "ble_keyboard.h"
+
+/* A keyboard that wants a code waits for 123456 and Enter typed on its own
+ * keys. The picture fills the panel at 1.5x and is redrawn every frame, so
+ * the note is drawn over it every frame for 30 seconds, then the picture
+ * has the panel back. */
+static uint32_t sPasskeyUntil;
+
+static void passkey_note(void) {
+    uint32_t code;
+    if (ble_keyboard_take_passkey(&code)) {
+        sPasskeyUntil = millis() + 30000;
+        Serial.printf("BLE: the keyboard wants a code: type %06lu and Enter on it\n", (unsigned long)code);
+    }
+    if (!sPasskeyUntil) return;
+    if ((int32_t)(millis() - sPasskeyUntil) >= 0) {
+        sPasskeyUntil = 0;
+        sRepaintWanted = 1;
+        return;
+    }
+    tft.fillRect(40, 120, DISPLAY_PANEL_W - 80, 80, TFT_BLACK);
+    tft.drawRect(40, 120, DISPLAY_PANEL_W - 80, 80, TFT_WHITE);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.drawString("No teclado: 123456 e Enter", DISPLAY_PANEL_W / 2, 160, 4);
+}
+#endif
+
 extern "C" void display_service(void) {
+#ifdef BLE_KEYBOARD_PASSKEY
+    passkey_note();
+#endif
     if (sPendingScale) {
         sScale = sPendingScale;
         sPendingScale = 0;

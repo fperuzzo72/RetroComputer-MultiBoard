@@ -304,13 +304,18 @@ static bool connectToKeyboard() {
     client->setClientCallbacks(&sClientCB, false);
     client->setConnectTimeout(7000);
 
+    Serial.printf("BLE: connecting, free heap %u (largest %u)\n", (unsigned)ESP.getFreeHeap(),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
     if (!client->connect(sTarget)) {
         Serial.println("BLE: connect failed");
         NimBLEDevice::deleteClient(client);
         return false;
     }
 
+    Serial.printf("BLE: link up, free heap %u; reading its services\n", (unsigned)ESP.getFreeHeap());
     NimBLERemoteService *hid = client->getService(HID_SERVICE_UUID);
+    Serial.printf("BLE: services read (%s), free heap %u\n", hid ? "HID found" : "no HID",
+                  (unsigned)ESP.getFreeHeap());
     if (!hid) {
         Serial.println("BLE: connected but no HID service, dropping");
         client->disconnect();
@@ -373,9 +378,12 @@ static bool connectToKeyboard() {
 }
 
 static void bleServiceTask(void *arg);
+static volatile bool sStarted;   /* ble_keyboard_init() done; see ble_keyboard_poll() */
 
 void ble_keyboard_init() {
+    Serial.printf("BLE: before init, free heap %u\n", (unsigned)ESP.getFreeHeap());
     NimBLEDevice::init(BLE_KEYBOARD_NAME);
+    Serial.printf("BLE: NimBLE up, free heap %u\n", (unsigned)ESP.getFreeHeap());
 #ifdef BLE_KEYBOARD_PASSKEY
     /* freeink-sdk's settings, proven on the PaperS3: bond, no MITM required
      * from our side, legacy pairing, and a display to show a code on. */
@@ -393,10 +401,16 @@ void ble_keyboard_init() {
 
     NimBLEScan *scan = NimBLEDevice::getScan();
     scan->setScanCallbacks(new KbdScanCallbacks(), false);
-#ifdef BLE_KEYBOARD_PASSKEY
+    /* Keep none of what the scan sees: onResult() copies the one address it
+     * wants. By default NimBLE keeps every device it has heard, and on the
+     * CYD, with 18kB left once the MSX has its memory, a busy room filled
+     * the heap and the BLE task aborted in operator new (2026-10-03). */
+    scan->setMaxResults(0);
+#if defined(CONFIG_BT_NIMBLE_EXT_ADV) && CONFIG_BT_NIMBLE_EXT_ADV
     /* Continuous, as freeink-sdk scans: a keyboard that advertises only in
      * extended advertising puts its data in a packet on a secondary
-     * channel that a windowed scan misses. With CONFIG_BT_NIMBLE_EXT_ADV. */
+     * channel that a windowed scan misses. Bluetooth 5, the S3's; the
+     * CYD's ESP32 has no extended advertising and keeps the window. */
     scan->setInterval(160);
     scan->setWindow(160);
 #else
@@ -408,7 +422,20 @@ void ble_keyboard_init() {
 
     /* Core 0, low priority: the machine owns core 1 and must not be made
      * responsible for keeping the keyboard alive. */
-    xTaskCreatePinnedToCore(bleServiceTask, "blesvc", 4096, NULL, 2, NULL, 0);
+#ifndef BLE_KEYBOARD_NO_TASK
+    if (xTaskCreatePinnedToCore(bleServiceTask, "blesvc", 4096, NULL, 2, NULL, 0) != pdPASS)
+        Serial.println("BLE: the service task could not be created (no memory): no keyboard this session");
+#else
+    /* BLE_KEYBOARD_NO_TASK: the board calls ble_keyboard_poll() from a task
+     * it already has. On the CYD, once the MSX has its memory and NimBLE
+     * its 15kB, 10kB are left and a fresh 4kB stack does not fit; the
+     * service task was never created and the keyboard found was never
+     * connected (2026-10-03). */
+    (void)bleServiceTask;
+#endif
+    sStarted = true;
+    Serial.printf("BLE: scanning and serviced, free heap %u (largest %u)\n", (unsigned)ESP.getFreeHeap(),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
     Serial.println("BLE: scanning for a keyboard");
 }
 
@@ -423,6 +450,7 @@ void ble_keyboard_status(void) {
 }
 
 void ble_keyboard_poll() {
+    if (!sStarted) return;   /* a board's task may call this before init */
     /* The connect handshake must not run inside the scan callback, which
      * is the NimBLE host task, so it runs here - and this is called from
      * a service task of our own rather than from the machine.
