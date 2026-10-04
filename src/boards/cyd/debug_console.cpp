@@ -143,10 +143,11 @@ static void handleLine(char *line) {
             if (sscanf(line + 1, "%d", &scale) != 1 || (scale != 1 && scale != 2))
                 scale = display_get_scale() == 1 ? 2 : 1;   /* bare 'z' toggles */
             display_set_scale(scale);
-            boot_remember_scale(machine_chosen_index(), scale);
-            Serial.printf("picture scale %s, remembered for %s\n",
+            const int entry = machine->selected_entry();
+            boot_remember_scale(machine_chosen_index(), entry, scale);
+            Serial.printf("picture scale %s, remembered for %s's %s\n",
                           scale == 1 ? "1:1 (crisp, small)" : "1.5x (nearly full screen)",
-                          machine->name);
+                          machine->name, entry == 0 ? "BASIC" : "games");
             break;
         }
 

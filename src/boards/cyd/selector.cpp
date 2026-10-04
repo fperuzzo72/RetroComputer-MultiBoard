@@ -15,6 +15,7 @@
 #include "panel.h"
 #include "display.h"
 #include "selector.h"
+#include "boot_menu.h"
 #include "chooser.h"
 #include "machine.h"
 
@@ -79,7 +80,11 @@ int selector_frame(void) {
 
         if (chosen >= 0) {
             sActive = false;
-            if (m == machine_chosen_index()) return chosen;
+            if (m == machine_chosen_index()) {
+                /* BASIC and the games each have their own scale */
+                display_set_scale(boot_scale_for(m, chosen));
+                return chosen;
+            }
 
             /* A different machine cannot be swapped in while this one is
              * running: its RAM, its VRAM and its band buffer were cut out

@@ -29,15 +29,22 @@ static const uint16_t COL_HEAD = TFT_YELLOW;
  * table says what it comes up at; this only remembers a change. */
 #define NVS_NS "cyd"
 
-static void scaleKey(char *out, int machineIndex) {
-    snprintf(out, 12, "scale%d", machineIndex);
+/* Two scales a machine: one for its BASIC (entry 0) and one for its games,
+ * the owner's choice of 2026-10-03: on the MSX, BASIC at 1.5x, where speed
+ * does not matter and the text wants to be big, and games at 1:1, where
+ * the 1.5x blit cost them half their speed. Games start at the machine's
+ * own default_scale (1:1 on the MSX, 1.5x on the Spectrum, which has
+ * speed to spare); BASIC at 1.5x. Keys "sb<m>" and "sg<m>"; the single
+ * "scale<m>" of before is no longer read. */
+static void scaleKey(char *out, int machineIndex, int entry) {
+    snprintf(out, 12, "s%c%d", entry == 0 ? 'b' : 'g', machineIndex);
 }
 
-int boot_scale_for_machine(int machineIndex) {
+int boot_scale_for(int machineIndex, int entry) {
     Preferences prefs;
     char key[12];
-    int v = machine_list[machineIndex]->default_scale;
-    scaleKey(key, machineIndex);
+    int v = entry == 0 ? 2 : machine_list[machineIndex]->default_scale;
+    scaleKey(key, machineIndex, entry);
     if (prefs.begin(NVS_NS, true)) {
         v = prefs.getInt(key, v);
         prefs.end();
@@ -45,10 +52,14 @@ int boot_scale_for_machine(int machineIndex) {
     return (v == 1) ? 1 : 2;
 }
 
-void boot_remember_scale(int machineIndex, int scale) {
+int boot_scale_for_machine(int machineIndex) {
+    return boot_scale_for(machineIndex, -1);   /* the games' */
+}
+
+void boot_remember_scale(int machineIndex, int entry, int scale) {
     Preferences prefs;
     char key[12];
-    scaleKey(key, machineIndex);
+    scaleKey(key, machineIndex, entry);
     if (!prefs.begin(NVS_NS, false)) return;
     prefs.putInt(key, scale);
     prefs.end();
@@ -141,7 +152,7 @@ void boot_menu_run(void) {
 
     /* Nothing to choose between: don't make anyone look at a menu. */
     if (totalEntries() <= 1) {
-        display_set_scale(boot_scale_for_machine(machine_chosen_index()));
+        display_set_scale(boot_scale_for(machine_chosen_index(), machine->selected_entry()));
         return;
     }
 
@@ -176,7 +187,7 @@ void boot_menu_run(void) {
         }
     }
 
-    display_set_scale(boot_scale_for_machine(chosenMachine));
+    display_set_scale(boot_scale_for(chosenMachine, machine->selected_entry()));
     Serial.printf("menu: starting %s / %s, picture %s\n",
                   machine->name, machine->entry_name(machine->selected_entry()),
                   display_get_scale() == 1 ? "1:1" : "1.5x");

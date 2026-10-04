@@ -193,8 +193,8 @@ static void drawScale(int machineIndex) {
     tft.drawRoundRect(SCALE_X, FOOT_TOP + 3, SCALE_W, FOOT_H - 8, 5, COL_EDGE);
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(COL_TEXT, COL_TILE);
-    tft.drawString(boot_scale_for_machine(machineIndex) == 1 ? "picture  1:1"
-                                                            : "picture  1.5x",
+    tft.drawString(boot_scale_for_machine(machineIndex) == 1 ? "games  1:1"
+                                                            : "games  1.5x",
                    SCALE_X + SCALE_W / 2, FOOT_TOP + FOOT_H / 2 - 2, 2);
     tft.setTextDatum(TL_DATUM);
 }
@@ -225,8 +225,9 @@ static bool inFooterScale(int x, int y) {
  * machine picks it up on its next frame. */
 static void toggleScale(int machineIndex) {
     int next = boot_scale_for_machine(machineIndex) == 1 ? 2 : 1;
-    boot_remember_scale(machineIndex, next);
-    display_set_scale(next);
+    boot_remember_scale(machineIndex, -1, next);   /* the games' scale */
+    if (machineIndex == machine_chosen_index() && machine->selected_entry() != 0)
+        display_set_scale(next);
     drawScale(machineIndex);
     delay(120);
 }

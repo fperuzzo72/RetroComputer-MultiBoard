@@ -16,11 +16,12 @@ extern "C" {
  * when there is only one thing to boot. */
 void boot_menu_run(void);
 
-/* The picture scale this machine was last left at, or the one its own
- * table says it should come up at. Per machine on purpose: see the
- * comment in boot_menu.cpp. */
-int  boot_scale_for_machine(int machineIndex);
-void boot_remember_scale(int machineIndex, int scale);
+/* The picture scale this machine was last left at, or the one it comes up
+ * at: one for its BASIC (entry 0), one for its games. Per machine and per
+ * kind on purpose: see the comment in boot_menu.cpp. */
+int  boot_scale_for_machine(int machineIndex);          /* its games' scale */
+int  boot_scale_for(int machineIndex, int entry);       /* entry 0 is BASIC */
+void boot_remember_scale(int machineIndex, int entry, int scale);
 
 #ifdef __cplusplus
 }
