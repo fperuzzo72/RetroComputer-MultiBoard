@@ -45,6 +45,7 @@ static int pic_w = DISPLAY_PICTURE_W;
 static int pic_h = DISPLAY_PICTURE_H;
 static uint16_t pic_border;
 static uint32_t pic_seq = 1;
+static int pic_filled;
 static unsigned long full_repaints;
 static volatile int repaint_wanted;
 
@@ -59,8 +60,19 @@ void display_write_picture(short srcX, short srcY, short width, short height,
     const int w = width > DISPLAY_PICTURE_W_MAX ? DISPLAY_PICTURE_W_MAX : width;
     uint16_t row[PIC_W];
     pthread_mutex_lock(&pic_lock);
-    if (w != pic_w || pic_h != DISPLAY_PICTURE_H) { pic_w = w; pic_h = DISPLAY_PICTURE_H; pic_seq++; }
-    if (bgColor != pic_border) { pic_border = bgColor; pic_seq++; }
+    /* Rows a machine never writes are its border: the C64 draws its 200
+     * lines from row 8 of the 216, and the rest came out black. So the
+     * whole picture takes the border colour whenever it or the size
+     * changes, and the machine's rows go on top. */
+    if (w != pic_w || pic_h != DISPLAY_PICTURE_H || bgColor != pic_border || !pic_filled) {
+        pic_w = w;
+        pic_h = DISPLAY_PICTURE_H;
+        pic_border = bgColor;
+        for (int y = 0; y < pic_h; y++)
+            for (int x = 0; x < pic_w; x++) pic[y][x] = bgColor;
+        pic_filled = 1;
+        pic_seq++;
+    }
     for (int r = 0; r < height; r++) {
         const int y = srcY + r;
         if (y < 0 || y >= DISPLAY_PICTURE_H) continue;
@@ -111,6 +123,7 @@ void display_mono_attach(const uint8_t *fb, int w, int h)
     pic_w = mono_w;
     pic_h = mono_h;
     pic_border = 0xFFFF;
+    pic_filled = 0;
     pic_seq++;
     pthread_mutex_unlock(&pic_lock);
 }
