@@ -259,7 +259,11 @@ void selector_open(void)
 }
 
 void selector_poll_open(void) {}
-int selector_active(void) { return sel_active; }
+/* Still active until the machine has taken the answer: the menu answers
+ * from another thread, and a machine that checked selector_frame() a
+ * moment before and selector_active() a moment after would leave with
+ * nothing (the MSX's loop did, and another game never loaded). */
+int selector_active(void) { return sel_active || sel_choice >= 0; }
 
 int selector_frame(void)
 {

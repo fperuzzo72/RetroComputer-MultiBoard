@@ -92,6 +92,26 @@ static const struct HidKey kHid[0x68] = {
     [0x2E] = {KEY(ROW_ENTER_H,1),0,1}, /* =  = SS+L */
 };
 
+/* The same punctuation keys with Shift: what is printed on the key, again
+ * as Symbol Shift plus a letter, and with no Caps Shift (Shift+' was Caps
+ * plus SS+7, and there was no way to type a quote but Ctrl+P). The digits
+ * keep Caps Shift: on a Spectrum those are the cursor keys and Delete. */
+static const struct { uint8_t hid, key; } kShifted[] = {
+    {0x34, KEY(ROW_P_Y,0)},     /* "  = SS+P */
+    {0x33, KEY(ROW_CAPS_V,1)},  /* :  = SS+Z */
+    {0x36, KEY(ROW_Q_T,3)},     /* <  = SS+R */
+    {0x37, KEY(ROW_Q_T,4)},     /* >  = SS+T */
+    {0x38, KEY(ROW_CAPS_V,3)},  /* ?  = SS+C */
+    {0x2D, KEY(ROW_0_6,0)},     /* _  = SS+0 */
+    {0x2E, KEY(ROW_ENTER_H,2)}, /* +  = SS+K */
+};
+
+static uint8_t shifted_key(uint8_t hid) {
+    for (unsigned i = 0; i < sizeof kShifted / sizeof kShifted[0]; i++)
+        if (kShifted[i].hid == hid) return kShifted[i].key;
+    return NO_KEY;
+}
+
 static uint8_t sMods;          /* the HID modifier byte */
 static uint8_t sHeld[6];
 
@@ -113,12 +133,19 @@ static void rebuild(void) {
     int i;
     memset(sMatrix, 0x1F, sizeof(sMatrix));
 
-    if (sMods & 0x22) press(K_CAPS);   /* either Shift = Caps Shift   */
+    int shift = (sMods & 0x22) != 0;
+    if (shift)
+        for (i = 0; i < 6; i++) {
+            const uint8_t k = shifted_key(sHeld[i]);
+            if (k != NO_KEY) { press(k); press(K_SYM); shift = 0; }
+        }
+    if (shift) press(K_CAPS);          /* either Shift = Caps Shift   */
     if (sMods & 0x11) press(K_SYM);    /* either Ctrl  = Symbol Shift */
 
     for (i = 0; i < 6; i++) {
         uint8_t hid = sHeld[i];
         if (!hid || hid >= 0x68) continue;
+        if ((sMods & 0x22) && shifted_key(hid) != NO_KEY) continue;
         if (kHid[hid].key == NO_KEY) continue;   /* nothing here on a Spectrum */
         press(kHid[hid].key);
         if (kHid[hid].caps) press(K_CAPS);
