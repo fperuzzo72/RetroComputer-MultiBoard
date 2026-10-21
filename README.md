@@ -473,12 +473,51 @@ clock: umac had no clock chip, so one is emulated now
 (`lib/umac/src/rtc.c`), with its 20 bytes of parameter RAM (volume, mouse
 speed, key repeat, the alarm) kept in NVS across power cycles.
 
+## Android: the five machines as an app (Boox Tab Mini C, HiBreak Pro)
+
+`src/boards/android/` is a board like `cyd/` and `eink/`, and `android/`
+is its Gradle project: MSX, Spectrum, Mac, C64 and PC in one app, for
+the two devices the Android CrossPoint already runs on, built the same way
+(JDK 17, SDK 35, NDK 30, arm64 only). Begun 2026-10-21; **built and
+host-tested, not yet run on a device**.
+
+```bash
+cd android
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export PATH=/opt/homebrew/opt/cmake/bin:/opt/homebrew/opt/ninja/bin:$PATH
+./gradlew :app:assembleDebug          # app/build/outputs/apk/debug/retrocomputer-debug.apk
+adb install -r app/build/outputs/apk/debug/retrocomputer-debug.apk
+```
+
+The ROMs are the same gitignored generated files the boards use (run a
+board build once so `mac_media.S` exists; `make_c64_roms.py`,
+`make_pc_font.py` for the others). The picture is kept in colour at the
+machine's size and posted to the panel at the largest whole scale, only
+when it changes: on e-ink every post is a refresh. Keys from a keyboard
+paired with Android reach the machines as the BLE boot reports they
+already take, so each keeps its own US-International.
+
+Files live in **`/sdcard/RetroComputer`**, laid out as the boards' card:
+`pc/` disk images (and `msdos.img` at the root), `c64/` .prg/.d64/.crt,
+`mac/` disc images. The app asks once for All files access; without it
+the MSX and the Spectrum still run, needing no files. A tap (or F12, or
+the system's back) opens the menu: this machine's entries and "Outro
+computador"; a finger is the Mac's trackpad, and its menu is the back
+gesture.
+
+`tools/androidhost` builds the same board on the Mac (MSX, Spectrum, C64,
+PC; the Mac's `.incbin` is ELF-only) and writes the picture as a colour
+PNG: `make -C tools/androidhost`, then `./androidhost <nvs-dir> <seconds>
+<out.png> [text]`, with `PC_ROOT`/`C64_ROOT` as the card.
+
 ## The layout of this repo
 
 ```
 src/boards/cyd/        the CYD: panel, amplifier, BLE keyboard host, card,
                        serial console. Knows nothing about what is emulated.
 src/boards/eink/  the Paper Mono: e-ink panel, touch, serial console
+src/boards/android/    the Android app's board: picture, keys, audio, files
+android/               the Android app's Gradle project
 src/machine.h          the only thing that crosses between boards and machines
 src/display_mono.h     how a 1-bit machine hands its framebuffer to a board
 src/msx/               the MSX1, on the vendored fMSX core

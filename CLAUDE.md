@@ -445,6 +445,43 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
   panel first. Proven: with `scan->setMaxResults(0)` the heap held at
   20.7-20.9kB for 8 minutes while 150 adverts came in; before, it fell
   all the time. The same fix made the CYD's keyboard pair at all.
+## The Android board (2026-10-21)
+
+`src/boards/android/` + `android/`: all five machines as one Android app
+for the Boox Tab Mini C (colour) and the HiBreak Pro, modelled on the
+Android CrossPoint (`~/github/crosspoint-reader-android`, which runs on
+both). **Not yet run on a device** (the Mini C never showed up on adb
+that day). `tools/androidhost` runs the same board on the Mac: use it
+first, as machost/pchost/c64host for the cores.
+
+- **retro_board.c is plain C**, no Android: picture (RGB565, up to
+  640x400, a sequence number that moves only on a real change), keys as
+  boot reports (the machines do their own layout), the selector as a pause
+  until the app's menu answers, display_mono.h for the Mac and the PC, the
+  trackpad. android_jni.cpp is the only C++; it must not include MSX.h or
+  Z80.h (the C/C++ wall), and it routes stdout/stderr into logcat.
+- **shim/** is real-time ESP-IDF (not tools/hostshim's simulated clock),
+  and NVS is one file per key in the app's files dir, so choices persist.
+- **Lessons carried over from the Android CrossPoint**: the machine thread
+  gets an 8MB stack (bionic's 1MB default crashes in moving places); the
+  Surface is asked for at its own size (any other size is resampled, and a
+  resampled pixel picture is a blurred one); the window, not
+  displayMetrics, gives the size; surfaceDestroyed is synchronous under the
+  same lock as a post; All files access for a visible folder.
+- **What the NDK added**: EMULib reads ANDROID as its author's own Android
+  port (LibAndroid.h): `-UANDROID` for the C. In a shared library every
+  global is exported, so an unused GetColor() in video_glue.c kept an
+  undefined VideoImg alive: hidden visibility plus --gc-sections.
+- lib/c64 builds as its own static library (PLATFORM_LINUX, pthreads),
+  so its generic header names stay off the others' include path.
+  c64_machine.cpp and pc_machine.cpp list their folders through POSIX off
+  an Arduino board (C64_ROOT, PC_ROOT = the card folder).
+- The Mac never polls its selector: another disc restarts the app into it.
+  The C64 restarts for another entry too (as on the boards).
+- To check on the device: the colour picture on the Mini C; whether the
+  Boox's fast refresh mode keeps colour; key events from the paired
+  keyboard going past the IME; AAudio's rate; the 50Hz pacing.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,
