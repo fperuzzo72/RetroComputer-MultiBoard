@@ -47,3 +47,5 @@ tools/pchost/pchost
 tools/pchost/*.o
 # built by tools/androidhost
 tools/androidhost/androidhost
+# built by tools/dosboxhost
+tools/dosboxhost/dosboxhost
