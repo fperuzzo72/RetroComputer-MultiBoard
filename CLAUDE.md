@@ -546,7 +546,11 @@ mouse. Use `tools/dosboxhost` first.
   Commander marked nothing. Next: whether "pc386: the core read the right
   button" appears (the core's binds do include MOUSE_RIGHT), tested on
   DOSBox Pure's start menu, where a right click is cancel.
-- To do: measure the load in play with the log kept (Test Drive, GP2).
+- **Test Drive in play** (EGA, 2026-10-21, log kept): core busy 4% of a
+  minute of driving, 9% for the minute with the menu and its start.
+  DOSBox's auto cycles give a real-mode game a fixed old-PC speed, so this
+  is what the game asks, not the room left.
+- To do: GP2's load in a race with the log kept (it is the heavy one).
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
