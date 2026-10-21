@@ -18,6 +18,8 @@ object RetroNative {
   @JvmStatic external fun nativeSetSurface(surface: Any?)
   @JvmStatic external fun nativeKey(keycode: Int, down: Boolean): Boolean
   @JvmStatic external fun nativeOpenMenu()
+  @JvmStatic external fun nativeHasPointer(): Boolean
+  @JvmStatic external fun nativeTouch(touching: Boolean, x: Float, y: Float, ms: Long)
   @JvmStatic external fun nativeMenuDone(entry: Int)
   @JvmStatic external fun nativeChooseMachine(machine: Int, entry: Int)
   @JvmStatic external fun nativeMachineCount(): Int

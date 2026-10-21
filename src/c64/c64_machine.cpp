@@ -38,6 +38,16 @@
 #ifdef ARDUINO
 #include <Arduino.h>
 #include <SDCardManager.h>
+#else
+#include <cstdlib>
+#include <dirent.h>
+#include <strings.h>
+#include <sys/stat.h>
+#endif
+/* A board with NVS and a sound output: the e-ink boards (Arduino) and the
+ * Android board. tools/c64host has neither. */
+#if defined(ARDUINO) || defined(RETRO_BOARD_ANDROID)
+#define C64_HAS_BOARD 1
 #include "audio.h"
 #include "esp_heap_caps.h"
 #include "nvs.h"
@@ -75,7 +85,12 @@ void retro_c64_picture(const uint8_t *bitmap, uint8_t border)
 void retro_c64_audio(const int16_t *samples, size_t n)
 {
     frames++;
-#ifdef ARDUINO
+#ifdef C64_HAS_BOARD
+#ifdef RETRO_BOARD_ANDROID
+    /* the SID's frames come at the C64's pace, the audio drains at its own:
+     * never let the queue grow past 80ms, or the sound lags the picture */
+    if (audio_queued() > AUDIO_SAMPLE_RATE * 80 / 1000) return;
+#endif
     audio_write(samples, (unsigned)n);
 #else
     (void)samples; (void)n;
@@ -110,10 +125,24 @@ static void list_files(void)
         f.close();
     }
     dir.close();
+#else
+    /* a folder for a card: C64_ROOT, as c64_files.cpp reads them */
+    const char *root = getenv("C64_ROOT");
+    const std::string base = std::string(root ? root : ".") + "/c64";
+    DIR *dir = opendir(base.c_str());
+    if (!dir) return;
+    while (struct dirent *e = readdir(dir)) {
+        if (files.size() >= 64) break;
+        struct stat st;
+        if (!wanted(e->d_name) || stat((base + "/" + e->d_name).c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+            continue;
+        files.push_back(e->d_name);
+    }
+    closedir(dir);
 #endif
 }
 
-#ifdef ARDUINO
+#ifdef C64_HAS_BOARD
 #define NVS_NS  "cyd"
 #define NVS_KEY "c64entry"
 
@@ -257,7 +286,7 @@ static void m_run(void)
     for (;;) PlatformManager::getInstance().waitMS(1000);
 #else
     make_palette();
-#ifdef ARDUINO
+#ifdef C64_HAS_BOARD
     ram = (uint8_t *)heap_caps_malloc(65536, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 #endif
     if (!ram) ram = new uint8_t[65536];
@@ -297,7 +326,7 @@ static void m_run(void)
 
     PlatformManager::getInstance().startIntervalTimer([]() { cpu->scanKeyboard(); }, 8000);
     PlatformManager::getInstance().startIntervalTimer([]() { cpu->cia1.updateTOD(); cpu->cia2.updateTOD(); }, 100000);
-#ifdef ARDUINO
+#ifdef C64_HAS_BOARD
     const unsigned rate = audio_start_push(AUDIO_SAMPLE_RATE);
     printf("c64: sound %s\n", rate ? "on" : "off");
 #endif

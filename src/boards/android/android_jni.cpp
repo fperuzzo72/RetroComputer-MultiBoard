@@ -98,6 +98,8 @@ static void restart_hook() { call_static("onRestart"); }
 
 static std::mutex win_lock;
 static ANativeWindow *win;
+/* where the last picture landed, for touch: its origin and scale */
+static std::atomic<int> view_x0{0}, view_y0{0}, view_k{1};
 static std::atomic<bool> win_new{false};
 
 static uint32_t rgbx(uint16_t c)
@@ -116,6 +118,9 @@ static void present(const uint16_t *pic, int w, int h, uint16_t border)
     int k = W / w < H / h ? W / w : H / h;
     if (k < 1) k = 1;
     const int x0 = (W - w * k) / 2, y0 = (H - h * k) / 2;
+    view_x0 = x0;
+    view_y0 = y0;
+    view_k = k;
     const uint32_t bc = rgbx(border);
     uint32_t *px = static_cast<uint32_t *>(buf.bits);
     static uint32_t lut[65536];
@@ -282,6 +287,19 @@ extern "C" JNIEXPORT jboolean JNICALL FN(nativeKey)(JNIEnv *, jclass, jint keyco
     if (!u) return JNI_FALSE;
     retro_board_key(u, down ? 1 : 0);
     return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL FN(nativeHasPointer)(JNIEnv *, jclass)
+{
+    return retro_board_has_pointer() ? JNI_TRUE : JNI_FALSE;
+}
+
+/* A finger, in the Surface's pixels, made the machine's own. */
+extern "C" JNIEXPORT void JNICALL FN(nativeTouch)(JNIEnv *, jclass, jboolean touching, jfloat x, jfloat y, jlong ms)
+{
+    const int k = view_k;
+    const int mx = (int)((x - view_x0) / k), my = (int)((y - view_y0) / k);
+    retro_board_touch(touching ? 1 : 0, mx, my, (float)k, (unsigned long)ms);
 }
 
 extern "C" JNIEXPORT void JNICALL FN(nativeOpenMenu)(JNIEnv *, jclass) { selector_open(); }

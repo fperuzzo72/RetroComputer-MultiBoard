@@ -199,6 +199,36 @@ void ble_keyboard_poll(void) {}
 int ble_keyboard_connected(void) { return keys_seen; }
 void ble_keyboard_inject(const uint8_t r[8]) { if (machine) machine->hid_report(r); }
 
+/* --- the pointer -------------------------------------------------------------
+ * The e-ink boards' trackpad (src/boards/eink/trackpad.c, plain C): drag
+ * moves the pointer with acceleration, a tap clicks, tap-tap double-clicks,
+ * tap-then-drag holds the button. The owner tuned it on the Paper Mono; a
+ * finger is too big to point at a Mac's close box directly. */
+#include "../eink/trackpad.h"   /* by path: eink/ is not on this board's include path */
+
+static trackpad tp;
+static int tp_ready, last_x = -1, last_y = -1, last_b = -1;
+
+int retro_board_has_pointer(void) { return machine && machine->pointer; }
+
+void retro_board_touch(int touching, int mx, int my, float scale, unsigned long now_ms)
+{
+    if (!retro_board_has_pointer()) return;
+    if (!tp_ready) {
+        trackpad_init(&tp, pic_w, pic_h, scale);
+        tp_ready = 1;
+    }
+    trackpad_update(&tp, now_ms, touching, mx, my);
+    int x, y, b;
+    trackpad_pointer(&tp, &x, &y, &b);
+    if (x != last_x || y != last_y || b != last_b) {
+        last_x = x;
+        last_y = y;
+        last_b = b;
+        machine->pointer(x, y, b);
+    }
+}
+
 /* --- the selector -------------------------------------------------------- */
 
 void (*retro_board_menu_hook)(void);

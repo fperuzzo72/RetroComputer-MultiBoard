@@ -22,6 +22,12 @@ uint32_t retro_board_picture(uint16_t *out, int *w, int *h, uint16_t *border);
 /* A key, as a HID usage (0x04 'a' ... 0xE0-0xE7 modifiers), down or up. */
 void retro_board_key(uint8_t usage, int down);
 
+/* A finger on the panel, for a machine with a pointer (the Mac): where it
+ * is in the machine's own pixels, and how many panel pixels make one of
+ * them. Becomes the e-ink boards' trackpad (trackpad.c). */
+int  retro_board_has_pointer(void);
+void retro_board_touch(int touching, int mx, int my, float scale, unsigned long now_ms);
+
 /* The selector: the platform is asked to show its menu by this hook... */
 extern void (*retro_board_menu_hook)(void);
 /* ...and answers with an entry of the running machine, or -1 to go back. */

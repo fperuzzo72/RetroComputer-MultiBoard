@@ -145,9 +145,20 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
     return super.dispatchKeyEvent(event)
   }
 
-  // A tap anywhere opens the selector, as on the boards.
+  // A machine with a pointer (the Mac) takes the panel as a trackpad, as on
+  // the e-ink boards; its selector is then the system's back. For the
+  // others a tap anywhere opens the selector, as on the boards.
   override fun onTouchEvent(event: MotionEvent): Boolean {
-    if (event.actionMasked == MotionEvent.ACTION_UP && !menuOpen) RetroNative.nativeOpenMenu()
+    if (menuOpen) return true
+    if (RetroNative.nativeHasPointer()) {
+      val touching = when (event.actionMasked) {
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> false
+        else -> true
+      }
+      RetroNative.nativeTouch(touching, event.x, event.y, event.eventTime)
+      return true
+    }
+    if (event.actionMasked == MotionEvent.ACTION_UP) RetroNative.nativeOpenMenu()
     return true
   }
 
@@ -165,7 +176,9 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
     AlertDialog.Builder(this)
       .setTitle(RetroNative.nativeMachineName(m))
       .setItems(items.toTypedArray()) { _, which ->
-        if (which < n) close(which) else pickMachine()
+        if (which >= n) pickMachine()
+        else if (RetroNative.nativeHasPointer()) choose(m, which)
+        else close(which)
       }
       .setNegativeButton(R.string.back) { _, _ -> close(-1) }
       .setOnCancelListener { close(-1) }
@@ -196,7 +209,9 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
   }
 
   private fun choose(machine: Int, entry: Int) {
-    if (machine == RetroNative.nativeCurrentMachine()) { close(entry); return }
+    // The Mac cannot change disc in place (it never asks its selector):
+    // another disc is a start over, as another computer is.
+    if (machine == RetroNative.nativeCurrentMachine() && !RetroNative.nativeHasPointer()) { close(entry); return }
     menuOpen = false
     RetroNative.nativeChooseMachine(machine, entry)
   }
