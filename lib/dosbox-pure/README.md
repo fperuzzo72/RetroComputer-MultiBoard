@@ -30,3 +30,9 @@ PlatformIO's ESP32 builds out of it.
   layout's first codepage, 437 for US-International, which has no ã or õ.
   860 is not among the codepages built in; 850 has every Portuguese
   letter.
+- `src/hardware/keyboard.cpp`: when the key repeating is let go and
+  another is still held, that one repeats again (the last pressed of
+  those still down; Shift, Ctrl, Alt and the locks never do). A real
+  keyboard never goes back; Test Drive reads the repeats, so holding Up,
+  tapping A to change gear stopped the acceleration until Up was pressed
+  again.

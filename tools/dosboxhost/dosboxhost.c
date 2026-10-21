@@ -16,7 +16,8 @@
  * <content> is what DOSBox Pure takes: a .zip or a folder (mounted as C:),
  * a disk image (.img, .ima, .vhd) or a .conf. In the text, '\n' is Enter,
  * '|' waits a second, and {F1}..{F12}, {ESC}, {UP} {DOWN} {LEFT} {RIGHT},
- * {TAB}, {BS}, {HOME}, {END} are those keys.
+ * {TAB}, {BS}, {HOME}, {END} are those keys. {+x} presses a letter and
+ * keeps it down, {-x} lets it go: for keys held under others.
  *
  * Core options as DBP_OPTS="dosbox_pure_cycles=max;dosbox_pure_machine=svga",
  * the system and save folders as DBP_DIR (default: the current one).
@@ -142,6 +143,11 @@ static int next_key(const char *t, unsigned *k, int *shift, int *wait)
     *wait = 0;
     const char c = *t;
     if (c == '|') { *wait = 1; return 1; }
+    if (c == '{' && (t[1] == '+' || t[1] == '-') && t[2] >= 'a' && t[2] <= 'z' && t[3] == '}') {
+        *k = RETROK_a + (t[2] - 'a');
+        *wait = t[1] == '+' ? 2 : 3;   /* hold, let go */
+        return 4;
+    }
     if (c == '{') {
         static const struct { const char *name; unsigned k; } named[] = {
             {"ESC", RETROK_ESCAPE}, {"UP", RETROK_UP}, {"DOWN", RETROK_DOWN}, {"LEFT", RETROK_LEFT},
@@ -309,7 +315,8 @@ int main(int argc, char **argv)
             if (phase == 0) {
                 int wait;
                 text += next_key(text, &k, &shift, &wait);
-                if (wait) next_at = f + (unsigned long)fps;
+                if (wait == 2 || wait == 3) { key(k, wait == 2, 0); next_at = f + 3; k = 0; }
+                else if (wait) next_at = f + (unsigned long)fps;
                 else if (k) {
                     if (shift) key(RETROK_LSHIFT, 1, 0);
                     key(k, 1, 0);

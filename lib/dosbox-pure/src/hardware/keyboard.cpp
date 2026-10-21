@@ -246,8 +246,32 @@ static Bitu read_p64(Bitu /*port*/,Bitu iolen) {
 	return status;
 }
 
+/* NOT UPSTREAM (RetroComputer): the keys held, oldest first, so that when
+ * the key repeating is let go and another is still down, that one repeats
+ * again. A real keyboard repeats only the last key pressed and never goes
+ * back; Test Drive reads the repeats, so holding Up, pressing A to change
+ * gear and letting it go stopped the car accelerating until Up was pressed
+ * again. Shift, Ctrl, Alt and the locks never take the repeat over. */
+static KBD_KEYS held_order[16];
+static int held_count;
+
+static void held_forget(KBD_KEYS k) {
+	for (int i = 0; i < held_count; i++)
+		if (held_order[i] == k) {
+			for (int j = i; j < held_count - 1; j++) held_order[j] = held_order[j + 1];
+			held_count--;
+			return;
+		}
+}
+
+static bool held_repeats(KBD_KEYS k) {
+	return k < KBD_leftalt || k > KBD_numlock;
+}
+
 void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	if (pressed == !!(keyb.down[keytype>>3] & (1<<(keytype&7)))) return;
+	held_forget(keytype);
+	if (pressed && held_repeats(keytype) && held_count < 16) held_order[held_count++] = keytype;
 	if (pressed) keyb.down[keytype>>3] |= (Bit8u)(1<<(keytype&7));
 	else keyb.down[keytype>>3] &= (Bit8u)~(1<<(keytype&7));
 
@@ -391,6 +415,11 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 			/* repeated key being released */
 			keyb.repeat.key  = KBD_NONE;
 			keyb.repeat.wait = 0;
+			/* NOT UPSTREAM: another still held repeats again (see held_order) */
+			if (held_count) {
+				keyb.repeat.key  = held_order[held_count - 1];
+				keyb.repeat.wait = keyb.repeat.rate;
+			}
 		}
 		ret += 128;
 	}
@@ -424,6 +453,7 @@ void KEYBOARD_Init(Section* /*sec*/) {
 	keyb.command = CMD_NONE;
 	keyb.p60changed = false;
 	keyb.repeat.key = KBD_NONE;
+	held_count = 0;	/* NOT UPSTREAM, see held_order */
 	keyb.repeat.pause = 500;
 	keyb.repeat.rate = 33;
 	keyb.repeat.wait = 0;
