@@ -521,10 +521,14 @@ mouse. Use `tools/dosboxhost` first.
 - **Boox auto-freeze** is on for the app (logcat `isAutoFreeze:true`):
   after an install or force-stop it comes back disabled. `adb shell pm
   enable org.retrocomputer.multiboard`.
-- To do: US-International and accents in DOS (the core's layouts are `us`
-  and ABNT2 `br`, wrong for a US keyboard); COUNTRY=055 for the core's
-  shell; 320x200 is shown with square pixels (5x, 1.6:1, not 4:3); right
-  mouse button.
+- **Accents**: DOS's own US-International, FreeDOS's `ux` built into
+  DOSBox, on codepage 850 (`ux 850`, a NOT UPSTREAM change so the option
+  takes a codepage; 860 is not built in). The country table is Brazil's.
+  Seen on the Mini C: é á ã õ ç ê, DATE 21/10/2026.
+- **4:3** (display_set_four3): a whole scale across, rows to 4:3 down;
+  touch maps through view_sx/view_sy. **Right button**: a second finger
+  while the first is down (nativeTouchSecond).
+- To do: measure the load in play (a GP2 race, Test Drive).
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
