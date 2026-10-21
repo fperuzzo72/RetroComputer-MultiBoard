@@ -508,6 +508,12 @@ the system's back) opens the menu: this machine's entries and "Outro
 computador"; a finger is the Mac's trackpad, and its menu is the back
 gesture.
 
+**Function keys on a Boox:** the system takes F3 to F11 before any app
+sees them (F5 a screenshot, F8 home, the rest system panels), and the
+Windows/Command key's combinations too. In the app, **Ctrl+Alt with 1-9,
+0, -, =** is F1-F12 (F12 is the menu), on every machine but the Mac. F1
+and F2 also work on their own.
+
 On a Boox, "freeze apps" can leave the app disabled: `am start` then says
 the Activity does not exist, and `adb shell pm enable
 org.retrocomputer.multiboard` brings it back (or take it out of freezing in

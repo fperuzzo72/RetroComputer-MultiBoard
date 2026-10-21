@@ -528,6 +528,15 @@ mouse. Use `tools/dosboxhost` first.
 - **4:3** (display_set_four3): a whole scale across, rows to 4:3 down;
   touch maps through view_sx/view_sy. **Right button**: a second finger
   while the first is down (nativeTouchSecond).
+- **Function keys**: the Boox takes F3-F11 itself, before dispatch
+  (measured with `input keyevent KEYCODE_Fn` and the app in front: F5
+  screenshot, F8 home, others SystemUI; F1/F2 pass), and swallows the
+  digits of Meta+digit (the Meta key arrives, the digit never does).
+  Ctrl+Alt+digit passes whole: RetroActivity.functionKey() makes it
+  F1-F12, letting Ctrl and Alt go in the machine first. The owner's
+  keyboard is a Logitech MX Mechanical Mini; it sends real F1-F12 (HID
+  0x3A-0x45), the Fn is inside it. `sendevent` to the keyboard's node is
+  refused by SELinux: combinations can only be tested by hand.
 - To do: measure the load in play (a GP2 race, Test Drive).
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)

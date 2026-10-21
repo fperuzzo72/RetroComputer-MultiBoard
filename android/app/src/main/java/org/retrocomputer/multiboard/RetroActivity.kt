@@ -140,9 +140,42 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
     }
     if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount > 0) return true   /* the machine repeats */
     if (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP) {
-      if (RetroNative.nativeKey(code, event.action == KeyEvent.ACTION_DOWN)) return true
+      val down = event.action == KeyEvent.ACTION_DOWN
+      if (functionKey(code, down, event.isCtrlPressed && event.isAltPressed)) return true
+      if (RetroNative.nativeKey(code, down)) return true
     }
     return super.dispatchKeyEvent(event)
+  }
+
+  // The Boox takes F3 to F11 for itself (F5 a screenshot, F8 home, the rest
+  // system panels) before any app sees them; F1 and F2 get through. And it
+  // swallows the Windows/Command key's combinations too. So Ctrl+Alt with
+  // 1-9, 0, - and = is F1-F12, for every machine but the Mac, which never
+  // had function keys. Ctrl and Alt reached the machine on their way down:
+  // they are let go there first, or a PC would see Ctrl+Alt+F3.
+  private val fHeld = HashMap<Int, Int>()   /* key pressed -> F key sent */
+
+  private fun functionKey(code: Int, down: Boolean, ctrlAlt: Boolean): Boolean {
+    if (RetroNative.nativeHasPointer() && RetroNative.nativeMachineName(RetroNative.nativeCurrentMachine()).startsWith("Mac")) return false
+    if (!down) {
+      val f = fHeld.remove(code) ?: return false
+      RetroNative.nativeKey(f, false)
+      return true
+    }
+    if (!ctrlAlt) return false
+    val f = when (code) {
+      in KeyEvent.KEYCODE_1..KeyEvent.KEYCODE_9 -> KeyEvent.KEYCODE_F1 + (code - KeyEvent.KEYCODE_1)
+      KeyEvent.KEYCODE_0 -> KeyEvent.KEYCODE_F10
+      KeyEvent.KEYCODE_MINUS -> KeyEvent.KEYCODE_F11
+      KeyEvent.KEYCODE_EQUALS -> KeyEvent.KEYCODE_F12
+      else -> return false
+    }
+    for (m in intArrayOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT))
+      RetroNative.nativeKey(m, false)
+    fHeld[code] = f
+    android.util.Log.i("RetroKeys", "Ctrl+Alt+${KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_")} = F${f - KeyEvent.KEYCODE_F1 + 1}")
+    RetroNative.nativeKey(f, true)
+    return true
   }
 
   // A machine with a pointer (the Mac) takes the panel as a trackpad, as on
