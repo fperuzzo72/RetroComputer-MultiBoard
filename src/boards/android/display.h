@@ -27,6 +27,9 @@ void display_write_frame_msx(short left, short top, short width, short height,
                              const uint8_t *buffer, uint16_t bgColor,
                              const uint16_t *palette);
 void display_fill_panel(uint16_t color);
+/* Android board only: a whole picture already in RGB565, w*h, row-major,
+ * up to 1024x768 (the PC 386). */
+void display_write_rgb565(const uint16_t *px, int w, int h);
 unsigned long display_full_repaints(void);
 void display_service(void);
 int  display_take_repaint(void);

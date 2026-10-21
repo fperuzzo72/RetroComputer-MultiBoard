@@ -144,7 +144,7 @@ static void present(const uint16_t *pic, int w, int h, uint16_t border)
 
 static void *present_loop(void *)
 {
-    static uint16_t pic[400 * 640];
+    static uint16_t pic[768 * 1024];   /* retro_board.c's largest, the PC 386's SVGA */
     uint32_t shown = 0;
     for (;;) {
         int w, h;

@@ -1,0 +1,7 @@
+{
+  "name": "dosbox-pure",
+  "version": "0.0.0+468dad0",
+  "description": "DOSBox Pure, vendored for the Android app's PC 386 (android/app/src/main/cpp/CMakeLists.txt). Not for the ESP32 boards. See README.md here.",
+  "frameworks": "*",
+  "platforms": "native"
+}

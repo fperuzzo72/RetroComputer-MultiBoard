@@ -31,10 +31,11 @@
 #include "selector.h"
 #include "ble_keyboard.h"
 
-/* Big enough for the largest picture any machine hands over: the PC's
- * text screen, 640x400. The 8-bit machines use 216 rows of up to 320. */
-#define PIC_W 640
-#define PIC_H 400
+/* Big enough for the largest picture any machine hands over: the PC 386's
+ * SVGA, up to 1024x768 (Windows 3.11 at 800x600). The PC's text screen is
+ * 640x400, the 8-bit machines use 216 rows of up to 320. */
+#define PIC_W 1024
+#define PIC_H 768
 
 /* --- the picture ----------------------------------------------------------- */
 
@@ -84,6 +85,30 @@ void display_write_picture(short srcX, short srcY, short width, short height,
         }
         if (memcmp(pic[y], row, (size_t)w * 2)) {
             memcpy(pic[y], row, (size_t)w * 2);
+            pic_seq++;
+        }
+    }
+    pthread_mutex_unlock(&pic_lock);
+}
+
+/* A whole picture in RGB565 at its own size, from a machine that draws in
+ * true colour (the PC 386): no border, and only rows that changed move
+ * the sequence. */
+void display_write_rgb565(const uint16_t *px, int w, int h)
+{
+    if (w <= 0 || h <= 0) return;
+    if (w > PIC_W) w = PIC_W;
+    if (h > PIC_H) h = PIC_H;
+    pthread_mutex_lock(&pic_lock);
+    if (w != pic_w || h != pic_h) {
+        pic_w = w;
+        pic_h = h;
+        pic_border = 0;
+        pic_seq++;
+    }
+    for (int y = 0; y < h; y++) {
+        if (memcmp(pic[y], px + y * w, (size_t)w * 2)) {
+            memcpy(pic[y], px + y * w, (size_t)w * 2);
             pic_seq++;
         }
     }

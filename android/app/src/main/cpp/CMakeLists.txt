@@ -109,6 +109,26 @@ if(EXISTS ${ROOT}/src/c64/c64_rom_data.c)
 endif()
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_C64)
 
+# The PC 386: DOSBox Pure (lib/dosbox-pure, GPLv2+), a libretro core, as a
+# library of its own that src/pc386/pc386_machine.c loads with dlopen: its
+# hundreds of globals (mem_readb, CPU_*, PIC_*...) stay out of the other
+# cores' way. Built as its jni/Android.mk builds it: C++11, exceptions and
+# RTTI, -D__LIBRETRO__, the ARM64 recompiler chosen by include/config.h.
+set(DBP ${ROOT}/lib/dosbox-pure)
+file(GLOB DBP_SRC ${DBP}/*.cpp ${DBP}/src/*.cpp ${DBP}/src/*/*.cpp ${DBP}/src/*/*/*.cpp)
+add_library(dosbox_pure SHARED ${DBP_SRC})
+target_include_directories(dosbox_pure PRIVATE ${DBP}/include)
+target_compile_definitions(dosbox_pure PRIVATE __LIBRETRO__ NDEBUG)
+target_compile_options(dosbox_pure PRIVATE -std=c++11 -O2 -fomit-frame-pointer -fexceptions -frtti
+    -fvisibility=hidden -ffunction-sections -fdata-sections -w)
+target_link_options(dosbox_pure PRIVATE -Wl,--gc-sections)
+target_link_libraries(dosbox_pure log)
+target_sources(retro PRIVATE ${ROOT}/src/pc386/pc386_machine.c)
+target_include_directories(retro PRIVATE ${DBP}/libretro-common/include)
+target_compile_definitions(retro PRIVATE HAVE_MACHINE_PC386)
+add_dependencies(retro dosbox_pure)
+target_link_libraries(retro dl)
+
 # Old C, kept as upstream wrote it: its warnings are not ours to fix.
 # And -UANDROID for it: the NDK defines ANDROID, and to EMULib that means
 # Marat Fayzullin's own Android port (LibAndroid.h, his JNI). The machines

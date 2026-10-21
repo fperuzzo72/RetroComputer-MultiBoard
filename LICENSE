@@ -51,6 +51,12 @@ is concerned, which does not sit well with fMSX's non-commercial terms in
 the same binary. For building it for your own device that changes nothing;
 for handing binaries to others it is one more reason to clear it first.
 
+The PC 386 in the Android app is Bernhard Schelling's DOSBox Pure, after
+DOSBox, vendored under lib/dosbox-pure/, GPLv2 or later
+(third_party_licenses/dosbox-pure_gpl2.txt). It is built as a library of
+its own and loaded by the app, but it ships in the same APK; the same
+caution as for the C64 applies.
+
 In short: this repo is not "all MIT" - only Fabricio Stefani Peruzzo's own
 code is. Building this for yourself is fine; selling it or redistributing
 it commercially is not, without separately clearing that with Marat
