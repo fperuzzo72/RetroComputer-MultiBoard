@@ -473,7 +473,7 @@ clock: umac had no clock chip, so one is emulated now
 (`lib/umac/src/rtc.c`), with its 20 bytes of parameter RAM (volume, mouse
 speed, key repeat, the alarm) kept in NVS across power cycles.
 
-## Android: the five machines as an app (Boox Tab Mini C, HiBreak Pro)
+## Android: the six machines as an app (Boox Tab Mini C, HiBreak Pro)
 
 `src/boards/android/` is a board like `cyd/` and `eink/`, and `android/`
 is its Gradle project: MSX, Spectrum, Mac, C64 and PC in one app, for
@@ -514,6 +514,23 @@ org.retrocomputer.multiboard` brings it back (or take it out of freezing in
 the Boox's app settings). Its `screencap` puts a line of text in front of
 the PNG.
 
+**The PC 386** (2026-10-21) is the sixth, Android only: DOSBox Pure
+(`lib/dosbox-pure`, GPLv2+), built as its own `libdosbox_pure.so` and run by
+`src/pc386/pc386_machine.c`, a small libretro frontend. Disks go in
+**`/sdcard/RetroComputer/pc386/`**: `.zip` (mounted as C:), `.img`,
+`.vhd`, `.iso`, `.conf`; the 8086 PC's `/msdos.img` is listed too.
+DOSBox Pure's start menu then lists the programs on it (End, Enter for
+the command line). A finger is the mouse, as on the Mac; F12 or the back
+gesture is the menu. Seen on the Mini C: ELITE+ in MCGA, Grand Prix 2's
+SVGA menu (the ARM64 recompiler works there), and the iDOS install's
+Windows up to the Program Manager with the mouse.
+
+`tools/dosboxhost` runs the core on the Mac first, in real time, with a
+PNG of the last picture and how busy the core was (`make -C
+tools/dosboxhost`, a dosbox-pure checkout in `~/github/dosbox-pure`). On
+Apple Silicon the recompiler cannot mark its cache executable and dies
+with SIGILL in 32-bit code: use `DBP_OPTS=dosbox_pure_cpu_core=normal`.
+
 `tools/androidhost` builds the same board on the Mac (MSX, Spectrum, C64,
 PC; the Mac's `.incbin` is ELF-only) and writes the picture as a colour
 PNG: `make -C tools/androidhost`, then `./androidhost <nvs-dir> <seconds>
@@ -527,6 +544,8 @@ src/boards/cyd/        the CYD: panel, amplifier, BLE keyboard host, card,
 src/boards/eink/  the Paper Mono: e-ink panel, touch, serial console
 src/boards/android/    the Android app's board: picture, keys, audio, files
 android/               the Android app's Gradle project
+src/pc386/             the PC 386 (Android only): a libretro frontend for DOSBox Pure
+lib/dosbox-pure/       DOSBox Pure, the PC 386's core (GPLv2+)
 src/machine.h          the only thing that crosses between boards and machines
 src/display_mono.h     how a 1-bit machine hands its framebuffer to a board
 src/msx/               the MSX1, on the vendored fMSX core

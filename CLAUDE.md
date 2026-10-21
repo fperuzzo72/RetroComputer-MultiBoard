@@ -493,6 +493,39 @@ first, as machost/pchost/c64host for the cores.
 - `adb input text` presses and releases faster than the MSX scans: lost
   and doubled letters there are the test, not the keyboard.
 
+## The PC 386 on Android: DOSBox Pure (2026-10-21)
+
+`src/pc386/pc386_machine.c` + `lib/dosbox-pure` (codeberg.org/schelling,
+468dad0; GitHub only says it moved). A sixth machine, Android only, last
+in machine_list so the others' NVS indices stay. **Ran on the Mini C**:
+ELITE+ (MCGA), GP2's SVGA menu, Windows from the iDOS DOS.zip with the
+mouse. Use `tools/dosboxhost` first.
+
+- **dlopen, not linked in**: libdosbox_pure.so is its own CMake target;
+  its globals (mem_readb, CPU_*, PIC_*) would meet lib/pc8086's and the
+  others'. Its retro_* are exported by RETRO_API despite hidden
+  visibility.
+- **The core keeps time by the wall clock** (time_cb): its start menu
+  ignores keys for 200ms after opening, so a host that runs frames flat
+  out never gets a key through. dosboxhost runs in real time.
+- **The recompiler on Apple Silicon** fails to mprotect its cache ("Setting
+  execute permission on the code cache has failed") and dies with SIGILL
+  once 32-bit code runs (GP2). Android allows it. On the Mac, set
+  `dosbox_pure_cpu_core=normal`.
+- **Colour**: XRGB8888 to RGB565 rounded, not cut. Cut, the menu's
+  blue-grey (25,29,31) became a faintly green grey and the Boox's colour
+  boost made it plain dark green. The Boox boosts saturation of
+  everything; screenshots show it.
+- Core busy on the Mini C: 8% for a minute of menu and ELITE's protection
+  screen, 16% on GP2's menu. Not measured in play yet.
+- **Boox auto-freeze** is on for the app (logcat `isAutoFreeze:true`):
+  after an install or force-stop it comes back disabled. `adb shell pm
+  enable org.retrocomputer.multiboard`.
+- To do: US-International and accents in DOS (the core's layouts are `us`
+  and ABNT2 `br`, wrong for a US keyboard); COUNTRY=055 for the core's
+  shell; 320x200 is shown with square pixels (5x, 1.6:1, not 4:3); right
+  mouse button.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,
