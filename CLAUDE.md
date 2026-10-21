@@ -537,10 +537,15 @@ mouse. Use `tools/dosboxhost` first.
   keyboard is a Logitech MX Mechanical Mini; it sends real F1-F12 (HID
   0x3A-0x45), the Fn is inside it. `sendevent` to the keyboard's node is
   refused by SELinux: combinations can only be tested by hand.
-- **GP2 in play**: the owner raced on the Mini C, 2026-10-21, and found
-  the speed very good (his impression; the core-busy line of that run was
-  not kept). In Windows the core reads 43-79% busy, which is DOSBox's
-  auto cycles filling idle time, not load.
+- **GP2 in play** (log kept, 2026-10-21): core busy 32% loading, 63% in
+  the menus and the start, 82% the minute of racing. Protected mode: auto
+  cycles give it all the CPU they can, so 82% is the Mini C near its
+  ceiling, not overload. The owner finds the speed very good; a
+  Pentium-era game would feel it. In Windows the core reads 43-79%, the
+  same auto cycles filling idle time.
+- **Key repeat** (keyboard.cpp, NOT UPSTREAM): the last key still held
+  repeats again when the repeating one is let go. Fixed Test Drive (Up
+  held, A for gears); GP2's keys stayed good.
 - **Right button: open.** The second finger reaches the board (logcat
   "touch: right button down/up", ~80ms apart in a quick tap), but Volkov
   Commander marked nothing. Next: whether "pc386: the core read the right
@@ -550,7 +555,6 @@ mouse. Use `tools/dosboxhost` first.
   minute of driving, 9% for the minute with the menu and its start.
   DOSBox's auto cycles give a real-mode game a fixed old-PC speed, so this
   is what the game asks, not the room left.
-- To do: GP2's load in a race with the log kept (it is the heavy one).
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
