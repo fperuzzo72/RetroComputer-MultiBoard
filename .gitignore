@@ -45,3 +45,5 @@ tools/c64host/c64host
 tools/c64host/*.o
 tools/pchost/pchost
 tools/pchost/*.o
+# built by tools/androidhost
+tools/androidhost/androidhost
