@@ -168,9 +168,50 @@ static int recall(void)
         if (files[i] == name) return (int)i + 1;
     return 0;
 }
+
+/* The cartridges whose games read port 1, one name a line: the keyboard
+ * joystick starts there for them, port 2 for the rest. One key for all:
+ * an ESP32's NVS key is at most 15 characters, a file name is not. */
+#define NVS_PORT1 "c64port1"
+static std::string cart;
+
+static std::string port1_list(void)
+{
+    nvs_handle_t h;
+    char buf[2048] = "";
+    size_t len = sizeof buf;
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) return "";
+    if (nvs_get_str(h, NVS_PORT1, buf, &len) != ESP_OK) buf[0] = 0;
+    nvs_close(h);
+    return buf;
+}
+
+static int port_recall(const std::string &name)
+{
+    return ("\n" + port1_list()).find("\n" + name + "\n") != std::string::npos ? 1 : 2;
+}
+
+static void port_remember(const std::string &name, int port)
+{
+    std::string list = "\n" + port1_list();
+    const size_t at = list.find("\n" + name + "\n");
+    if (at != std::string::npos) list.erase(at, name.size() + 1);
+    if (port == 1) list += name + "\n";
+    list.erase(0, 1);
+    if (list.size() >= 2048) return;
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_set_str(h, NVS_PORT1, list.c_str());
+    nvs_commit(h);
+    nvs_close(h);
+    printf("c64: %s remembered on port %d\n", name.c_str(), port);
+}
 #else
 static void remember(int i) { (void)i; }
 static int recall(void) { return 0; }
+static std::string cart;
+static int port_recall(const std::string &name) { (void)name; return 2; }
+static void port_remember(const std::string &name, int port) { (void)name; (void)port; }
 #endif
 
 static int m_entry_count(void) { list_files(); return 1 + (int)files.size(); }
@@ -316,8 +357,11 @@ static void m_run(void)
              * without the keyboard joystick, both cursor keys read as
              * left and up and down as nothing (H.E.R.O.). F10 turns it
              * off. */
-            retro_c64_joystick_set(1);
-            printf("c64: keyboard joystick on, port 2 (F10 turns it off)\n");
+            cart = f;
+            const int port = port_recall(f);
+            retro_c64_joystick_set(1, port);
+            retro_c64_on_port = [](int p) { port_remember(cart, p); };
+            printf("c64: keyboard joystick on, port %d (F10 turns it off, F9 the other port)\n", port);
         } else if (!strcasecmp(f.c_str() + dot, ".d64")) {
             printf("c64: %s in drive 8: %s\n", f.c_str(), cpu->floppy.attach(f) ? "ok" : "FAILED");
             to_type = "load\"*\",8,1\nrun\n";

@@ -9,7 +9,10 @@ void retro_c64_keys_attach(void *c64sys);
 void retro_c64_keys_report(const uint8_t report[8]);
 uint8_t retro_c64_matrix_read(uint8_t select, bool rows_from_columns);
 int retro_c64_joystick_on(void);   /* 0 off, else the port */
-/* The keyboard joystick on or off, on port 2, before or after attach. */
-void retro_c64_joystick_set(int on);
+/* The keyboard joystick on or off, and on which port (1 or 2), before or
+ * after attach. */
+void retro_c64_joystick_set(int on, int port);
+/* Called when F9 moves the keyboard joystick to the other port. */
+extern void (*retro_c64_on_port)(int port);
 
 #endif

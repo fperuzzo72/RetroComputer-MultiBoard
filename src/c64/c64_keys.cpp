@@ -22,7 +22,8 @@
  * F10 turns the arrows and Ctrl into a joystick (fire), on port 2, which
  * is the one most games read; F9 moves it to port 1. A cartridge starts
  * with it on (c64_machine.cpp): port 2 is read on the keyboard's own
- * lines, so without it a cursor key reads as joystick left. F12 opens the
+ * lines, so without it a cursor key reads as joystick left. The port F9
+ * chose is remembered for that cartridge (Choplifter reads port 1). F12 opens the
  * selector, as on the other machines.
  */
 #include <cstdint>
@@ -166,6 +167,7 @@ void retro_c64_keys_report(const uint8_t r[8])
     if (in_report(r, 0x42) && !in_report(last, 0x42)) {          /* F9 */
         joy_port = joy_port == 2 ? 1 : 2;
         if (sys && joy_on) sys->kbjoystickmode = (uint8_t)joy_port;
+        if (retro_c64_on_port) retro_c64_on_port(joy_port);
     }
     if (in_report(r, 0x4b) && !in_report(last, 0x4b) && sys)     /* Page Up */
         sys->restorenmi = true;
@@ -219,9 +221,11 @@ uint8_t RetroC64Keyboard::getKBJoyValue() { return joy_bits; }
 
 int retro_c64_joystick_on(void) { return joy_on ? joy_port : 0; }
 
-void retro_c64_joystick_set(int on)
+void (*retro_c64_on_port)(int port);
+
+void retro_c64_joystick_set(int on, int port)
 {
     joy_on = on;
-    joy_port = 2;
+    joy_port = port == 1 ? 1 : 2;
     if (sys) sys->kbjoystickmode = joy_on ? (uint8_t)joy_port : 0;
 }
