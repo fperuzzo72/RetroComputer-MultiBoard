@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">RetroComputer</string>
+    <string name="app_name">FSP Retro Computer</string>
     <string name="menu_title">%1$s</string>
     <string name="other_computer">Outro computador…</string>
     <string name="which_computer">Qual computador?</string>
