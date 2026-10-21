@@ -20,6 +20,8 @@ object RetroNative {
   @JvmStatic external fun nativeOpenMenu()
   @JvmStatic external fun nativeHasPointer(): Boolean
   @JvmStatic external fun nativeTouch(touching: Boolean, x: Float, y: Float, ms: Long)
+  /** A second finger beside the first, down or lifted: the right button. */
+  @JvmStatic external fun nativeTouchSecond(down: Boolean)
   @JvmStatic external fun nativeMenuDone(entry: Int)
   @JvmStatic external fun nativeChooseMachine(machine: Int, entry: Int)
   @JvmStatic external fun nativeMachineCount(): Int

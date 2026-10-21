@@ -1138,6 +1138,16 @@ public:
 		loaded_layout=new keyboard_layout();
 
 		const char * layoutname=section->Get_string("keyboardlayout");
+		/* NOT UPSTREAM (RetroComputer): "ux 850", a layout and its codepage,
+		 * as KEYB takes them. Upstream takes the layout's first codepage,
+		 * which for US-International is 437, with no a or o with a tilde. */
+		static char layout_only[32];
+		Bits forced_codepage = -1;
+		if (const char* sp = strchr(layoutname, ' ')) {
+			snprintf(layout_only, sizeof(layout_only), "%.*s", (int)(sp - layoutname), layoutname);
+			forced_codepage = atoi(sp + 1);
+			layoutname = layout_only;
+		}
 
 #ifdef C_DBP_NATIVE_KEYBOARDLAYOUT
 		Bits wants_dos_codepage = -1;
@@ -1298,6 +1308,8 @@ public:
 			}
 		}
 #endif
+		if (forced_codepage > 0 && loaded_layout->read_codepage_file("auto", forced_codepage) == KEYB_NOERROR)
+			extract_codepage = false;
 		if (extract_codepage) {
 			// try to find a good codepage for the requested layout
 			Bitu req_codepage = loaded_layout->extract_codepage(layoutname);

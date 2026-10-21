@@ -602,7 +602,7 @@ static Bitu DOS_21Handler(void) {
 		if (reg_al==0) {		/* Get country specidic information */
 			PhysPt dest = SegPhys(ds)+reg_dx;
 			MEM_BlockWrite(dest,dos.tables.country,0x18);
-			reg_ax = reg_bx = 0x01;
+			reg_ax = reg_bx = 55;	/* NOT UPSTREAM: Brazil (dos_tables.cpp) */
 			CALLBACK_SCF(false);
 			break;
 		} else {				/* Set country code */

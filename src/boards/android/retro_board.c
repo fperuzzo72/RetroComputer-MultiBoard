@@ -184,6 +184,10 @@ uint32_t retro_board_picture(uint16_t *out, int *w, int *h, uint16_t *border)
     return seq;
 }
 
+static volatile int four3;
+void display_set_four3(int on) { four3 = on; }
+int retro_board_four3(void) { return four3; }
+
 unsigned long display_full_repaints(void) { return full_repaints; }
 void display_service(void) {}
 int display_take_repaint(void) { int v = repaint_wanted; repaint_wanted = 0; return v; }
@@ -246,6 +250,7 @@ void ble_keyboard_inject(const uint8_t r[8]) { if (machine) machine->hid_report(
 
 static trackpad tp;
 static int tp_ready, last_x = -1, last_y = -1, last_b = -1;
+static volatile int right_down;   /* a second finger: the right button, bit 1 */
 
 int retro_board_has_pointer(void) { return machine && machine->pointer; }
 
@@ -259,11 +264,23 @@ void retro_board_touch(int touching, int mx, int my, float scale, unsigned long 
     trackpad_update(&tp, now_ms, touching, mx, my);
     int x, y, b;
     trackpad_pointer(&tp, &x, &y, &b);
+    b = (b ? 1 : 0) | (right_down ? 2 : 0);
     if (x != last_x || y != last_y || b != last_b) {
         last_x = x;
         last_y = y;
         last_b = b;
         machine->pointer(x, y, b);
+    }
+}
+
+void retro_board_touch_second(int down)
+{
+    right_down = down;
+    if (!retro_board_has_pointer() || last_x < 0) return;
+    const int b = (last_b > 0 ? last_b & 1 : 0) | (down ? 2 : 0);
+    if (b != last_b) {
+        last_b = b;
+        machine->pointer(last_x, last_y, b);
     }
 }
 

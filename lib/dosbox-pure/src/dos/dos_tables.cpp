@@ -56,18 +56,21 @@ static Bitu DOS_CaseMapFunc(void) {
 	return CBRET_NONE;
 }
 
+/* NOT UPSTREAM (RetroComputer): Brazil, as MS-DOS's COUNTRY=055 gives it:
+ * dates day/month/year, a decimal comma, a 24-hour clock. Upstream is the
+ * US. */
 static Bit8u country_info[0x22] = {
-/* Date format      */  0x00, 0x00,
-/* Currencystring   */  0x24, 0x00, 0x00, 0x00, 0x00,
-/* Thousands sep    */  0x2c, 0x00,
-/* Decimal sep      */  0x2e, 0x00,
-/* Date sep         */  0x2d, 0x00,
+/* Date format      */  0x01, 0x00,
+/* Currencystring   */  0x43, 0x72, 0x24, 0x00, 0x00,
+/* Thousands sep    */  0x2e, 0x00,
+/* Decimal sep      */  0x2c, 0x00,
+/* Date sep         */  0x2f, 0x00,
 /* time sep         */  0x3a, 0x00,
-/* currency form    */  0x00,
+/* currency form    */  0x02,
 /* digits after dec */  0x02,
-/* Time format      */  0x00,
+/* Time format      */  0x01,
 /* Casemap          */  0x00, 0x00, 0x00, 0x00,
-/* Data sep         */  0x2c, 0x00,
+/* Data sep         */  0x3b, 0x00,
 /* Reservered 5     */  0x00, 0x00, 0x00, 0x00, 0x00,
 /* Reservered 5     */  0x00, 0x00, 0x00, 0x00, 0x00
 };

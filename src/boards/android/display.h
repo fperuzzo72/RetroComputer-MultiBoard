@@ -30,6 +30,9 @@ void display_fill_panel(uint16_t color);
 /* Android board only: a whole picture already in RGB565, w*h, row-major,
  * up to 1024x768 (the PC 386). */
 void display_write_rgb565(const uint16_t *px, int w, int h);
+/* Android board only: show the picture at 4:3 whatever its size, as a PC
+ * monitor did, instead of with square pixels. */
+void display_set_four3(int on);
 unsigned long display_full_repaints(void);
 void display_service(void);
 int  display_take_repaint(void);

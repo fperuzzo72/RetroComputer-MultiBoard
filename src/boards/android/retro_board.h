@@ -27,6 +27,12 @@ void retro_board_key(uint8_t usage, int down);
  * them. Becomes the e-ink boards' trackpad (trackpad.c). */
 int  retro_board_has_pointer(void);
 void retro_board_touch(int touching, int mx, int my, float scale, unsigned long now_ms);
+/* A second finger down beside the first, or lifted: the right button. */
+void retro_board_touch_second(int down);
+
+/* Whether the running machine's picture is shown at 4:3 whatever its size
+ * (display_set_four3), rather than with square pixels. */
+int  retro_board_four3(void);
 
 /* The selector: the platform is asked to show its menu by this hook... */
 extern void (*retro_board_menu_hook)(void);

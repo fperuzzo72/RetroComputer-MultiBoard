@@ -49,3 +49,6 @@ tools/pchost/*.o
 tools/androidhost/androidhost
 # built by tools/dosboxhost
 tools/dosboxhost/dosboxhost
+lib/dosbox-pure/build/
+lib/dosbox-pure/*.dylib
+lib/dosbox-pure/*.so

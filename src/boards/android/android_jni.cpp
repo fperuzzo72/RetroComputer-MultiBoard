@@ -99,7 +99,8 @@ static void restart_hook() { call_static("onRestart"); }
 static std::mutex win_lock;
 static ANativeWindow *win;
 /* where the last picture landed, for touch: its origin and scale */
-static std::atomic<int> view_x0{0}, view_y0{0}, view_k{1};
+static std::atomic<int> view_x0{0}, view_y0{0};
+static std::atomic<float> view_sx{1}, view_sy{1};   /* panel pixels per machine pixel */
 static std::atomic<bool> win_new{false};
 
 static uint32_t rgbx(uint16_t c)
@@ -108,19 +109,34 @@ static uint32_t rgbx(uint16_t c)
     return 0xFF000000u | (b << 16) | (g << 8) | r;   /* RGBX_8888, little endian */
 }
 
-static void present(const uint16_t *pic, int w, int h, uint16_t border)
+/* The largest whole scale that fits. Or, for a machine whose monitor was
+ * 4:3 whatever its mode (the PC 386: 320x200, 640x400 and 720x400 all
+ * filled a 4:3 tube), a whole scale across and as many rows down as 4:3
+ * takes: on the Mini C's 1872x1404, 320x200 is 5x across and 6x down. */
+static void present(const uint16_t *pic, int w, int h, uint16_t border, bool four3)
 {
     std::lock_guard<std::mutex> lock(win_lock);
     if (!win) return;
     ANativeWindow_Buffer buf;
     if (ANativeWindow_lock(win, &buf, nullptr) != 0) return;
     const int W = buf.width, H = buf.height;
-    int k = W / w < H / h ? W / w : H / h;
-    if (k < 1) k = 1;
-    const int x0 = (W - w * k) / 2, y0 = (H - h * k) / 2;
+    int k, out_h;
+    if (four3) {
+        k = W / w;
+        while (k > 1 && w * k * 3 / 4 > H) k--;
+        if (k < 1) k = 1;
+        out_h = w * k * 3 / 4;
+        if (out_h > H) out_h = H;
+    } else {
+        k = W / w < H / h ? W / w : H / h;
+        if (k < 1) k = 1;
+        out_h = h * k;
+    }
+    const int x0 = (W - w * k) / 2, y0 = (H - out_h) / 2;
     view_x0 = x0;
     view_y0 = y0;
-    view_k = k;
+    view_sx = (float)k;
+    view_sy = (float)out_h / h;
     const uint32_t bc = rgbx(border);
     uint32_t *px = static_cast<uint32_t *>(buf.bits);
     static uint32_t lut[65536];
@@ -128,8 +144,8 @@ static void present(const uint16_t *pic, int w, int h, uint16_t border)
     if (!lut_ok) { for (int i = 0; i < 65536; i++) lut[i] = rgbx((uint16_t)i); lut_ok = true; }
     for (int y = 0; y < H; y++) {
         uint32_t *row = px + (size_t)y * buf.stride;   /* stride in pixels */
-        const int sy = (y - y0) / k;
-        if (y < y0 || sy >= h) { for (int x = 0; x < W; x++) row[x] = bc; continue; }
+        if (y < y0 || y >= y0 + out_h) { for (int x = 0; x < W; x++) row[x] = bc; continue; }
+        const int sy = (y - y0) * h / out_h;
         const uint16_t *src = pic + (size_t)sy * w;
         int x = 0;
         for (; x < x0 && x < W; x++) row[x] = bc;
@@ -152,7 +168,7 @@ static void *present_loop(void *)
         const uint32_t seq = retro_board_picture(nullptr, &w, &h, &border);
         if (seq != shown || win_new.exchange(false)) {
             retro_board_picture(pic, &w, &h, &border);
-            present(pic, w, h, border);
+            present(pic, w, h, border, retro_board_four3());
             shown = seq;
         }
         usleep(15000);
@@ -297,9 +313,16 @@ extern "C" JNIEXPORT jboolean JNICALL FN(nativeHasPointer)(JNIEnv *, jclass)
 /* A finger, in the Surface's pixels, made the machine's own. */
 extern "C" JNIEXPORT void JNICALL FN(nativeTouch)(JNIEnv *, jclass, jboolean touching, jfloat x, jfloat y, jlong ms)
 {
-    const int k = view_k;
-    const int mx = (int)((x - view_x0) / k), my = (int)((y - view_y0) / k);
-    retro_board_touch(touching ? 1 : 0, mx, my, (float)k, (unsigned long)ms);
+    const float sx = view_sx, sy = view_sy;
+    const int mx = (int)((x - view_x0) / sx), my = (int)((y - view_y0) / sy);
+    retro_board_touch(touching ? 1 : 0, mx, my, sx, (unsigned long)ms);
+}
+
+/* A second finger while the first is down: the right button, held as
+ * long as it stays. */
+extern "C" JNIEXPORT void JNICALL FN(nativeTouchSecond)(JNIEnv *, jclass, jboolean down)
+{
+    retro_board_touch_second(down ? 1 : 0);
 }
 
 extern "C" JNIEXPORT void JNICALL FN(nativeOpenMenu)(JNIEnv *, jclass) { selector_open(); }

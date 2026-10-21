@@ -155,7 +155,14 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> false
         else -> true
       }
-      RetroNative.nativeTouch(touching, event.x, event.y, event.eventTime)
+      // A second finger while the first stays down is the right button,
+      // held until it lifts; the first finger keeps moving the pointer.
+      when (event.actionMasked) {
+        MotionEvent.ACTION_POINTER_DOWN -> if (event.pointerCount == 2) RetroNative.nativeTouchSecond(true)
+        MotionEvent.ACTION_POINTER_UP -> if (event.pointerCount == 2) RetroNative.nativeTouchSecond(false)
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> RetroNative.nativeTouchSecond(false)
+      }
+      RetroNative.nativeTouch(touching, event.getX(0), event.getY(0), event.eventTime)
       return true
     }
     if (event.actionMasked == MotionEvent.ACTION_UP) RetroNative.nativeOpenMenu()

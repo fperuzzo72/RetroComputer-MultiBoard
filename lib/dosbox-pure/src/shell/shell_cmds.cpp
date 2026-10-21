@@ -1087,7 +1087,8 @@ void DOS_Shell::CMD_DATE(char * args) {
 	}
 	// check if a date was passed in command line
 	Bit32u newday,newmonth,newyear;
-	if(sscanf(args,"%u-%u-%u",&newmonth,&newday,&newyear)==3) {
+	// NOT UPSTREAM: day first, as the country table (dos_tables.cpp)
+	if(sscanf(args,"%u-%u-%u",&newday,&newmonth,&newyear)==3 || sscanf(args,"%u/%u/%u",&newday,&newmonth,&newyear)==3) {
 		reg_cx = static_cast<Bit16u>(newyear);
 		reg_dh = static_cast<Bit8u>(newmonth);
 		reg_dl = static_cast<Bit8u>(newday);

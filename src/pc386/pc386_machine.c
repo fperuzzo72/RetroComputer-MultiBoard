@@ -13,8 +13,10 @@
  *     (display_write_rgb565), and only what changed counts;
  *   - its stereo sound, mixed to one channel, to the board's audio
  *     (audio_start_push), the queue kept under 100ms;
- *   - the board's keyboard reports become key events and key states; the
- *     pointer (the trackpad) becomes the mouse's movement and its button;
+ *   - the board's keyboard reports become key events and key states, DOS
+ *     doing US-International; the pointer (the trackpad) becomes the
+ *     mouse's movement, its button, and a second finger the right one;
+ *   - shown at 4:3 whatever the mode, as on a PC's monitor;
  *   - what it starts with: entry 0 is the command line with no disk, the
  *     rest the card's pc386/ folder (.zip, .img, .ima, .vhd, .iso, .cue,
  *     .conf) and the 8086 PC's /msdos.img. DOSBox Pure's own start menu
@@ -144,8 +146,9 @@ static void audio_one(int16_t l, int16_t r) { int16_t s[2] = {l, r}; audio_batch
 
 /* --- keys ------------------------------------------------------------------
  * The boards' keyboard is a HID boot report; libretro's is key events and
- * key states, by RETROK codes. US positions: the core's own keyboard
- * layout is "us". */
+ * key states, by RETROK codes, by position. The layout is DOS's own: "ux",
+ * US-International with its dead keys, on codepage 850, which has every
+ * letter Portuguese needs (437 has no a or o with a tilde). */
 
 static uint8_t held[RETROK_LAST];
 static retro_keyboard_event_t key_event;
@@ -383,7 +386,7 @@ static char sysdir[512], savedir[512];
 /* What this frontend sets; everything else at the core's defaults. */
 static const char *option(const char *k)
 {
-    if (!strcmp(k, "dosbox_pure_keyboard_layout")) return "us";
+    if (!strcmp(k, "dosbox_pure_keyboard_layout")) return "ux 850";   /* lib/dosbox-pure, NOT UPSTREAM */
     if (!strcmp(k, "dosbox_pure_on_screen_keyboard")) return "false";   /* there is a keyboard */
     if (!strcmp(k, "dosbox_pure_mouse_input")) return "virtual";        /* the trackpad moves it */
     return NULL;
@@ -478,6 +481,7 @@ static void m_run(void)
     struct retro_system_av_info av;
     core_get_system_av_info(&av);
     const double fps = av.timing.fps > 0 ? av.timing.fps : 70;
+    display_set_four3(1);   /* every mode filled a 4:3 monitor */
     rate = audio_start_push(av.timing.sample_rate > 0 ? (unsigned)av.timing.sample_rate : 48000);
     printf("pc386: %.2f frames a second, sound %u Hz\n", fps, rate);
 
