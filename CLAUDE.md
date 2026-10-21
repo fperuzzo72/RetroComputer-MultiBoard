@@ -546,6 +546,15 @@ mouse. Use `tools/dosboxhost` first.
 - **Key repeat** (keyboard.cpp, NOT UPSTREAM): the last key still held
   repeats again when the repeating one is let go. Fixed Test Drive (Up
   held, A for gears); GP2's keys stayed good.
+- **One disk with everything** (tools/make_dos_hd.py): the GP2 disk plus
+  the boards' msdos.img and the iDOS DOS.zip, for the PC 386; msdos.img
+  plus TP and TCPP for the 8086 PC. Same CONFIG/AUTOEXEC/PATH, C:\BAT
+  launchers, AJUDA. **The 8086 PC does not boot the 256MB GP2 disk**, not
+  even untouched: after 40 sectors of COMMAND.COM it runs into garbage
+  (PCLOG: ENTERs at E8C3:74E2). The 31MB one boots. Not looked into.
+  DOSBox Pure runs AUTOEXEC.BAT through AUTOBOOT.DBP; it must end with
+  %COMSPEC%, as a bare COMMAND finds MS-DOS's and says "Incorrect DOS
+  version", and with nothing DOSBox Pure goes back to its menu.
 - **Right button: open.** The second finger reaches the board (logcat
   "touch: right button down/up", ~80ms apart in a quick tap), but Volkov
   Commander marked nothing. Next: whether "pc386: the core read the right
