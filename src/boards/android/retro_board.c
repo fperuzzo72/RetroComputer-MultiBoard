@@ -275,6 +275,7 @@ void retro_board_touch(int touching, int mx, int my, float scale, unsigned long 
 
 void retro_board_touch_second(int down)
 {
+    if (down != right_down) printf("touch: right button %s\n", down ? "down" : "up");
     right_down = down;
     if (!retro_board_has_pointer() || last_x < 0) return;
     const int b = (last_b > 0 ? last_b & 1 : 0) | (down ? 2 : 0);

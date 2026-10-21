@@ -274,7 +274,13 @@ static int16_t input_state(unsigned port, unsigned device, unsigned index, unsig
         case RETRO_DEVICE_ID_MOUSE_X: return (int16_t)poll_dx;
         case RETRO_DEVICE_ID_MOUSE_Y: return (int16_t)poll_dy;
         case RETRO_DEVICE_ID_MOUSE_LEFT: return (int16_t)(mouse_b & 1);
-        case RETRO_DEVICE_ID_MOUSE_RIGHT: return (int16_t)((mouse_b >> 1) & 1);
+        case RETRO_DEVICE_ID_MOUSE_RIGHT: {
+            static int seen;
+            const int r = (mouse_b >> 1) & 1;
+            if (r != seen) printf("pc386: the core read the right button %s\n", r ? "down" : "up");
+            seen = r;
+            return (int16_t)r;
+        }
         }
     }
     return 0;

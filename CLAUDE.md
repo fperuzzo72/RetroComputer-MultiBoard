@@ -537,7 +537,16 @@ mouse. Use `tools/dosboxhost` first.
   keyboard is a Logitech MX Mechanical Mini; it sends real F1-F12 (HID
   0x3A-0x45), the Fn is inside it. `sendevent` to the keyboard's node is
   refused by SELinux: combinations can only be tested by hand.
-- To do: measure the load in play (a GP2 race, Test Drive).
+- **GP2 in play**: the owner raced on the Mini C, 2026-10-21, and found
+  the speed very good (his impression; the core-busy line of that run was
+  not kept). In Windows the core reads 43-79% busy, which is DOSBox's
+  auto cycles filling idle time, not load.
+- **Right button: open.** The second finger reaches the board (logcat
+  "touch: right button down/up", ~80ms apart in a quick tap), but Volkov
+  Commander marked nothing. Next: whether "pc386: the core read the right
+  button" appears (the core's binds do include MOUSE_RIGHT), tested on
+  DOSBox Pure's start menu, where a right click is cancel.
+- To do: measure the load in play with the log kept (Test Drive, GP2).
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
