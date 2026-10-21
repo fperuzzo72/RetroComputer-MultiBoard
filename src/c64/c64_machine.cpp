@@ -311,7 +311,13 @@ static void m_run(void)
         std::string base = f.substr(0, dot);
         for (auto &c : base) c = (char)tolower(c);
         if (!strcasecmp(f.c_str() + dot, ".crt")) {
-            /* it started itself */
+            /* It started itself. A cartridge is nearly always a joystick
+             * game, and the C64 reads port 2 on the keyboard's own lines:
+             * without the keyboard joystick, both cursor keys read as
+             * left and up and down as nothing (H.E.R.O.). F10 turns it
+             * off. */
+            retro_c64_joystick_set(1);
+            printf("c64: keyboard joystick on, port 2 (F10 turns it off)\n");
         } else if (!strcasecmp(f.c_str() + dot, ".d64")) {
             printf("c64: %s in drive 8: %s\n", f.c_str(), cpu->floppy.attach(f) ? "ok" : "FAILED");
             to_type = "load\"*\",8,1\nrun\n";
