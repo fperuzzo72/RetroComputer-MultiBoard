@@ -450,8 +450,8 @@ first**, with `PCLOG=1` or `2` for the core's own logs (build without
 `src/boards/android/` + `android/`: all five machines as one Android app
 for the Boox Tab Mini C (colour) and the HiBreak Pro, modelled on the
 Android CrossPoint (`~/github/crosspoint-reader-android`, which runs on
-both). **Not yet run on a device** (the Mini C never showed up on adb
-that day). `tools/androidhost` runs the same board on the Mac: use it
+both). **All five ran on the Mini C on 2026-10-21** (adb found it after
+`adb kill-server`); the HiBreak Pro is untried. `tools/androidhost` runs the same board on the Mac: use it
 first, as machost/pchost/c64host for the cores.
 
 - **retro_board.c is plain C**, no Android: picture (RGB565, up to
@@ -478,9 +478,20 @@ first, as machost/pchost/c64host for the cores.
   an Arduino board (C64_ROOT, PC_ROOT = the card folder).
 - The Mac never polls its selector: another disc restarts the app into it.
   The C64 restarts for another entry too (as on the boards).
-- To check on the device: the colour picture on the Mini C; whether the
-  Boox's fast refresh mode keeps colour; key events from the paired
-  keyboard going past the IME; AAudio's rate; the 50Hz pacing.
+- **The selector answers from the UI thread.** selector_active() stays
+  true until the machine has taken the choice: clearing it with the
+  answer let the MSX's loop leave between selector_frame() and
+  selector_active(), and a game chosen in the menu never loaded.
+- Seen on the Mini C: colour, the paired keyboard reaching nativeKey (the
+  IME is not in the way), AAudio at the asked rate (22050 MSX, 32750 C64),
+  games switching. Not measured yet: the 50Hz pacing, the Boox refresh
+  modes, sound quality.
+- **Boox "freeze apps"** disables the package (enabled=3; `am start` says
+  the Activity does not exist): `adb shell pm enable
+  org.retrocomputer.multiboard`. Its screencap prefixes a text line to the
+  PNG; cut at `\x89PNG`.
+- `adb input text` presses and releases faster than the MSX scans: lost
+  and doubled letters there are the test, not the keyboard.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 

@@ -478,8 +478,11 @@ speed, key repeat, the alarm) kept in NVS across power cycles.
 `src/boards/android/` is a board like `cyd/` and `eink/`, and `android/`
 is its Gradle project: MSX, Spectrum, Mac, C64 and PC in one app, for
 the two devices the Android CrossPoint already runs on, built the same way
-(JDK 17, SDK 35, NDK 30, arm64 only). Begun 2026-10-21; **built and
-host-tested, not yet run on a device**.
+(JDK 17, SDK 35, NDK 30, arm64 only). Begun 2026-10-21, and the same
+day **all five ran on the Mini C** (Android 11): the MSX in colour, games
+chosen from the menu, the C64's cartridges with sound, MS-DOS from the
+floppy, the Mac on its built-in disc. The app is called **FSP Retro
+Computer**. Not yet tried on the HiBreak Pro.
 
 ```bash
 cd android
@@ -504,6 +507,12 @@ the MSX and the Spectrum still run, needing no files. A tap (or F12, or
 the system's back) opens the menu: this machine's entries and "Outro
 computador"; a finger is the Mac's trackpad, and its menu is the back
 gesture.
+
+On a Boox, "freeze apps" can leave the app disabled: `am start` then says
+the Activity does not exist, and `adb shell pm enable
+org.retrocomputer.multiboard` brings it back (or take it out of freezing in
+the Boox's app settings). Its `screencap` puts a line of text in front of
+the PNG.
 
 `tools/androidhost` builds the same board on the Mac (MSX, Spectrum, C64,
 PC; the Mac's `.incbin` is ELF-only) and writes the picture as a colour
