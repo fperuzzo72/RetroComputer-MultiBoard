@@ -26,18 +26,23 @@
 
 #include "audio.h"
 #include "display.h"
+#include "display_mono.h"
 #include "machine.h"
 #include "selector.h"
 #include "ble_keyboard.h"
 
-#define PIC_W DISPLAY_PICTURE_W_MAX
-#define PIC_H DISPLAY_PICTURE_H
+/* Big enough for the largest picture any machine hands over: the PC's
+ * text screen, 640x400. The 8-bit machines use 216 rows of up to 320. */
+#define PIC_W 640
+#define PIC_H 400
 
 /* --- the picture ----------------------------------------------------------- */
 
 static pthread_mutex_t pic_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t retro_critical = PTHREAD_MUTEX_INITIALIZER;   /* freertos/FreeRTOS.h */
 static uint16_t pic[PIC_H][PIC_W];
 static int pic_w = DISPLAY_PICTURE_W;
+static int pic_h = DISPLAY_PICTURE_H;
 static uint16_t pic_border;
 static uint32_t pic_seq = 1;
 static unsigned long full_repaints;
@@ -51,14 +56,14 @@ void display_write_picture(short srcX, short srcY, short width, short height,
 {
     (void)srcX;
     if (width <= 0 || height <= 0) return;
-    const int w = width > PIC_W ? PIC_W : width;
+    const int w = width > DISPLAY_PICTURE_W_MAX ? DISPLAY_PICTURE_W_MAX : width;
     uint16_t row[PIC_W];
     pthread_mutex_lock(&pic_lock);
-    if (w != pic_w) { pic_w = w; pic_seq++; }
+    if (w != pic_w || pic_h != DISPLAY_PICTURE_H) { pic_w = w; pic_h = DISPLAY_PICTURE_H; pic_seq++; }
     if (bgColor != pic_border) { pic_border = bgColor; pic_seq++; }
     for (int r = 0; r < height; r++) {
         const int y = srcY + r;
-        if (y < 0 || y >= PIC_H) continue;
+        if (y < 0 || y >= DISPLAY_PICTURE_H) continue;
         if (!buffer) {
             for (int x = 0; x < w; x++) row[x] = bgColor;
         } else {
@@ -89,15 +94,54 @@ void display_fill_panel(uint16_t color)
     pthread_mutex_unlock(&pic_lock);
 }
 
+/* display_mono.h: a machine with a 1-bit framebuffer of its own (the Mac,
+ * the PC) hands it over once and never waits. It is read here when the
+ * platform asks for the picture, turned into black on white, and counts
+ * as a change only where it changed. Called with pic_lock held. */
+static const uint8_t *mono_fb;
+static int mono_w, mono_h;
+static unsigned long mono_vsyncs;
+
+void display_mono_attach(const uint8_t *fb, int w, int h)
+{
+    pthread_mutex_lock(&pic_lock);
+    mono_fb = fb;
+    mono_w = w > PIC_W ? PIC_W : w;
+    mono_h = h > PIC_H ? PIC_H : h;
+    pic_w = mono_w;
+    pic_h = mono_h;
+    pic_border = 0xFFFF;
+    pic_seq++;
+    pthread_mutex_unlock(&pic_lock);
+}
+
+void display_mono_vsync(void) { mono_vsyncs++; }
+
+static void mono_convert(void)
+{
+    uint16_t row[PIC_W];
+    const int stride = mono_w / 8;
+    for (int y = 0; y < mono_h; y++) {
+        const uint8_t *src = mono_fb + (size_t)y * stride;
+        for (int x = 0; x < mono_w; x++)
+            row[x] = (src[x >> 3] & (0x80 >> (x & 7))) ? 0x0000 : 0xFFFF;   /* 1 = black */
+        if (memcmp(pic[y], row, (size_t)mono_w * 2)) {
+            memcpy(pic[y], row, (size_t)mono_w * 2);
+            pic_seq++;
+        }
+    }
+}
+
 uint32_t retro_board_picture(uint16_t *out, int *w, int *h, uint16_t *border)
 {
     pthread_mutex_lock(&pic_lock);
+    if (mono_fb) mono_convert();
     const uint32_t seq = pic_seq;
     *w = pic_w;
-    *h = PIC_H;
+    *h = pic_h;
     *border = pic_border;
     if (out)
-        for (int y = 0; y < PIC_H; y++) memcpy(out + y * pic_w, pic[y], (size_t)pic_w * 2);
+        for (int y = 0; y < pic_h; y++) memcpy(out + y * pic_w, pic[y], (size_t)pic_w * 2);
     pthread_mutex_unlock(&pic_lock);
     return seq;
 }

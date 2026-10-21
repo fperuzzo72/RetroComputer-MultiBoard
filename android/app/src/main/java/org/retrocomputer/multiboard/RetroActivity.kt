@@ -3,7 +3,10 @@ package org.retrocomputer.multiboard
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -13,6 +16,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import java.io.File
 import java.lang.ref.WeakReference
 
 /**
@@ -48,8 +52,42 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
 
     RetroNative.activity = WeakReference(this)
     // NVS lives in the app's own files: which computer and which game were
-    // chosen last, the MSX's 50/60Hz, and so on.
-    RetroNative.nativeStart(filesDir.absolutePath)
+    // chosen last, the MSX's 50/60Hz, and so on. The card is a folder.
+    RetroNative.nativeStart(filesDir.absolutePath, cardFolder().absolutePath)
+  }
+
+  /**
+   * The folder that plays the boards' SD card: pc/ for the PC's disk
+   * images, c64/ for its games, mac/ for the Mac's discs.
+   *
+   * With All files access, `/sdcard/RetroComputer`: a folder anyone can see
+   * and fill from a file manager or over USB, which survives uninstalling.
+   * Without it, the app's own external folder, which Android 11+ hides.
+   * Unlike the Android CrossPoint the app still starts without it: the MSX
+   * and the Spectrum carry their ROMs inside and need no file at all. It
+   * asks once, and a later start finds the permission there.
+   */
+  private fun cardFolder(): File {
+    if (Environment.isExternalStorageManager()) {
+      val dir = File(Environment.getExternalStorageDirectory(), "RetroComputer")
+      if (dir.mkdirs() || dir.isDirectory) {
+        for (sub in listOf("pc", "c64", "mac")) File(dir, sub).mkdirs()
+        return dir
+      }
+    } else {
+      val prefs = getSharedPreferences("retro", MODE_PRIVATE)
+      if (!prefs.getBoolean("asked_files", false)) {
+        prefs.edit().putBoolean("asked_files", true).apply()
+        runCatching {
+          startActivity(
+            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName"))
+          )
+        }
+      }
+    }
+    val fallback = getExternalFilesDir(null) ?: filesDir
+    for (sub in listOf("pc", "c64", "mac")) File(fallback, sub).mkdirs()
+    return fallback
   }
 
   override fun onResume() {

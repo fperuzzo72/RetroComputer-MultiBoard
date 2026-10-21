@@ -139,7 +139,7 @@ static void present(const uint16_t *pic, int w, int h, uint16_t border)
 
 static void *present_loop(void *)
 {
-    static uint16_t pic[216 * 320];
+    static uint16_t pic[400 * 640];
     uint32_t shown = 0;
     for (;;) {
         int w, h;
@@ -235,7 +235,11 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *)
 
 #define FN(name) Java_org_retrocomputer_multiboard_RetroNative_##name
 
-extern "C" JNIEXPORT void JNICALL FN(nativeStart)(JNIEnv *env, jclass, jstring dir)
+/* dir: the app's own files, where NVS lives. card: the folder that plays
+ * the boards' SD card (/sdcard/RetroComputer when the app may see it), with
+ * pc/, c64/, mac/ as on the card; the machines that read files take it as
+ * their root, as they take PC_ROOT and C64_ROOT on the Mac. */
+extern "C" JNIEXPORT void JNICALL FN(nativeStart)(JNIEnv *env, jclass, jstring dir, jstring card)
 {
     static bool started;
     if (started) return;
@@ -244,6 +248,12 @@ extern "C" JNIEXPORT void JNICALL FN(nativeStart)(JNIEnv *env, jclass, jstring d
     const char *d = env->GetStringUTFChars(dir, nullptr);
     retro_board_set_storage(d);
     env->ReleaseStringUTFChars(dir, d);
+    const char *c = env->GetStringUTFChars(card, nullptr);
+    setenv("PC_ROOT", c, 1);
+    setenv("C64_ROOT", c, 1);
+    setenv("RETRO_CARD", c, 1);
+    printf("retro: card folder %s\n", c);
+    env->ReleaseStringUTFChars(card, c);
     retro_board_menu_hook = menu_hook;
     retro_board_restart_hook = restart_hook;
     retro_board_start();

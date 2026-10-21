@@ -31,8 +31,19 @@
 #include "pc_keys.h"
 #include "pc_text.h"
 
+#ifdef ARDUINO
 #include <Arduino.h>
 #include <SDCardManager.h>
+#else
+/* The Android board: the card is a folder, PC_ROOT (as for tools/pchost
+ * and pc_files.cpp), read with plain POSIX. */
+#include <cstdlib>
+#include <dirent.h>
+#include <strings.h>
+#include <sys/stat.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#endif
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "nvs.h"
@@ -62,6 +73,7 @@ static void list_images(void)
     static bool done;
     if (done) return;
     done = true;
+#ifdef ARDUINO
     FsFile m = SDCardManager::getInstance().open("/msdos.img");
     if (m) {
         images.push_back({"msdos.img", "/msdos.img", (uint32_t)m.fileSize()});
@@ -78,6 +90,23 @@ static void list_images(void)
         f.close();
     }
     dir.close();
+#else
+    const char *root = getenv("PC_ROOT");
+    const std::string base = root ? root : ".";
+    struct stat st;
+    if (stat((base + "/msdos.img").c_str(), &st) == 0)
+        images.push_back({"msdos.img", "/msdos.img", (uint32_t)st.st_size});
+    DIR *dir = opendir((base + PC_DIR).c_str());
+    if (!dir) return;
+    while (struct dirent *e = readdir(dir)) {
+        if (images.size() >= 32) break;
+        if (!wanted(e->d_name)) continue;
+        const std::string path = std::string(PC_DIR "/") + e->d_name;
+        if (stat((base + path).c_str(), &st) != 0 || !S_ISREG(st.st_mode)) continue;
+        images.push_back({e->d_name, path, (uint32_t)st.st_size});
+    }
+    closedir(dir);
+#endif
 }
 
 #define NVS_NS  "cyd"

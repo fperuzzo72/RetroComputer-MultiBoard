@@ -14,7 +14,7 @@ object RetroNative {
 
   var activity: WeakReference<RetroActivity>? = null
 
-  @JvmStatic external fun nativeStart(storageDir: String)
+  @JvmStatic external fun nativeStart(storageDir: String, cardDir: String)
   @JvmStatic external fun nativeSetSurface(surface: Any?)
   @JvmStatic external fun nativeKey(keycode: Int, down: Boolean): Boolean
   @JvmStatic external fun nativeOpenMenu()

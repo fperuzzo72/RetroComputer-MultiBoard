@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     usleep((useconds_t)(secs / 2 * 1e6));
     if (argc > 4) for (const char *c = argv[4]; *c; c++) type_char(*c);
     usleep((useconds_t)(secs / 2 * 1e6));
-    static uint16_t px[216 * 320];
+    static uint16_t px[400 * 640];
     int w, h;
     uint16_t border;
     const uint32_t seq = retro_board_picture(px, &w, &h, &border);
