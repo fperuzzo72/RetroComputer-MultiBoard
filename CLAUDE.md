@@ -600,11 +600,14 @@ the Mac.
   this one did not, and Turrican's fire did nothing on either port.
   dosboxhost (DBP_PAD=1, {+!}/{-!}, DBP_FIREPORT) showed fire starting the
   game on port 0 and 1 alike, nothing without. Fire works on the Mini C.
-- **Open, 2026-10-25, the owner on the Mini C:** one key held blocks the
-  others, no running and shooting at once in Turrican. Possibly the game:
-  Turrican's fire held is its lightning beam, swung with the joystick while
-  the hero stands still, and tapping fire shoots while running. Check in
-  another game, and what reaches lr_hid, before changing anything.
+- **Keys, settled 2026-10-25:** "one key held blocks the others" was
+  Turrican itself: fire held is its lightning beam, swung with the hero
+  standing still; tapping fire shoots while running. The log (lr_hid
+  prints the joystick as U/D/L/R and fire on each change) showed arrow and
+  Ctrl arriving together. The owner confirmed on the Mini C, cropped
+  picture included. Speedball 2 runs.
+- No floppy drive noise: puae_floppy_sound=100, which is PUAE's
+  "disabled" (the value is how much the volume is cut). Owner's choice.
 - **The frontend answers with the core's declared defaults** (2026-10-25).
   A core declares its options (SET_VARIABLES: "Label; default|other|...")
   and may count on hearing the default back; lr_frontend answered NULL for

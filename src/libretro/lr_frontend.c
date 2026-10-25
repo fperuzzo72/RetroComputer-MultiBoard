@@ -253,6 +253,10 @@ void lr_hid(const lr_core *c, const uint8_t r[8])
             if (in(r, 0x4F)) j |= 1 << RETRO_DEVICE_ID_JOYPAD_RIGHT;
             if (r[0] & 0x11) j |= 1 << RETRO_DEVICE_ID_JOYPAD_B;   /* Ctrl: fire */
         }
+        if (j != joy)
+            printf("%s: joystick %s%s%s%s%s\n", c->tag, j & 1 << RETRO_DEVICE_ID_JOYPAD_UP ? "U" : "-",
+                   j & 1 << RETRO_DEVICE_ID_JOYPAD_DOWN ? "D" : "-", j & 1 << RETRO_DEVICE_ID_JOYPAD_LEFT ? "L" : "-",
+                   j & 1 << RETRO_DEVICE_ID_JOYPAD_RIGHT ? "R" : "-", j & 1 << RETRO_DEVICE_ID_JOYPAD_B ? " fire" : "");
         joy = j;
     }
     const uint8_t m = (uint8_t)(joy_on > 0 && c->kbjoy ? r[0] & (uint8_t)~0x11 : r[0]);

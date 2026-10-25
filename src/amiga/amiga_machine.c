@@ -41,6 +41,9 @@ static const char *option(const char *k, const char *sysdir)
     /* PUAE's own default makes right Ctrl swap joystick and mouse; here
      * Ctrl is the fire button, and the swap would come with no warning. */
     if (!strcmp(k, "puae_mapper_mouse_toggle")) return "---";
+    /* No floppy drive noise (the owner's choice): "100" is PUAE's
+     * "disabled", the value being how much the volume is cut. */
+    if (!strcmp(k, "puae_floppy_sound")) return "100";
     return NULL;
 }
 
