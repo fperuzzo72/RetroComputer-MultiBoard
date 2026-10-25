@@ -123,9 +123,50 @@ target_compile_options(dosbox_pure PRIVATE -std=c++11 -O2 -fomit-frame-pointer -
     -fvisibility=hidden -ffunction-sections -fdata-sections -w)
 target_link_options(dosbox_pure PRIVATE -Wl,--gc-sections)
 target_link_libraries(dosbox_pure log)
-target_sources(retro PRIVATE ${ROOT}/src/pc386/pc386_machine.c)
-target_include_directories(retro PRIVATE ${DBP}/libretro-common/include)
+target_sources(retro PRIVATE ${ROOT}/src/libretro/lr_frontend.c ${ROOT}/src/pc386/pc386_machine.c)
+target_include_directories(retro PRIVATE ${DBP}/libretro-common/include ${ROOT}/src/libretro)
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_PC386)
+
+# The Amiga: libretro's PUAE (third_party/libretro-uae, a submodule, GPLv2),
+# a library of its own as DOSBox Pure is, run by src/libretro/lr_frontend.c
+# through src/amiga/amiga_machine.c. Built as its jni/Android.mk builds it;
+# the sources and flags come from its Makefile.common through
+# tools/puae_sources.py. The 68000 core alone is most of 41MB of C.
+set(PUAE ${ROOT}/third_party/libretro-uae)
+include(${CMAKE_SOURCE_DIR}/puae_sources.cmake)
+# PUAE opens IPF disks through CAPSImg, by dlopen("capsimg.so"); an APK
+# only carries libraries named lib*.so, so a copy of caps.c asks for
+# libcapsimg.so instead, and the submodule stays as upstream left it.
+file(READ ${PUAE}/sources/src/caps/caps.c CAPS_C)
+string(REPLACE "\"capsimg.so\"" "\"libcapsimg.so\"" CAPS_C "${CAPS_C}")
+file(WRITE ${CMAKE_BINARY_DIR}/puae_caps.c "${CAPS_C}")
+list(REMOVE_ITEM PUAE_SRC ${PUAE}/sources/src/caps/caps.c)
+add_library(puae SHARED ${PUAE_SRC} ${CMAKE_BINARY_DIR}/puae_caps.c)
+target_include_directories(puae PRIVATE ${PUAE_INC} ${PUAE}/sources/src/caps ${PUAE}/jni/include)
+target_compile_definitions(puae PRIVATE ${PUAE_DEFS} ANDROID __LIBRETRO__ USE_LIBRETRO_VFS
+    GIT_VERSION="7387937")
+target_compile_options(puae PRIVATE $<$<COMPILE_LANGUAGE:C>:-std=gnu99> -O2 -w)
+target_link_options(puae PRIVATE -Wl,--version-script=${PUAE}/libretro/link.T)
+target_link_libraries(puae z log)
+
+# CAPSImg (third_party/capsimg, a submodule; the SPS licence, non-commercial):
+# the IPF decoder, built as its CAPSImg/Makefile.in lists it.
+set(CAPS ${ROOT}/third_party/capsimg)
+add_library(capsimg SHARED
+    ${CAPS}/Codec/CTRawCodec.cpp ${CAPS}/Codec/CTRawCodecDecompressor.cpp ${CAPS}/Codec/DiskEncoding.cpp
+    ${CAPS}/Core/BaseFile.cpp ${CAPS}/Core/BitBuffer.cpp ${CAPS}/Core/CRC.cpp ${CAPS}/Core/DiskFile.cpp
+    ${CAPS}/Core/MemoryFile.cpp ${CAPS}/CAPSImg/CapsAPI.cpp ${CAPS}/CAPSImg/CapsFDCEmulator.cpp
+    ${CAPS}/CAPSImg/CapsFile.cpp ${CAPS}/CAPSImg/CapsFormatMFM.cpp ${CAPS}/CAPSImg/CapsImage.cpp
+    ${CAPS}/CAPSImg/CapsImageStd.cpp ${CAPS}/CAPSImg/CapsLoader.cpp ${CAPS}/CAPSImg/DiskImage.cpp
+    ${CAPS}/CAPSImg/DiskImageFactory.cpp ${CAPS}/CAPSImg/stdafx.cpp ${CAPS}/CAPSImg/StreamCueImage.cpp
+    ${CAPS}/CAPSImg/StreamImage.cpp)
+target_include_directories(capsimg PRIVATE ${CMAKE_SOURCE_DIR}/capsimg ${CAPS}/LibIPF ${CAPS}/Codec
+    ${CAPS}/Core ${CAPS}/Device ${CAPS}/CAPSImg)
+target_compile_options(capsimg PRIVATE -O2 -w)
+
+target_sources(retro PRIVATE ${ROOT}/src/amiga/amiga_machine.c)
+target_compile_definitions(retro PRIVATE HAVE_MACHINE_AMIGA)
+add_dependencies(retro puae capsimg)
 add_dependencies(retro dosbox_pure)
 target_link_libraries(retro dl)
 

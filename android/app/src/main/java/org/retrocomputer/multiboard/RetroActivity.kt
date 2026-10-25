@@ -212,13 +212,15 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
     menuOpen = true
     val m = RetroNative.nativeCurrentMachine()
     val n = RetroNative.nativeEntryCount(m)
-    val items = (0 until n).map { RetroNative.nativeEntryName(m, it) } + getString(R.string.other_computer)
+    // Another computer first: with a card full of games it was at the end
+    // of a long list.
+    val items = listOf(getString(R.string.other_computer)) + (0 until n).map { RetroNative.nativeEntryName(m, it) }
     AlertDialog.Builder(this)
       .setTitle(RetroNative.nativeMachineName(m))
       .setItems(items.toTypedArray()) { _, which ->
-        if (which >= n) pickMachine()
-        else if (RetroNative.nativeHasPointer()) choose(m, which)
-        else close(which)
+        if (which == 0) pickMachine()
+        else if (RetroNative.nativeHasPointer()) choose(m, which - 1)
+        else close(which - 1)
       }
       .setNegativeButton(R.string.back) { _, _ -> close(-1) }
       .setOnCancelListener { close(-1) }

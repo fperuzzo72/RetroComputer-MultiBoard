@@ -473,7 +473,7 @@ clock: umac had no clock chip, so one is emulated now
 (`lib/umac/src/rtc.c`), with its 20 bytes of parameter RAM (volume, mouse
 speed, key repeat, the alarm) kept in NVS across power cycles.
 
-## Android: the six machines as an app (Boox Tab Mini C, HiBreak Pro)
+## Android: the seven machines as an app (Boox Tab Mini C, HiBreak Pro)
 
 `src/boards/android/` is a board like `cyd/` and `eink/`, and `android/`
 is its Gradle project: MSX, Spectrum, Mac, C64 and PC in one app, for
@@ -531,6 +531,20 @@ gesture is the menu. Seen on the Mini C: ELITE+ in MCGA, Grand Prix 2's
 SVGA menu (the ARM64 recompiler works there), and the iDOS install's
 Windows up to the Program Manager with the mouse.
 
+**The Amiga** (2026-10-25) is the seventh, Android only: libretro's PUAE
+(`third_party/libretro-uae`, a submodule: `git submodule update --init`)
+with CAPSImg (`third_party/capsimg`) for the IPF disks the romsets come in.
+Both it and the PC 386 run through `src/libretro/lr_frontend.c`, one small
+libretro frontend; each machine is a table of what differs. Disks go in
+**`/sdcard/RetroComputer/amiga/`** (.adf .ipf .dms .hdf, or a .zip of
+them), the Kickstart ROMs in `amiga/system` under the names PUAE looks for
+(`kick34005.A500`, `kick40068.A1200`...); with no Kickstart 1.3 it runs
+AROS, which it carries. The arrows and Ctrl are the joystick from the
+start (Ctrl+Alt+0, F10, gives the arrows back; Ctrl+Alt+9, F9, the other
+port), a finger is the mouse. Turrican from its IPF ran on the Mini C at
+50% of the CPU. `python3 tools/puae_sources.py` regenerates the source
+list from PUAE's Makefile.common after the submodule moves.
+
 `tools/dosboxhost` runs the core on the Mac first, in real time, with a
 PNG of the last picture and how busy the core was (`make -C
 tools/dosboxhost`, a dosbox-pure checkout in `~/github/dosbox-pure`). On
@@ -550,7 +564,10 @@ src/boards/cyd/        the CYD: panel, amplifier, BLE keyboard host, card,
 src/boards/eink/  the Paper Mono: e-ink panel, touch, serial console
 src/boards/android/    the Android app's board: picture, keys, audio, files
 android/               the Android app's Gradle project
-src/pc386/             the PC 386 (Android only): a libretro frontend for DOSBox Pure
+src/libretro/          a small libretro frontend for the Android board's cores
+src/pc386/             the PC 386 (Android only): DOSBox Pure's table
+src/amiga/             the Amiga (Android only): PUAE's table
+third_party/           PUAE and CAPSImg, submodules (Android only)
 lib/dosbox-pure/       DOSBox Pure, the PC 386's core (GPLv2+)
 src/machine.h          the only thing that crosses between boards and machines
 src/display_mono.h     how a 1-bit machine hands its framebuffer to a board

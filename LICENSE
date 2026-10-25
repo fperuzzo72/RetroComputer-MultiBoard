@@ -57,6 +57,13 @@ DOSBox, vendored under lib/dosbox-pure/, GPLv2 or later
 its own and loaded by the app, but it ships in the same APK; the same
 caution as for the C64 applies.
 
+The Amiga in the Android app is libretro's PUAE, after UAE and WinUAE,
+a git submodule under third_party/libretro-uae, GPLv2
+(third_party_licenses/libretro-uae_gpl2.txt), built as a library of its
+own. Its IPF disks are read by CAPSImg, the SPS decoder library, a
+submodule under third_party/capsimg, whose licence forbids selling it or
+using it in anything commercial (third_party_licenses/capsimg_sps.txt).
+
 In short: this repo is not "all MIT" - only Fabricio Stefani Peruzzo's own
 code is. Building this for yourself is fine; selling it or redistributing
 it commercially is not, without separately clearing that with Marat

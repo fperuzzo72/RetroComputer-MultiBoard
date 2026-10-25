@@ -28,6 +28,9 @@ extern const Machine pc_machine;
 #ifdef HAVE_MACHINE_PC386
 extern const Machine pc386_machine;
 #endif
+#ifdef HAVE_MACHINE_AMIGA
+extern const Machine amiga_machine;
+#endif
 
 const Machine *const machine_list[] = {
 #ifdef HAVE_MACHINE_MSX
@@ -47,6 +50,9 @@ const Machine *const machine_list[] = {
 #endif
 #ifdef HAVE_MACHINE_PC386
     &pc386_machine,   /* last: the indices remembered in NVS stay the others' */
+#endif
+#ifdef HAVE_MACHINE_AMIGA
+    &amiga_machine,   /* and after it */
 #endif
 };
 

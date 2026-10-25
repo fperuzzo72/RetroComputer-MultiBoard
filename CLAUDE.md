@@ -565,6 +565,43 @@ mouse. Use `tools/dosboxhost` first.
   DOSBox's auto cycles give a real-mode game a fixed old-PC speed, so this
   is what the game asks, not the room left.
 
+## The Amiga on Android: PUAE (2026-10-25)
+
+`src/amiga/amiga_machine.c`, a table for `src/libretro/lr_frontend.c`,
+which the PC 386 moved onto the same day (`pc386_machine.c` is a table
+too now; LR_MACHINE() makes the Machine). Seventh in machine_list.
+PUAE is `third_party/libretro-uae` at 7387937 and CAPSImg
+`third_party/capsimg` at ed4cb09, **submodules, not vendored**: 41MB of C
+compiles, mostly the generated 68000 core. **Ran on the Mini C**:
+Turrican from the IPF in the owner's romset, KS 1.3, 59.83fps (an NTSC
+model for a USA disk), core busy 50% at the title (75% loading); 21-23% on
+the Mac.
+
+- **The sources come from PUAE's Makefile.common**
+  (`tools/puae_sources.py` -> `puae_sources.cmake`), with jni/Android.mk's
+  defines. GIT_VERSION is set in CMake: the generated one has a space.
+- **IPF needs CAPSImg, by dlopen("capsimg.so")**. An APK carries only
+  lib*.so, so CMake compiles a copy of caps.c asking for libcapsimg.so;
+  the submodule is untouched. CAPSImg's configure only answers
+  HAVE_STRUCT_DIRENT_D_TYPE: `android/app/src/main/cpp/capsimg/config.h`.
+  On the Mac, PUAE looks in the system dir: build CAPSImg there as
+  capsimg.so (the c++ line is the CMake list).
+- **The owner's Kickstarts** are in iCloud's RetroArch System folder under
+  PUAE's names (kick34005.A500 is the right 1.3, MD5 82a21c18...). They go
+  to the card's amiga/system, never into the repo. Without kick34005.A500
+  the option says AROS.
+- **The romset is IPF** (commodore-amiga-romset-us.zip in iCloud's
+  "01 Arquivos/Emuladores": a zip of zips, 197 games). PUAE opens the
+  inner zips and unpacks to saves/TEMP.
+- **Keyboard joystick** (lr_frontend, kbjoy): on from the start, RetroPad
+  0, arrows and Ctrl; F10 off, F9 RetroPad 1. Not yet tried in a game.
+- **Framing: open.** PUAE gives 720x574 with the PAL overscan, the picture
+  off to the right. puae_crop=auto follows the content and cut a title in
+  half; minimum and medium kept the left border and cut the right
+  (dosboxhost). Left at the core's default.
+- `dosboxhost` runs PUAE too (any libretro core): DBP_DIR is the system
+  and save folder.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,

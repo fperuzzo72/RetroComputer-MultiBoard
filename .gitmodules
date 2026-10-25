@@ -1,3 +1,9 @@
 [submodule "freeink-sdk"]
 	path = freeink-sdk
 	url = https://github.com/ma-r-s/freeink-sdk.git
+[submodule "third_party/libretro-uae"]
+	path = third_party/libretro-uae
+	url = https://github.com/libretro/libretro-uae.git
+[submodule "third_party/capsimg"]
+	path = third_party/capsimg
+	url = https://github.com/FrodeSolheim/capsimg.git
