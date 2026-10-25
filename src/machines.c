@@ -31,6 +31,9 @@ extern const Machine pc386_machine;
 #ifdef HAVE_MACHINE_AMIGA
 extern const Machine amiga_machine;
 #endif
+#ifdef HAVE_MACHINE_MSX2
+extern const Machine msx2_machine;
+#endif
 
 const Machine *const machine_list[] = {
 #ifdef HAVE_MACHINE_MSX
@@ -53,6 +56,9 @@ const Machine *const machine_list[] = {
 #endif
 #ifdef HAVE_MACHINE_AMIGA
     &amiga_machine,   /* and after it */
+#endif
+#ifdef HAVE_MACHINE_MSX2
+    &msx2_machine,
 #endif
 };
 

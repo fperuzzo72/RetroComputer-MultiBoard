@@ -64,6 +64,11 @@ own. Its IPF disks are read by CAPSImg, the SPS decoder library, a
 submodule under third_party/capsimg, whose licence forbids selling it or
 using it in anything commercial (third_party_licenses/capsimg_sps.txt).
 
+The MSX2+ in the Android app is libretro's blueMSX, a submodule under
+third_party/blueMSX-libretro: blueMSX's own code under a zlib-style
+licence, some parts GPL from openMSX (third_party_licenses/bluemsx.txt),
+built as a library of its own. The Hotbit stays fMSX's.
+
 In short: this repo is not "all MIT" - only Fabricio Stefani Peruzzo's own
 code is. Building this for yourself is fine; selling it or redistributing
 it commercially is not, without separately clearing that with Marat

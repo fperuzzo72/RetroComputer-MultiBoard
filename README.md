@@ -473,7 +473,7 @@ clock: umac had no clock chip, so one is emulated now
 (`lib/umac/src/rtc.c`), with its 20 bytes of parameter RAM (volume, mouse
 speed, key repeat, the alarm) kept in NVS across power cycles.
 
-## Android: the seven machines as an app (Boox Tab Mini C, HiBreak Pro)
+## Android: the eight machines as an app (Boox Tab Mini C, HiBreak Pro)
 
 `src/boards/android/` is a board like `cyd/` and `eink/`, and `android/`
 is its Gradle project: MSX, Spectrum, Mac, C64 and PC in one app, for
@@ -543,8 +543,18 @@ them), the Kickstart ROMs in `amiga/system` under the names PUAE looks for
 AROS, which it carries. The arrows and Ctrl are the joystick from the
 start (Ctrl+Alt+0, F10, gives the arrows back; Ctrl+Alt+9, F9, the other
 port), a finger is the mouse. Turrican from its IPF ran on the Mini C at
-50% of the CPU. `python3 tools/puae_sources.py` regenerates the source
-list from PUAE's Makefile.common after the submodule moves.
+50% of the CPU. `python3 tools/libretro_sources.py` regenerates the source
+lists from the cores' Makefile.common after a submodule moves.
+
+**The MSX2+** (2026-10-25) is the eighth, Android only: libretro's blueMSX
+(`third_party/blueMSX-libretro`, a submodule), through the same frontend;
+the Hotbit stays fMSX's. Files in **`/sdcard/RetroComputer/msx2/`** (.rom
+.mx2 .dsk .m3u .cas); its system folder `msx2/system` holds blueMSX's
+`Machines` and `Databases` (from its repository's `system/bluemsx`) with
+the MSX ROMs in `Machines/Shared Roms` (the owner's, from a RetroArch
+system folder). The machine is blueMSX's "MSX2+"; any folder in
+`Machines` whose ROMs are there can be asked for by name.
+`python3 tools/libretro_sources.py` regenerates both cores' source lists.
 
 `tools/dosboxhost` runs the core on the Mac first, in real time, with a
 PNG of the last picture and how busy the core was (`make -C
@@ -568,7 +578,8 @@ android/               the Android app's Gradle project
 src/libretro/          a small libretro frontend for the Android board's cores
 src/pc386/             the PC 386 (Android only): DOSBox Pure's table
 src/amiga/             the Amiga (Android only): PUAE's table
-third_party/           PUAE and CAPSImg, submodules (Android only)
+src/msx2/              the MSX2+ (Android only): blueMSX's table
+third_party/           PUAE, CAPSImg and blueMSX, submodules (Android only)
 lib/dosbox-pure/       DOSBox Pure, the PC 386's core (GPLv2+)
 src/machine.h          the only thing that crosses between boards and machines
 src/display_mono.h     how a 1-bit machine hands its framebuffer to a board

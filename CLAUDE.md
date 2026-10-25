@@ -593,7 +593,7 @@ model for a USA disk), core busy 50% at the title (75% loading); 21-23% on
 the Mac.
 
 - **The sources come from PUAE's Makefile.common**
-  (`tools/puae_sources.py` -> `puae_sources.cmake`), with jni/Android.mk's
+  (`tools/libretro_sources.py` -> `puae_sources.cmake`), with jni/Android.mk's
   defines. GIT_VERSION is set in CMake: the generated one has a space.
 - **IPF needs CAPSImg, by dlopen("capsimg.so")**. An APK carries only
   lib*.so, so CMake compiles a copy of caps.c asking for libcapsimg.so;
@@ -639,6 +639,35 @@ the Mac.
   joystick and mouse: turned off, Ctrl being the fire button.
 - `dosboxhost` runs PUAE too (any libretro core): DBP_DIR is the system
   and save folder.
+
+## The MSX2+ on Android: blueMSX (2026-10-25)
+
+`src/msx2/msx2_machine.c`, a third table for lr_frontend; eighth in
+machine_list. blueMSX is `third_party/blueMSX-libretro` at e3086eb, a
+submodule; the Hotbit is untouched (fMSX). **Ran on the Mini C**: Space
+Manbow from msx2/, MSX2+, 59.92fps; 4% of the Mac's CPU.
+
+- **Machines and Databases sit directly in the system folder**
+  (msx2/system/Machines), not under bluemsx/ as the repository ships them.
+  machineCreate() failing is that, and retro_load_game says only "load
+  failed".
+- **bluemsx_msxtype is the Machines folder's name**: the option lists
+  generic ones, but any folder can be asked for. Complete with the
+  owner's Shared Roms (iCloud, RetroArch data/System/Machines/Shared
+  Roms, 63 ROMs): "MSX2+", "MSX2 - Brazilian" (Microsol disk), "MSXturboR".
+  Ciel Expert 3 IDE, Hotbit 2.0 and the Gradiente Experts want ROMs of
+  their own that he does not have there.
+- **Clang 16+**: its callbacks take struct pointers where void* is
+  declared; -Wno-error=incompatible-function-pointer-types (its Android.mk
+  does the same). On the Mac its old zlib defines fdopen() as NULL and
+  breaks the SDK: build with CC="cc -Dfdopen=fdopen -Wno-..." there.
+- The MSX2 romset (No-Intro "Microsoft - MSX2.zip", 155 .rom) is on the
+  Mini C's msx2/.
+- **Next: the owner's OCM disk**, ~/Downloads/MSXFAT16.dd (extracted at
+  ~/Documents/ARRUMAR/MSXFAT16: OCM-BIOS.DAT, Nextor, MSX-DOS 2, SOFTWARE).
+  blueMSX has bluemsx_sunriseide_enable (a disk as a Sunrise IDE hard
+  disk, SUNRISEIDE.rom is in Shared Roms), but FAT16 wants Nextor's
+  Sunrise kernel ROM, not MSX-DOS 2's; untried.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 

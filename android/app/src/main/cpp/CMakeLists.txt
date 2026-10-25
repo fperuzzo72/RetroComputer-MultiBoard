@@ -171,6 +171,26 @@ target_compile_options(capsimg PRIVATE -O2 -w)
 target_sources(retro PRIVATE ${ROOT}/src/amiga/amiga_machine.c)
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_AMIGA)
 add_dependencies(retro puae capsimg)
+
+# The MSX2+: libretro's blueMSX (third_party/blueMSX-libretro, a submodule,
+# BSD-style with GPL parts from openMSX), a library of its own, run by
+# src/libretro/lr_frontend.c through src/msx2/msx2_machine.c. The Hotbit
+# stays fMSX's. Built as its jni/Android.mk builds it, sources from its
+# Makefile.common through tools/libretro_sources.py; its device callbacks
+# take concrete struct pointers where void* is declared, which clang 16+
+# calls an error (its Android.mk keeps it a warning too).
+set(BLUEMSX ${ROOT}/third_party/blueMSX-libretro)
+include(${CMAKE_SOURCE_DIR}/bluemsx_sources.cmake)
+add_library(bluemsx SHARED ${BLUEMSX_SRC})
+target_include_directories(bluemsx PRIVATE ${BLUEMSX_INC})
+target_compile_definitions(bluemsx PRIVATE ${BLUEMSX_DEFS} ANDROID GIT_VERSION="e3086eb")
+target_compile_options(bluemsx PRIVATE -O2 -w -Wno-error=incompatible-function-pointer-types
+    -Wno-error=int-conversion -Wno-error=incompatible-pointer-types $<$<COMPILE_LANGUAGE:CXX>:-Wno-c++11-narrowing>)
+target_link_options(bluemsx PRIVATE -Wl,--version-script=${BLUEMSX}/link.T)
+target_link_libraries(bluemsx z log)
+target_sources(retro PRIVATE ${ROOT}/src/msx2/msx2_machine.c)
+target_compile_definitions(retro PRIVATE HAVE_MACHINE_MSX2)
+add_dependencies(retro bluemsx)
 add_dependencies(retro dosbox_pure)
 target_link_libraries(retro dl)
 
