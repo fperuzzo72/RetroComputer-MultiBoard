@@ -34,6 +34,9 @@ typedef struct lr_core {
 } lr_core;
 
 void lr_run(const lr_core *c);
+/* The file the running core was started with, or NULL (for options that
+ * depend on it). */
+const char *lr_content_path(void);
 int lr_ready(void);
 unsigned long lr_frames(void);
 void lr_hid(const lr_core *c, const uint8_t report[8]);

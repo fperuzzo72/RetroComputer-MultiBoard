@@ -41,6 +41,9 @@
 #include "libretro.h"
 
 static const lr_core *core;   /* the one running */
+static const char *content;   /* the file it was started with, or NULL */
+
+const char *lr_content_path(void) { return content; }
 
 /* --- the core ------------------------------------------------------------ */
 
@@ -541,6 +544,11 @@ void lr_run(const lr_core *c)
     snprintf(savedir, sizeof savedir, "%s/%s/saves", card, c->tag);
     mkdir(sysdir, 0775);
     mkdir(savedir, 0775);
+    /* Inside the core's system folder: blueMSX names the Sunrise IDE ROM
+     * it adds for a hard disk "Machines/Shared Roms/SUNRISEIDE.rom",
+     * relative, where every other ROM path is made whole (a bug of its
+     * own), and with the ROM not found the controller comes up empty. */
+    if (chdir(sysdir) != 0) printf("%s: cannot work in %s\n", c->tag, sysdir);
     running = 1;
     if (!load_core(c->lib)) for (;;) sleep(1);
 
@@ -552,6 +560,7 @@ void lr_run(const lr_core *c)
     core_set_input_state(input_state);
     core_init();
     const int with_file = selected > 0 && selected - 1 < nfiles;
+    content = with_file ? paths[selected - 1] : NULL;
     struct retro_game_info game = {with_file ? paths[selected - 1] : NULL, NULL, 0, NULL};
     printf("%s: starting %s\n", c->tag, with_file ? paths[selected - 1] : c->entry0);
     if (c->kbjoy) {

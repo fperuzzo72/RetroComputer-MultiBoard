@@ -552,8 +552,13 @@ the Hotbit stays fMSX's. Files in **`/sdcard/RetroComputer/msx2/`** (.rom
 .mx2 .dsk .m3u .cas); its system folder `msx2/system` holds blueMSX's
 `Machines` and `Databases` (from its repository's `system/bluemsx`) with
 the MSX ROMs in `Machines/Shared Roms` (the owner's, from a RetroArch
-system folder). The machine is blueMSX's "MSX2+"; any folder in
-`Machines` whose ROMs are there can be asked for by name.
+system folder). The machine is blueMSX's "MSX2+ - European", for the
+international keyboard; any folder in `Machines` whose ROMs are there can
+be asked for by name. A file over 2MB is a hard disk on a Sunrise IDE
+controller with Nextor's ROM (`Nextor-2.1.4.SunriseIDE.blueMSX.ROM` as
+`Shared Roms/SUNRISEIDE.rom`), so FAT16 disks boot; it must be under 2GB
+for blueMSX, and `tools/msx_fat16_disk.py` rebuilds a larger card image
+(the owner's One Chip MSX card) into one.
 `python3 tools/libretro_sources.py` regenerates both cores' source lists.
 
 `tools/dosboxhost` runs the core on the Mac first, in real time, with a

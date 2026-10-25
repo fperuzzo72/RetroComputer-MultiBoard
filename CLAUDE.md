@@ -663,11 +663,31 @@ Manbow from msx2/, MSX2+, 59.92fps; 4% of the Mac's CPU.
   breaks the SDK: build with CC="cc -Dfdopen=fdopen -Wno-..." there.
 - The MSX2 romset (No-Intro "Microsoft - MSX2.zip", 155 .rom) is on the
   Mini C's msx2/.
-- **Next: the owner's OCM disk**, ~/Downloads/MSXFAT16.dd (extracted at
-  ~/Documents/ARRUMAR/MSXFAT16: OCM-BIOS.DAT, Nextor, MSX-DOS 2, SOFTWARE).
-  blueMSX has bluemsx_sunriseide_enable (a disk as a Sunrise IDE hard
-  disk, SUNRISEIDE.rom is in Shared Roms), but FAT16 wants Nextor's
-  Sunrise kernel ROM, not MSX-DOS 2's; untried.
+- **The machine is "MSX2+ - European"** (its ROMs ship in blueMSX's
+  repository): the Japanese "MSX2+" put half the symbols elsewhere in
+  BASIC; on the European one `print "ab";2+2` types right (only [ was lost
+  in a run of symbols). The owner saw the mapping wrong on the Japanese.
+- **The owner's One Chip MSX card boots** (2026-10-25, on the Mac and the
+  Mini C: Nextor 2.1.4, NEXTOR.SYS 2.12, COMMAND2 2.44, A:\>, deep folders
+  listed). A file over 2MB is taken as a Sunrise IDE hard disk
+  (bluemsx_sunriseide_enable from msx2_machine.c), whose ROM on the card
+  is Nextor's: Nextor-2.1.4.SunriseIDE.blueMSX.ROM from Konamiman's GitHub
+  releases (Nextor is free), as Shared Roms/SUNRISEIDE.rom, the original
+  kept as SUNRISEIDE-original.rom. MSX-DOS 2's Sunrise ROM reads FAT12
+  only. Three things on the way:
+  - **blueMSX loads that ROM by a relative path** ("Machines/Shared
+    Roms/SUNRISEIDE.rom", addSunriseIde in Machine.c) where every other
+    ROM path is made whole; not found, the controller comes up empty and
+    the machine boots Disk BASIC 1.0 as if nothing were there.
+    lr_frontend now chdir()s into the core's system folder.
+  - **blueMSX keeps a disk's size in a signed int** (Disk.c fileSize[]):
+    the 31GB card wrapped to 1.15GB and booted but could not read past
+    that; a 2.4GB cut went negative and a 4GB one near zero, and neither
+    booted. tools/msx_fat16_disk.py reads every file out by its 8.3 name
+    and makes a fresh FAT16 one sector under 2GB, 32kB clusters: 6016
+    files, 1.97GB, 84MB free ("OCM MSXFAT16.dsk" on the Mini C's msx2/).
+  - The extracted copy at ~/Documents/ARRUMAR/MSXFAT16 is incomplete
+    (zero-length files, 448MB of 1.97GB); read the .dd.
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
