@@ -33,6 +33,14 @@ static const char *option(const char *k, const char *sysdir)
         snprintf(path, sizeof path, "%s/kick34005.A500", sysdir);
         return stat(path, &st) == 0 ? NULL : "aros";
     }
+    /* The smallest fixed crop: the picture centred with a thin border.
+     * Uncropped, PUAE gives the whole PAL overscan and a game sits off to
+     * the right with its right edge cut; "auto" follows each screen and
+     * changes size, which at 4:3 changes the scale. */
+    if (!strcmp(k, "puae_crop")) return "minimum";
+    /* PUAE's own default makes right Ctrl swap joystick and mouse; here
+     * Ctrl is the fire button, and the swap would come with no warning. */
+    if (!strcmp(k, "puae_mapper_mouse_toggle")) return "---";
     return NULL;
 }
 

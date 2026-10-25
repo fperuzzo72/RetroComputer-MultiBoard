@@ -23,6 +23,8 @@
  * and 1 as frontends do.
  *
  * Core options as DBP_OPTS="dosbox_pure_cycles=max;dosbox_pure_machine=svga",
+ * the rest at the defaults the core declares (DBP_NODEFAULTS=1: none, as
+ * the Android frontend answered before 2026-10-25),
  * the system and save folders as DBP_DIR (default: the current one).
  */
 #include <dlfcn.h>
@@ -47,6 +49,13 @@ static void video(const void *data, unsigned w, unsigned h, size_t pitch)
     frames++;
     if (!data) return;             /* the same picture again */
     frames_new++;
+    {
+        static unsigned lw, lh;
+        static size_t lp;
+        if (w != lw || h != lh || pitch != lp)
+            fprintf(stderr, "picture at frame %lu: %ux%u, pitch %zu\n", frames, w, h, pitch);
+        lw = w, lh = h, lp = pitch;
+    }
     if (w != pic_w || h != pic_h) {
         free(pic);
         pic = malloc((size_t)w * h * 4);
@@ -192,6 +201,39 @@ static int next_key(const char *t, unsigned *k, int *shift, int *wait)
 static const char *dir = ".";
 static char *opts;
 
+
+/* The cores' own defaults, as they declare them with SET_VARIABLES: "Label;
+ * first|second|...", the first value the default. A core may count on the
+ * frontend to answer with it: PUAE's statics are not its declared defaults
+ * (its picture position is "auto" only if the frontend says so), and with
+ * no answer the Amiga's picture sat off to the right, cut, on the Mini C. */
+#define MAX_VARS 400
+static char var_key[MAX_VARS][64], var_def[MAX_VARS][96];
+static int nvars;
+
+static void defaults_from(const struct retro_variable *v)
+{
+    for (; v && v->key; v++) {
+        if (nvars >= MAX_VARS) return;
+        const char *semi = v->value ? strchr(v->value, ';') : NULL;
+        if (!semi) continue;
+        semi++;
+        while (*semi == ' ') semi++;
+        size_t n = strcspn(semi, "|");
+        if (n >= sizeof var_def[0]) n = sizeof var_def[0] - 1;
+        snprintf(var_key[nvars], sizeof var_key[0], "%s", v->key);
+        memcpy(var_def[nvars], semi, n);
+        var_def[nvars][n] = 0;
+        nvars++;
+    }
+}
+
+static const char *default_of(const char *key)
+{
+    for (int i = 0; i < nvars; i++) if (!strcmp(var_key[i], key)) return var_def[i];
+    return NULL;
+}
+
 static const char *option(const char *key)
 {
     if (!opts) return NULL;
@@ -237,6 +279,7 @@ static bool environment(unsigned cmd, void *data)
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
         struct retro_variable *v = data;
         v->value = option(v->key);
+        if (!v->value && !getenv("DBP_NODEFAULTS")) v->value = default_of(v->key);
         return v->value != NULL;
     }
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
@@ -252,6 +295,10 @@ static bool environment(unsigned cmd, void *data)
         *(unsigned *)data = 0;     /* the plain variables, through GET_VARIABLE */
         return true;
     case RETRO_ENVIRONMENT_SET_VARIABLES:
+        defaults_from(data);
+        if (getenv("DBP_DEBUG"))
+            for (int i = 0; i < nvars; i++) fprintf(stderr, "default %s = %s\n", var_key[i], var_def[i]);
+        return true;
     case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
     case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
     case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:

@@ -600,15 +600,25 @@ the Mac.
   this one did not, and Turrican's fire did nothing on either port.
   dosboxhost (DBP_PAD=1, {+!}/{-!}, DBP_FIREPORT) showed fire starting the
   game on port 0 and 1 alike, nothing without. Fire works on the Mini C.
-- **Open, 2026-10-25, the owner on the Mini C:** (1) the picture is
-  shifted, black border top and left, the right and bottom cut off;
-  (2) one key held blocks the others: no running and shooting at once.
-  Not looked into yet. For (2), check first what reaches lr_hid (HID
-  reports with arrow + Ctrl together) before suspecting PUAE.
-- **Framing: open.** PUAE gives 720x574 with the PAL overscan, the picture
-  off to the right. puae_crop=auto follows the content and cut a title in
-  half; minimum and medium kept the left border and cut the right
-  (dosboxhost). Left at the core's default.
+- **Open, 2026-10-25, the owner on the Mini C:** one key held blocks the
+  others, no running and shooting at once in Turrican. Possibly the game:
+  Turrican's fire held is its lightning beam, swung with the joystick while
+  the hero stands still, and tapping fire shoots while running. Check in
+  another game, and what reaches lr_hid, before changing anything.
+- **The frontend answers with the core's declared defaults** (2026-10-25).
+  A core declares its options (SET_VARIABLES: "Label; default|other|...")
+  and may count on hearing the default back; lr_frontend answered NULL for
+  every option it did not set. DOSBox Pure falls back to its own defaults,
+  PUAE does not fully: the crops were wrong without them (they need
+  puae_crop_mode=both). PUAE declares 112; dosboxhost prints them with
+  DBP_DEBUG=1 and DBP_NODEFAULTS=1 answers NULL as before.
+- **Framing**: PUAE gives 720x574 with the PAL overscan, a game off to the
+  right with its right edge cut (seen on the Mini C). With the defaults,
+  puae_crop=minimum gives a steady 716x240 for Turrican in play, centred,
+  the whole status bar, a thin border; "auto" fits closer but changes size
+  with each screen, which at 4:3 changes the scale. minimum it is.
+- PUAE's default puae_mapper_mouse_toggle is right Ctrl, which swaps
+  joystick and mouse: turned off, Ctrl being the fire button.
 - `dosboxhost` runs PUAE too (any libretro core): DBP_DIR is the system
   and save folder.
 

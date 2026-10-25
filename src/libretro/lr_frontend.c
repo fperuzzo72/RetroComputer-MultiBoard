@@ -432,6 +432,38 @@ void lr_switch_to(const lr_core *c, int entry)
 
 static char sysdir[512], savedir[512];
 
+/* The cores' own defaults, as they declare them with SET_VARIABLES: "Label;
+ * first|second|...", the first value the default. A core may count on the
+ * frontend to answer with it: PUAE's statics are not its declared defaults
+ * (its picture position is "auto" only if the frontend says so), and with
+ * no answer the Amiga's picture sat off to the right, cut. */
+#define MAX_VARS 400
+static char var_key[MAX_VARS][64], var_def[MAX_VARS][96];
+static int nvars;
+
+static void defaults_from(const struct retro_variable *v)
+{
+    for (; v && v->key; v++) {
+        if (nvars >= MAX_VARS) return;
+        const char *semi = v->value ? strchr(v->value, ';') : NULL;
+        if (!semi) continue;
+        semi++;
+        while (*semi == ' ') semi++;
+        size_t n = strcspn(semi, "|");
+        if (n >= sizeof var_def[0]) n = sizeof var_def[0] - 1;
+        snprintf(var_key[nvars], sizeof var_key[0], "%s", v->key);
+        memcpy(var_def[nvars], semi, n);
+        var_def[nvars][n] = 0;
+        nvars++;
+    }
+}
+
+static const char *default_of(const char *key)
+{
+    for (int i = 0; i < nvars; i++) if (!strcmp(var_key[i], key)) return var_def[i];
+    return NULL;
+}
+
 static void core_log(enum retro_log_level level, const char *fmt, ...)
 {
     if (level < RETRO_LOG_WARN) return;
@@ -459,6 +491,7 @@ static bool environment(unsigned cmd, void *data)
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
         struct retro_variable *v = data;
         v->value = core->option ? core->option(v->key, sysdir) : NULL;
+        if (!v->value) v->value = default_of(v->key);
         return v->value != NULL;
     }
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
@@ -474,6 +507,8 @@ static bool environment(unsigned cmd, void *data)
         *(unsigned *)data = 0;
         return true;
     case RETRO_ENVIRONMENT_SET_VARIABLES:
+        defaults_from(data);
+        return true;
     case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME:
     case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
     case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
