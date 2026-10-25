@@ -17,7 +17,10 @@
  * a disk image (.img, .ima, .vhd) or a .conf. In the text, '\n' is Enter,
  * '|' waits a second, and {F1}..{F12}, {ESC}, {UP} {DOWN} {LEFT} {RIGHT},
  * {TAB}, {BS}, {HOME}, {END} are those keys. {+x} presses a letter and
- * keeps it down, {-x} lets it go: for keys held under others.
+ * keeps it down, {-x} lets it go: for keys held under others. {+!} and
+ * {-!} hold and let go the fire button (RetroPad B) on port 0 (DBP_FIREPORT), for a core
+ * that reads a joystick (PUAE); DBP_PAD=1 plugs RetroPads into ports 0
+ * and 1 as frontends do.
  *
  * Core options as DBP_OPTS="dosbox_pure_cycles=max;dosbox_pure_machine=svga",
  * the system and save folders as DBP_DIR (default: the current one).
@@ -122,9 +125,17 @@ static void key(unsigned k, int down, uint32_t ch)
 
 static void input_poll(void) {}
 
+static int fire;
+static unsigned long pad_reads[2], fire_reads;
+
 static int16_t input_state(unsigned port, unsigned device, unsigned index, unsigned id)
 {
     (void)index;
+    if (device == RETRO_DEVICE_JOYPAD && port < 2) pad_reads[port]++;
+    if (device == RETRO_DEVICE_JOYPAD && port == 0 && id == RETRO_DEVICE_ID_JOYPAD_B && fire) fire_reads++;
+    if (port == (unsigned)(getenv("DBP_FIREPORT") ? atoi(getenv("DBP_FIREPORT")) : 0) && device == RETRO_DEVICE_JOYPAD &&
+        id == RETRO_DEVICE_ID_JOYPAD_B)
+        return (int16_t)fire;
     if (port == 0 && device == RETRO_DEVICE_KEYBOARD && id < RETROK_LAST) return held[id];
     return 0;
 }
@@ -143,6 +154,11 @@ static int next_key(const char *t, unsigned *k, int *shift, int *wait)
     *wait = 0;
     const char c = *t;
     if (c == '|') { *wait = 1; return 1; }
+    if (c == '{' && (t[1] == '+' || t[1] == '-') && t[2] == '!' && t[3] == '}') {
+        fire = t[1] == '+';
+        *k = 0;
+        return 4;
+    }
     if (c == '{' && (t[1] == '+' || t[1] == '-') && t[2] >= 'a' && t[2] <= 'z' && t[3] == '}') {
         *k = RETROK_a + (t[2] - 'a');
         *wait = t[1] == '+' ? 2 : 3;   /* hold, let go */
@@ -280,6 +296,7 @@ int main(int argc, char **argv)
     void (*retro_run)(void);
     void (*retro_unload_game)(void);
     void (*retro_deinit)(void);
+    void (*retro_set_controller_port_device)(unsigned, unsigned);
     SYM(retro_set_environment); SYM(retro_set_video_refresh); SYM(retro_set_audio_sample);
     SYM(retro_set_audio_sample_batch); SYM(retro_set_input_poll); SYM(retro_set_input_state);
     SYM(retro_init); SYM(retro_load_game); SYM(retro_get_system_av_info); SYM(retro_run);
@@ -294,6 +311,9 @@ int main(int argc, char **argv)
     retro_init();
     struct retro_game_info game = {argv[2], NULL, 0, NULL};
     if (!retro_load_game(&game)) { fprintf(stderr, "load failed: %s\n", argv[2]); return 1; }
+    *(void **)&retro_set_controller_port_device = dlsym(core, "retro_set_controller_port_device");
+    if (getenv("DBP_PAD") && retro_set_controller_port_device)
+        for (unsigned p = 0; p < 2; p++) retro_set_controller_port_device(p, RETRO_DEVICE_JOYPAD);
     struct retro_system_av_info av;
     retro_get_system_av_info(&av);
     const double fps = av.timing.fps > 0 ? av.timing.fps : 60;
@@ -347,6 +367,9 @@ int main(int argc, char **argv)
            "%lu samples at %.0f Hz\n",
            frames, frames_new, fps, took, 100.0 * total / fps / took, 100.0 * busy / took, pic_w, pic_h,
            samples, av.timing.sample_rate);
+    if (pad_reads[0] || pad_reads[1])
+        printf("RetroPad reads: port 0 %lu, port 1 %lu; fire seen down %lu times\n", pad_reads[0], pad_reads[1],
+               fire_reads);
     png(argv[4]);
     retro_unload_game();
     retro_deinit();

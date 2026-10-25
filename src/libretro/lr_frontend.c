@@ -54,6 +54,7 @@ static void (*core_init)(void);
 static bool (*core_load_game)(const struct retro_game_info *);
 static void (*core_get_system_av_info)(struct retro_system_av_info *);
 static void (*core_run)(void);
+static void (*core_set_controller)(unsigned port, unsigned device);
 
 static int load_core(const char *name)
 {
@@ -71,6 +72,7 @@ static int load_core(const char *name)
     SYM(core_get_system_av_info, "retro_get_system_av_info");
     SYM(core_run, "retro_run");
 #undef SYM
+    *(void **)&core_set_controller = dlsym(lib, "retro_set_controller_port_device");
     return 1;
 }
 
@@ -521,6 +523,11 @@ void lr_run(const lr_core *c)
         printf("%s: the core would not load it\n", c->tag);
         for (;;) sleep(1);
     }
+    /* A RetroPad in the first two ports, as every frontend says after
+     * loading: PUAE reads no joystick from a port nobody plugged one into,
+     * and Turrican's fire did nothing on either. */
+    if (c->kbjoy && core_set_controller)
+        for (unsigned p = 0; p < 2; p++) core_set_controller(p, RETRO_DEVICE_JOYPAD);
     struct retro_system_av_info av;
     core_get_system_av_info(&av);
     const double fps = av.timing.fps > 0 ? av.timing.fps : 60;

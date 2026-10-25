@@ -594,7 +594,17 @@ the Mac.
   "01 Arquivos/Emuladores": a zip of zips, 197 games). PUAE opens the
   inner zips and unpacks to saves/TEMP.
 - **Keyboard joystick** (lr_frontend, kbjoy): on from the start, RetroPad
-  0, arrows and Ctrl; F10 off, F9 RetroPad 1. Not yet tried in a game.
+  0, arrows and Ctrl; F10 off, F9 RetroPad 1. **PUAE reads no joystick
+  until retro_set_controller_port_device()** says a RetroPad is plugged in
+  (retro_devices[] starts at NONE); every frontend calls it after loading,
+  this one did not, and Turrican's fire did nothing on either port.
+  dosboxhost (DBP_PAD=1, {+!}/{-!}, DBP_FIREPORT) showed fire starting the
+  game on port 0 and 1 alike, nothing without. Fire works on the Mini C.
+- **Open, 2026-10-25, the owner on the Mini C:** (1) the picture is
+  shifted, black border top and left, the right and bottom cut off;
+  (2) one key held blocks the others: no running and shooting at once.
+  Not looked into yet. For (2), check first what reaches lr_hid (HID
+  reports with arrow + Ctrl together) before suspecting PUAE.
 - **Framing: open.** PUAE gives 720x574 with the PAL overscan, the picture
   off to the right. puae_crop=auto follows the content and cut a title in
   half; minimum and medium kept the left border and cut the right
