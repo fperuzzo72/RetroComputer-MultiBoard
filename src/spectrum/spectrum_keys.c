@@ -11,7 +11,15 @@
  * Ctrl, and the things a Spectrum expresses as Caps Shift combinations -
  * the arrows, Delete - are synthesised here so the PC keys do what is
  * printed on them.
+ *
+ * A game is better played with a Kempston joystick, which most support:
+ * F10 makes the arrows and Ctrl one, read on port 0x1F (spectrum.c), and
+ * a game started from a snapshot or a tape comes up with it on. As keys,
+ * the arrows are Caps Shift with 5 to 8, which is what they were on a
+ * Spectrum+, and a game's "define keys" reads every one as Caps Shift
+ * (Cybernoid, on the Mini C).
  */
+#include <stdio.h>
 #include <string.h>
 #include "spectrum.h"
 #include "selector.h"
@@ -129,9 +137,15 @@ static void press(uint8_t key) {
 /* Rebuild the whole matrix from what is held. Same reasoning as the MSX
  * side: the machine scans the matrix, so recomputing it from scratch is
  * both correct and far less bug-prone than tracking press and release. */
+static int sJoy;   /* the arrows and Ctrl are a Kempston joystick */
+
+static int is_arrow(uint8_t hid) { return hid >= 0x4F && hid <= 0x52; }
+
 static void rebuild(void) {
     int i;
     memset(sMatrix, 0x1F, sizeof(sMatrix));
+    /* typing for the user (LOAD "") needs Ctrl as Symbol Shift */
+    const int joy = sJoy && !spectrum_keys_typing();
 
     int shift = (sMods & 0x22) != 0;
     if (shift)
@@ -140,11 +154,12 @@ static void rebuild(void) {
             if (k != NO_KEY) { press(k); press(K_SYM); shift = 0; }
         }
     if (shift) press(K_CAPS);          /* either Shift = Caps Shift   */
-    if (sMods & 0x11) press(K_SYM);    /* either Ctrl  = Symbol Shift */
+    if ((sMods & 0x11) && !joy) press(K_SYM);    /* either Ctrl  = Symbol Shift */
 
     for (i = 0; i < 6; i++) {
         uint8_t hid = sHeld[i];
         if (!hid || hid >= 0x68) continue;
+        if (joy && is_arrow(hid)) continue;          /* the joystick's */
         if ((sMods & 0x22) && shifted_key(hid) != NO_KEY) continue;
         if (kHid[hid].key == NO_KEY) continue;   /* nothing here on a Spectrum */
         press(kHid[hid].key);
@@ -166,8 +181,40 @@ void spectrum_keys_hid(const uint8_t report[8]) {
         break;
     }
 
+    /* F10: the keyboard joystick on and off, at its down edge */
+    for (i = 2; i < 8; i++) {
+        if (report[i] != 0x43) continue;
+        for (j = 2; j < 8; j++) if (sHeld[j - 2] == 0x43) break;
+        if (j >= 8) spectrum_keys_joystick(!sJoy);
+        break;
+    }
+
     sMods = report[0];
     memcpy(sHeld, report + 2, 6);
+}
+
+void spectrum_keys_joystick(int on) {
+    sJoy = on;
+    printf("spectrum: Kempston joystick on the arrows and Ctrl %s (F10)\n", on ? "on" : "off");
+}
+
+int spectrum_keys_joystick_on(void) { return sJoy; }
+
+/* A Kempston interface on port 0x1F: high for pressed, right, left, down,
+ * up and fire in bits 0 to 4. */
+uint8_t spectrum_keys_kempston(void) {
+    uint8_t v = 0;
+    int i;
+    for (i = 0; i < 6; i++) {
+        switch (sHeld[i]) {
+        case 0x4F: v |= 0x01; break;
+        case 0x50: v |= 0x02; break;
+        case 0x51: v |= 0x04; break;
+        case 0x52: v |= 0x08; break;
+        }
+    }
+    if (sMods & 0x11) v |= 0x10;
+    return v;
 }
 
 uint8_t spectrum_keys_read(uint8_t highAddr) {

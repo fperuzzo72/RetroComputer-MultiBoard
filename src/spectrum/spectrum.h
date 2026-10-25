@@ -83,6 +83,10 @@ void spectrum_help_invalidate(void);
 void spectrum_keys_reset(void);
 void spectrum_keys_hid(const uint8_t report[8]);
 uint8_t spectrum_keys_read(uint8_t highAddr);
+/* The Kempston joystick on the arrows and Ctrl (spectrum_keys.c). */
+void    spectrum_keys_joystick(int on);
+int     spectrum_keys_joystick_on(void);
+uint8_t spectrum_keys_kempston(void);
 int  spectrum_keys_type(const char *text);
 int  spectrum_keys_typing(void);
 void spectrum_keys_frame(void);

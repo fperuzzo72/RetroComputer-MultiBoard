@@ -151,6 +151,10 @@ byte InZ80(word Port) {
     if (!(Port & 0x0001))
         return (byte)(spectrum_keys_read((uint8_t)(Port >> 8))
                       | spectrum_tape_ear(tstate()) | 0xA0);
+    /* A Kempston joystick, while the keyboard plays one; otherwise no
+     * interface, and nothing answers. */
+    if ((Port & 0xFF) == 0x1F && spectrum_keys_joystick_on())
+        return spectrum_keys_kempston();
     return 0xFF;
 }
 
@@ -482,7 +486,9 @@ static void m_run(void) {
 
     if (loadSnapshot()) {
         printf("spectrum: started from a snapshot\n");
+        spectrum_keys_joystick(1);
     } else if (spectrum_tape_begin(spectrum_rom)) {
+        spectrum_keys_joystick(1);
         /* Not yet: the ROM has its own startup to get through, and this
          * one sits on a copyright screen until a key is pressed. Typing
          * into it before the cursor exists just loses the keystrokes. */
@@ -625,8 +631,10 @@ static void m_switch_to(int i) {
     sLastBorder = 0xFF;
     markAll();
     spectrum_help_invalidate();
-    if (!loadSnapshot() && spectrum_tape_begin(spectrum_rom))
-        sAutoloadAt = sFrames + 150;
+    const int snap = loadSnapshot();
+    const int tape = !snap && spectrum_tape_begin(spectrum_rom);
+    if (tape) sAutoloadAt = sFrames + 150;
+    spectrum_keys_joystick(snap || tape);   /* a game: the joystick; BASIC: the arrows */
 }
 
 static int m_selected_entry(void) {
