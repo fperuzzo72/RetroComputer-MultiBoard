@@ -493,6 +493,21 @@ first, as machost/pchost/c64host for the cores.
 - `adb input text` presses and releases faster than the MSX scans: lost
   and doubled letters there are the test, not the keyboard.
 
+- **Games from the card on Android** (2026-10-25,
+  `src/boards/android/card_catalogue.c`). The built-in cartridges,
+  snapshots and tapes were for the ESP32 boards, so a game started with no
+  card in the slot; on Android, under RETRO_BOARD_ANDROID, msx_carts.c,
+  spectrum_snap.c and spectrum_tapes.c list the card's msx/ (.rom .mx1
+  .ri) and spectrum/ (.sna .tap) instead, in alphabetical order, the
+  choice kept by file name (msxcartname, specsnapname, spectapename). The
+  MSX loads the file by its path through fMSX's own loader (mirroring,
+  MAP_GUESS), not "flash:cart"; a snapshot must be a 48K .sna. The C64's
+  folder listing had a cap of 64 and no order: off the boards, 8192 and
+  alphabetical. On the Mini C since then: 609 MSX1 games (the No-Intro
+  set), the 30 Spectrum ones, 2397 C64 (OneLoad64's root plus the
+  romset), 189 Amiga. androidhost builds with RETRO_BOARD_ANDROID and
+  takes RETRO_CARD.
+
 ## The PC 386 on Android: DOSBox Pure (2026-10-21)
 
 `src/pc386/pc386_machine.c` + `lib/dosbox-pure` (codeberg.org/schelling,

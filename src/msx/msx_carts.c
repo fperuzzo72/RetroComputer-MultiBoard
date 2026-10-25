@@ -17,6 +17,40 @@
 #include "nvs.h"
 #include "msx_carts.h"
 
+#ifdef RETRO_BOARD_ANDROID
+/* On Android the cartridges are the card's msx/ folder, not the flash:
+ * there the card is a folder that is always there (card_catalogue.h).
+ * fMSX loads the chosen file by its path (msx_cart_path, msx_bridge.c),
+ * with its own loader, which mirrors and guesses mappers as it does for
+ * any file; the built-in catalogue's power-of-two rule does not apply. */
+#include "card_catalogue.h"
+
+static const char *const cart_exts[] = {".rom", ".mx1", ".ri", NULL};
+static card_catalogue carts = CARD_CATALOGUE("msx", cart_exts, "msxcartname");
+
+int msx_cart_count_get(void) { return card_count(&carts); }
+
+const char *msx_cart_name(int i) {
+    if (i < 0 || i >= card_count(&carts)) return "MSX-BASIC (no cartridge)";
+    return card_name(&carts, i);
+}
+
+int msx_cart_selected(void) { return card_selected(&carts); }
+void msx_cart_select(int i) { card_select(&carts, i); }
+const char *msx_cart_path(void) { return card_path(&carts); }
+const unsigned char *msx_cart_image(void) { return 0; }
+int msx_cart_size(void) { return 0; }
+
+void msx_cart_list(void) {
+    int i, sel = msx_cart_selected();
+    printf("cartridges in the card's msx/ folder:\n");
+    printf(" %c -1  %s\n", sel < 0 ? '*' : ' ', msx_cart_name(-1));
+    for (i = 0; i < card_count(&carts); i++)
+        printf(" %c %2d  %s\n", sel == i ? '*' : ' ', i, msx_cart_name(i));
+}
+
+#else
+
 #ifdef HAVE_LOCAL_CART
 extern const struct { const char *name; const unsigned char *rom; int size; }
     msx_cart_catalogue[];
@@ -86,3 +120,5 @@ void msx_cart_list(void) {
     if (!msx_cart_count)
         printf("      (none - see tools/embed_roms.py)\n");
 }
+
+#endif /* RETRO_BOARD_ANDROID */

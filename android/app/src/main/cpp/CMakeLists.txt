@@ -45,6 +45,7 @@ add_library(retro SHARED
     ${BOARD}/retro_board.c
     ${BOARD}/nvs_file.c
     ${BOARD}/beeper.c
+    ${BOARD}/card_catalogue.c
     ${SPECTRUM}
     ${PC8086}
     ${PC_SRC}
@@ -60,6 +61,9 @@ target_include_directories(retro PRIVATE
 
 # The flags the MSX is built with on every board (BPS16, LSB_FIRST, ESP32
 # for the ESPlay-fMSX paths, FMSX for the Z80's fast fetch).
+# RETRO_BOARD_ANDROID: the MSX's cartridges and the Spectrum's snapshots
+# and tapes come from the card (card_catalogue.c), not from the firmware.
+target_compile_definitions(retro PRIVATE RETRO_BOARD_ANDROID)
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_MSX HAVE_MACHINE_SPECTRUM HAVE_MACHINE_PC
     HAVE_MACHINE_MAC UMAC_MEMSIZE=4096 DISP_WIDTH=512 DISP_HEIGHT=342
     BPS16 LSB_FIRST ESP32 FMSX PC8086_LEAN)

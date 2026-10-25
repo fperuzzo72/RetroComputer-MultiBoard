@@ -502,7 +502,8 @@ already take, so each keeps its own US-International.
 
 Files live in **`/sdcard/RetroComputer`**, laid out as the boards' card:
 `pc/` disk images (and `msdos.img` at the root), `c64/` .prg/.d64/.crt,
-`mac/` disc images. The app asks once for All files access; without it
+`mac/` disc images, and on Android only `msx/` cartridges (.rom) and
+`spectrum/` snapshots and tapes (.sna, .tap), which the boards build in. The app asks once for All files access; without it
 the MSX and the Spectrum still run, needing no files. A tap (or F12, or
 the system's back) opens the menu: this machine's entries and "Outro
 computador"; a finger is the Mac's trackpad, and its menu is the back

@@ -13,6 +13,10 @@ void        msx_cart_list(void);
 
 const unsigned char *msx_cart_image(void);
 int                  msx_cart_size(void);
+#ifdef RETRO_BOARD_ANDROID
+/* The chosen cartridge's file on the card, or NULL. Android only. */
+const char *msx_cart_path(void);
+#endif
 
 #ifdef __cplusplus
 }

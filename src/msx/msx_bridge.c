@@ -25,7 +25,10 @@ int msx_video_prealloc(void) { return PreallocVideo(); }
 #include "msx_carts.h"
 
 static const char *gameRomPath(void) {
-#ifdef HAVE_LOCAL_CART
+#ifdef RETRO_BOARD_ANDROID
+    /* the card's msx/ folder (msx_carts.c), loaded by fMSX from its path */
+    if (msx_cart_path()) return msx_cart_path();
+#elif defined(HAVE_LOCAL_CART)
     if (msx_cart_selected() >= 0) return "flash:cart";
 #endif
     return "/sdcard/msx/games/game.rom";
@@ -150,7 +153,7 @@ extern byte *ROMData[MAXSLOTS]; /* MSX.c; not in MSX.h */
 void msx_reboot(void) { esp_restart(); }
 
 void msx_insert_cartridge(void) {
-#ifdef HAVE_LOCAL_CART
+#if defined(HAVE_LOCAL_CART) || defined(RETRO_BOARD_ANDROID)
     /* MSX-BASIC is no cartridge. Loading the SD path instead fails without
      * touching the slot, which left the last game in it: back to BASIC
      * booted that game again. Ejecting resets the machine, but only when

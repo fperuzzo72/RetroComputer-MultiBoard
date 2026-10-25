@@ -15,6 +15,37 @@
 #include "nvs.h"
 #include "spectrum.h"
 
+#ifdef RETRO_BOARD_ANDROID
+/* On Android the snapshots are the .sna files in the card's spectrum/
+ * folder (card_catalogue.h), read when one is started; the tapes beside
+ * them are spectrum_tapes.c's. Only a 48K .sna is taken. */
+#include "card_catalogue.h"
+
+static const char *const snap_exts[] = {".sna", NULL};
+static card_catalogue snaps = CARD_CATALOGUE("spectrum", snap_exts, "specsnapname");
+
+int spectrum_snapshot_count(void) { return card_count(&snaps); }
+
+const char *spectrum_snapshot_name(int i) {
+    if (i < 0 || i >= card_count(&snaps)) return "Spectrum BASIC";
+    return card_name(&snaps, i);
+}
+
+int spectrum_snapshot_selected(void) { return card_selected(&snaps); }
+void spectrum_snapshot_select(int i) { card_select(&snaps, i); }
+
+const unsigned char *spectrum_snapshot_image(void) {
+    int size;
+    const unsigned char *b = card_bytes(&snaps, &size);
+    if (b && size != SNA_SIZE) {
+        printf("spectrum: %s is %d bytes, not a 48K .sna\n", card_path(&snaps), size);
+        return 0;
+    }
+    return b;
+}
+
+#else
+
 #ifdef HAVE_SPECTRUM_SNAPS
 extern const struct { const char *name; const unsigned char *sna; int size; }
     spectrum_snap_catalogue[];
@@ -66,3 +97,5 @@ const unsigned char *spectrum_snapshot_image(void) {
     int i = spectrum_snapshot_selected();
     return (i >= 0 && i < spectrum_snap_count) ? spectrum_snap_catalogue[i].sna : 0;
 }
+
+#endif /* RETRO_BOARD_ANDROID */

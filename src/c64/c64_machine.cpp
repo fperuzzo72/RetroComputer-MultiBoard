@@ -18,6 +18,7 @@
  *     for a disc or a .prg, once BASIC is up, LOAD and RUN are typed for
  *     you, as a person would. tools/sd_put.py puts files there over USB.
  */
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -131,14 +132,22 @@ static void list_files(void)
     const std::string base = std::string(root ? root : ".") + "/c64";
     DIR *dir = opendir(base.c_str());
     if (!dir) return;
+    /* No 64 here, as on the boards: the Android card holds OneLoad64 and
+     * the romset, thousands of games, shown in alphabetical order (the
+     * folder's own order is none). */
     while (struct dirent *e = readdir(dir)) {
-        if (files.size() >= 64) break;
-        struct stat st;
-        if (!wanted(e->d_name) || stat((base + "/" + e->d_name).c_str(), &st) != 0 || !S_ISREG(st.st_mode))
-            continue;
+        if (files.size() >= 8192) break;
+        if (!wanted(e->d_name)) continue;
+        if (e->d_type != DT_REG) {
+            struct stat st;
+            if (e->d_type != DT_UNKNOWN || stat((base + "/" + e->d_name).c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+                continue;
+        }
         files.push_back(e->d_name);
     }
     closedir(dir);
+    std::sort(files.begin(), files.end(),
+              [](const std::string &a, const std::string &b) { return strcasecmp(a.c_str(), b.c_str()) < 0; });
 #endif
 }
 

@@ -7,6 +7,35 @@
 #include "nvs.h"
 #include "spectrum.h"
 
+#ifdef RETRO_BOARD_ANDROID
+/* On Android the tapes are the .tap files in the card's spectrum/ folder
+ * (card_catalogue.h), read when one is put in; the snapshots beside them
+ * are spectrum_snap.c's. */
+#include "card_catalogue.h"
+
+static const char *const tape_exts[] = {".tap", NULL};
+static card_catalogue tapes = CARD_CATALOGUE("spectrum", tape_exts, "spectapename");
+
+int spectrum_tape_count(void) { return card_count(&tapes); }
+
+const char *spectrum_tape_name(int i) {
+    if (i < 0 || i >= card_count(&tapes)) return "Spectrum BASIC";
+    return card_name(&tapes, i);
+}
+
+int spectrum_tape_selected(void) { return card_selected(&tapes); }
+void spectrum_tape_select(int i) { card_select(&tapes, i); }
+
+const unsigned char *spectrum_tape_image(void) { return card_bytes(&tapes, 0); }
+
+int spectrum_tape_size(void) {
+    int size;
+    card_bytes(&tapes, &size);
+    return size;
+}
+
+#else
+
 #ifdef HAVE_SPECTRUM_TAPES
 extern const struct { const char *name; const unsigned char *tap; int size; }
     spectrum_tape_catalogue[];
@@ -63,3 +92,5 @@ int spectrum_tape_size(void) {
     int i = spectrum_tape_selected();
     return (i >= 0 && i < spectrum_tape_count_n) ? spectrum_tape_catalogue[i].size : 0;
 }
+
+#endif /* RETRO_BOARD_ANDROID */

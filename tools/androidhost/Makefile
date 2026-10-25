@@ -7,7 +7,7 @@ MSX_CORE = $(FMSX)/fMSX/MSX.c $(FMSX)/fMSX/V9938.c $(FMSX)/fMSX/I8251.c $(FMSX)/
            $(FMSX)/EMULib/WD1793.c $(FMSX)/EMULib/FDIDisk.c $(FMSX)/EMULib/Floppy.c $(FMSX)/EMULib/Hunt.c \
            $(FMSX)/EMULib/IPS.c $(FMSX)/EMULib/MCF.c $(FMSX)/EMULib/SHA1.c $(FMSX)/EMULib/Sound.c \
            $(FMSX)/video/video_glue.c $(ROOT)/lib/z80/Z80.c
-BOARD_SRC = $(BOARD)/retro_board.c $(BOARD)/nvs_file.c $(BOARD)/audio_none.c $(BOARD)/beeper.c
+BOARD_SRC = $(BOARD)/retro_board.c $(BOARD)/nvs_file.c $(BOARD)/audio_none.c $(BOARD)/beeper.c $(BOARD)/card_catalogue.c
 SPEC = $(ROOT)/src/spectrum
 SPEC_SRC = $(filter-out $(SPEC)/spectrum_help.cpp,$(wildcard $(SPEC)/*.c))
 # The PC: lib/pc8086 and src/pc, the font if tools/make_pc_font.py made it.
@@ -20,7 +20,7 @@ C64_CXX = $(wildcard $(C64L)/*.cpp) $(C64L)/platform/PlatformFactory.cpp $(C64L)
           $(ROOT)/src/c64/c64_keys.cpp $(ROOT)/src/c64/c64_files.cpp $(ROOT)/src/c64/c64_cart.cpp \
           $(ROOT)/src/c64/c64_machine.cpp
 PC_FLAGS = -DHAVE_MACHINE_C64 -DHAVE_MACHINE_PC -DPC8086_LEAN $(if $(wildcard $(PC)/pc_font_data.c),-DHAVE_PC_FONT) -I$(PC)
-CFLAGS = -O2 -w -pthread -I$(BOARD)/shim -I$(BOARD) -I$(ROOT)/src -I$(ROOT)/src/boards/common -I$(ROOT)/lib/z80 \
+CFLAGS = -O2 -w -pthread -DRETRO_BOARD_ANDROID -I$(BOARD)/shim -I$(BOARD) -I$(ROOT)/src -I$(ROOT)/src/boards/common -I$(ROOT)/lib/z80 \
          -DHAVE_MACHINE_MSX -DHAVE_MACHINE_SPECTRUM -DHAVE_SPECTRUM_ROM -DHAVE_SPECTRUM_SNAPS -I$(SPEC) -DBPS16 -DLSB_FIRST -DESP32 -DFMSX -DHAVE_LOCAL_BIOS -DHAVE_LOCAL_CART \
          -I$(ROOT)/src/msx -I$(FMSX)/fMSX -I$(FMSX)/EMULib -I$(FMSX)/video
 
