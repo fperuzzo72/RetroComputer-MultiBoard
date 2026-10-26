@@ -3,6 +3,8 @@ package org.retrocomputer.multiboard
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -33,8 +35,40 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
   private lateinit var surfaceView: SurfaceView
   private var menuOpen = false
 
+  // The orientation the system was in before this app, given back when it
+  // is left: the Boox kept the app's landscape for its home screen. Noted
+  // when the app is started from outside; a start over into another
+  // computer (restart()) finds it already noted.
+  private var outsideOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+  private fun noteOutsideOrientation() {
+    val prefs = getSharedPreferences("retro", MODE_PRIVATE)
+    if (!intent.getBooleanExtra(EXTRA_RESTART, false)) {
+      val portrait = resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
+      prefs.edit().putBoolean("outside_portrait", portrait).apply()
+    }
+    outsideOrientation = if (prefs.getBoolean("outside_portrait", true))
+      ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+  }
+
+  private fun giveOrientationBack() {
+    requestedOrientation = outsideOrientation
+  }
+
+  override fun onUserLeaveHint() {
+    super.onUserLeaveHint()
+    giveOrientationBack()                 /* Home or another app */
+  }
+
+  override fun onPause() {
+    super.onPause()
+    if (isFinishing) giveOrientationBack()  /* the app closed */
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    noteOutsideOrientation()
+    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     // A computer in use does not go to sleep under you. On e-ink a still
     // screen costs almost nothing.
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -92,6 +126,7 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
 
   override fun onResume() {
     super.onResume()
+    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     hideSystemBars()
   }
 
@@ -269,7 +304,12 @@ class RetroActivity : Activity(), SurfaceHolder.Callback {
   fun restart() {
     val intent = Intent(this, RetroActivity::class.java)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+      .putExtra(EXTRA_RESTART, true)
     startActivity(intent)
     Runtime.getRuntime().exit(0)
+  }
+
+  companion object {
+    private const val EXTRA_RESTART = "org.retrocomputer.multiboard.RESTART"
   }
 }

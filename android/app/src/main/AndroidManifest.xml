@@ -18,8 +18,12 @@
         android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar.Fullscreen">
 
         <!--
-          sensorLandscape: these are keyboard computers, and every one of them
-          drew a landscape picture. configChanges keeps the Activity (and the
+          No screenOrientation here: RetroActivity notes the orientation the
+          system was in, then asks for sensorLandscape (these are keyboard
+          computers, and every one of them drew a landscape picture), and
+          gives the noted one back on the way out. The Boox kept the app's
+          landscape after it, for its own home screen. configChanges keeps
+          the Activity (and the
           Surface) through a keyboard being connected or the panel turning,
           as in the Android CrossPoint: on e-ink a recreated window is a
           flashing screen for nothing.
@@ -27,7 +31,6 @@
         <activity
             android:name=".RetroActivity"
             android:exported="true"
-            android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
