@@ -20,6 +20,8 @@
  *   - the files are the card's msx2/ folder: cartridges (.rom .mx2),
  *     disks (.dsk, or an .m3u of them) and tapes (.cas); entry 0 is the
  *     machine with nothing in it, into its BASIC;
+ *   - the One Chip MSX disk, which boots into SofaRun, comes right after
+ *     BASIC in the list, as "MSX DISK DRIVE";
  *   - MSX games read the cursor keys and space themselves, so there is no
  *     keyboard joystick here;
  *   - shown at 4:3, as on a monitor.
@@ -48,6 +50,7 @@ static const char *const exts[] = {".rom", ".mx2", ".mx1", ".dsk", ".m3u", ".cas
 static const lr_core msx2 = {
     "msx2", "libbluemsx.so", exts, "MSX2+ BASIC", "msx2entry",
     option, NULL, 1, 0,
+    "OCM MSXFAT16.dsk", "MSX DISK DRIVE",
 };
 
 LR_MACHINE(msx2_machine, "MSX2+ (blueMSX)", msx2);

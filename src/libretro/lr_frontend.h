@@ -31,6 +31,9 @@ typedef struct lr_core {
     void (*extra)(const char *card, void (*add)(const char *name, const char *path));
     int four3;                   /* shown at 4:3 whatever the size */
     int kbjoy;                   /* arrows and Ctrl are a joystick on RetroPad 0, F10 toggles */
+    /* a file of its folder listed right after entry 0, under a name of its
+     * own in the menus (kept by its file name all the same), or NULL */
+    const char *first_file, *first_label;
 } lr_core;
 
 void lr_run(const lr_core *c);

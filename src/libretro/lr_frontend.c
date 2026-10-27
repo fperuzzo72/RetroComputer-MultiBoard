@@ -384,6 +384,16 @@ static void list_files(const lr_core *c)
     }
     memcpy(names, n2, sizeof names[0] * (size_t)nfiles);
     memcpy(paths, p2, sizeof paths[0] * (size_t)nfiles);
+    for (int i = 1; c->first_file && i < nfiles; i++) {
+        if (strcmp(names[i], c->first_file)) continue;
+        memcpy(n2[0], names[i], sizeof n2[0]);
+        memcpy(p2[0], paths[i], sizeof p2[0]);
+        memmove(names[1], names[0], sizeof names[0] * (size_t)i);
+        memmove(paths[1], paths[0], sizeof paths[0] * (size_t)i);
+        memcpy(names[0], n2[0], sizeof names[0]);
+        memcpy(paths[0], p2[0], sizeof paths[0]);
+        break;
+    }
     if (c->extra) c->extra(card, add);
 }
 
@@ -419,6 +429,7 @@ const char *lr_entry_name(const lr_core *c, int i)
     static char label[96];
     list_files(c);
     if (i <= 0 || i - 1 >= nfiles) return c->entry0;
+    if (c->first_label && !strcmp(names[i - 1], c->first_file)) return c->first_label;
     snprintf(label, sizeof label, "%s", names[i - 1]);
     char *dot = strrchr(label, '.');
     if (dot && !strchr(dot, ' ')) *dot = 0;
