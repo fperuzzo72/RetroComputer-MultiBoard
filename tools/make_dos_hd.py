@@ -33,9 +33,10 @@ Two disks, the same configuration on both:
     PROMPT command.
 
 Turbo C 2.0 and Turbo C++ are both TC.EXE: Turbo C++ is on the PATH, Turbo
-C 2.0 is TC2. Programs that want to start in their own folder (GP2, the
-games, Turbo C 2.0) have a batch file in C:\\BAT, which is on the PATH;
-AJUDA lists them all, in Portuguese.
+C 2.0 is TC2. Programs that want to start in their own folder (the games,
+Turbo C 2.0) have a batch file in C:\\BAT, which is on the PATH; AJUDA
+lists them all, in Portuguese. GP2 goes in with the other games, as
+C:\\GAMES\\GP2; its GP2.PIF (Windows' shortcut) is pointed there too.
 
 Needs mtools. Generated from the owner's files: the image is not committed.
 """
@@ -86,7 +87,7 @@ ECHO.
     "TC2.BAT": "@ECHO OFF\r\nC:\r\nCD \\TC\r\nTC %1 %2\r\nCD \\\r\n",
     "ELITE.BAT": "@ECHO OFF\r\nC:\r\nCD \\GAMES\\ELITE\r\nELITE\r\nCD \\\r\n",
     "TD.BAT": "@ECHO OFF\r\nC:\r\nCD \\GAMES\\TD\r\nTD\r\nCD \\\r\n",
-    "GP2.BAT": "@ECHO OFF\r\nC:\r\nCD \\GP2\r\nGP2\r\nCD \\\r\n",
+    "GP2.BAT": "@ECHO OFF\r\nC:\r\nCD \\GAMES\\GP2\r\nGP2\r\nCD \\\r\n",
 }
 
 
@@ -121,6 +122,8 @@ def build(base, out, msdos, doszip, from_hd, from_zip):
             mtools("mcopy", "-s", "-i", disk, os.path.join(z, d), "::/")
 
         have = set(from_hd) | set(from_zip) | {d for d in ("GP2", "WINDOWS") if exists(disk, d)}
+        if "GP2" in have:
+            gp2_into_games(disk)
         b = os.path.join(tmp, "BAT")
         os.mkdir(b)
         for name, text in BAT.items():
@@ -139,6 +142,23 @@ def build(base, out, msdos, doszip, from_hd, from_zip):
     finally:
         shutil.rmtree(tmp)
     mtools("mdir", "-i", disk, "::/")
+
+
+def gp2_into_games(disk):
+    """C:\\GP2 moved to C:\\GAMES\\GP2. The game finds its files from the
+    folder it is started in; only GP2.PIF names the old one (its program
+    field, 63 bytes at 0x24)."""
+    mtools("mmove", "-i", disk, "::/GP2", "::/GAMES/GP2")
+    tmp = tempfile.mkdtemp()
+    try:
+        pif = os.path.join(tmp, "GP2.PIF")
+        mtools("mcopy", "-n", "-i", disk, "::/GAMES/GP2/GP2.PIF", pif)
+        d = bytearray(open(pif, "rb").read())
+        d[0x24:0x24 + 63] = b"C:\\GAMES\\GP2\\GP2.EXE".ljust(63, b"\0")
+        open(pif, "wb").write(d)
+        mtools("mcopy", "-o", "-i", disk, pif, "::/GAMES/GP2/GP2.PIF")
+    finally:
+        shutil.rmtree(tmp)
 
 
 def exists(disk, d):

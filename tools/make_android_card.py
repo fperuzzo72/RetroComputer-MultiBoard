@@ -16,7 +16,8 @@ Writes OUT_DIR/RetroComputer, laid out as the app reads it (README,
   pc        pc/, msdos.img  the MS-DOS floppy (tools/make_pc_floppy.py) and the
                        8086 disk (tools/make_dos_hd.py's)
   pc386     pc386/     the 386 disk (tools/make_dos_hd.py's)
-  mac       mac/       roms/mac's discs
+  mac       mac/       one disc for each System, all the programs on each
+                       (tools/make_mac_discs.py)
 
 Copy it with `adb push --sync OUT_DIR/RetroComputer /sdcard/`, which
 resumes where a dropped cable left it. Nothing here is committed: these are
@@ -136,10 +137,8 @@ def pc386(card):
 
 
 def mac(card):
-    out = os.path.join(card, "mac")
-    os.makedirs(out, exist_ok=True)
-    for f in ("papermac.img", "system608.img", "system701.img"):
-        shutil.copy(os.path.join(ROOT, "roms/mac", f), out)
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools/make_mac_discs.py"), os.path.join(card, "mac")],
+                   check=True, stdout=subprocess.DEVNULL)
     return 3
 
 

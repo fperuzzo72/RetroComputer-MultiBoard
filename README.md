@@ -308,6 +308,13 @@ copy of the built-in one** the first time the Mac starts, and the Mac boots
 from that copy: nobody has to take the card out to begin. The choice of
 disc is remembered.
 
+`python3 tools/make_mac_discs.py OUT_DIR` makes the card's discs, one for
+each System the owner has (3.2, 6.0.8, 7.0.1), 10MB each, every one with
+the same games and programs (and TeachText): "Sistema 3.2.img" and so on.
+hformat leaves the boot blocks empty, which gets the question mark, so
+each disc is given its System's own. All three boot to the Finder on the
+Android board (HiBreak Pro, 2026-10-27).
+
 **Back to the reader.** The first menu's last choice, when the other app
 slot holds a firmware, is "Voltar ao CrossPlay" (CrossPoint on the
 PaperS3): it makes that slot the one that boots and restarts.
