@@ -17,6 +17,10 @@ Writes OUT_DIR/RetroComputer, laid out as the app reads it (README,
                        8086 disk (tools/make_dos_hd.py's)
   pc386     pc386/     the 386 disk (tools/make_dos_hd.py's), with the shareware
                        games of tools/add_dos_games.py
+  scummvm   scummvm/   the adventures their makers set free, floppy versions,
+                       from scummvm.org (SHA-256 checked), a folder each with
+                       its <gameid>.scummvm hook, and the data files of
+                       tools/build_scummvm_core.sh's build in system/scummvm
   mac       mac/       one disc for each System, all the programs on each, and
                        the Duane Blehm Collection (tools/make_mac_discs.py)
 
@@ -153,8 +157,57 @@ def mac(card):
     return 3
 
 
+SCUMMVM_EXTRAS = "https://downloads.scummvm.org/frs/extras/"
+# folder on the card, game id (the hook), the download
+SCUMMVM_GAMES = [
+    ("Beneath a Steel Sky", "sky", "Beneath a Steel Sky/BASS-Floppy-1.3.zip"),
+    ("Lure of the Temptress", "lure", "Lure of the Temptress/lure-1.1.zip"),
+    ("Flight of the Amazon Queen", "queen", "Flight of the Amazon Queen/FOTAQ_Floppy.zip"),
+    ("Drascula", "drascula", "Drascula_ The Vampire Strikes Back/drascula-1.0.zip"),
+    ("Dreamweb", "dreamweb", "Dreamweb/dreamweb-uk-1.1.zip"),
+]
+# what the five engines and the launcher use of the build's data files
+SCUMMVM_DATA = ("sky.cpt", "lure.dat", "queen.tbl", "drascula.dat", "fonts.dat", "encoding.dat",
+                "helpdialog.zip", "vkeybd_default.zip")
+
+
+def scummvm(card):
+    import hashlib
+    import urllib.parse
+    out = os.path.join(card, "scummvm")
+    extra = os.path.join(out, "system", "scummvm", "extra")
+    os.makedirs(extra, exist_ok=True)
+    os.makedirs(os.path.join(out, "system", "scummvm", "theme"), exist_ok=True)
+    os.makedirs(CACHE, exist_ok=True)
+    for folder, gameid, rel in SCUMMVM_GAMES:
+        url = SCUMMVM_EXTRAS + urllib.parse.quote(rel)
+        zpath = os.path.join(CACHE, rel.rsplit("/", 1)[-1])
+        if not os.path.exists(zpath):
+            with urllib.request.urlopen(url) as r, open(zpath, "wb") as o:
+                o.write(r.read())
+        with urllib.request.urlopen(url + ".sha256") as r:
+            want = r.read().decode().split()[0].lower()
+        if hashlib.sha256(open(zpath, "rb").read()).hexdigest() != want:
+            sys.exit(f"{zpath}: SHA-256 does not match scummvm.org's")
+        game = os.path.join(out, folder)
+        os.makedirs(game, exist_ok=True)
+        with zipfile.ZipFile(zpath) as z:
+            for i in z.infolist():
+                if i.is_dir() or i.filename.startswith("__MACOSX"):
+                    continue
+                with open(os.path.join(game, os.path.basename(i.filename)), "wb") as o:
+                    o.write(z.read(i))
+        open(os.path.join(game, gameid + ".scummvm"), "w").write(gameid)
+    with zipfile.ZipFile(os.path.join(ROOT, "build/scummvm/scummvm.zip")) as z:
+        for name in SCUMMVM_DATA:
+            if "scummvm/extra/" + name in z.namelist():
+                with open(os.path.join(extra, name), "wb") as o:
+                    o.write(z.read("scummvm/extra/" + name))
+    return len(SCUMMVM_GAMES)
+
+
 MACHINES = {"msx": msx, "spectrum": spectrum, "c64": c64, "amiga": amiga, "msx2": msx2, "pc": pc,
-            "pc386": pc386, "mac": mac}
+            "pc386": pc386, "mac": mac, "scummvm": scummvm}
 
 
 def main():

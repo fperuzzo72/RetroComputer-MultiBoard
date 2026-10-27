@@ -576,6 +576,24 @@ for blueMSX, and `tools/msx_fat16_disk.py` rebuilds a larger card image
 (the owner's One Chip MSX card) into one.
 `python3 tools/libretro_sources.py` regenerates both cores' source lists.
 
+**ScummVM** (2026-10-27) is the ninth, Android only: libretro's ScummVM
+(`third_party/scummvm`, a shallow submodule), built by `sh
+tools/build_scummvm_core.sh` with its own makefiles (they generate the
+engine tables first) into `android/app/src/main/jniLibs`, with only the
+engines of the adventures their makers set free: sky, lure, queen,
+drascula, dreamweb. Each game is a folder in
+**`/sdcard/RetroComputer/scummvm/`** with a `<gameid>.scummvm` hook file in
+it, listed by the folder's name; entry 0 is ScummVM's launcher. The data
+files the engines need (sky.cpt, lure.dat...) go in
+`scummvm/system/scummvm/extra`. The floppy versions of Beneath a Steel
+Sky, Lure of the Temptress, Flight of the Amazon Queen, Drascula and
+Dreamweb (scummvm.org's downloads, SHA-256 checked) all start on the
+HiBreak Pro. The interface is ScummVM's, in English.
+
+The machines are in this order: MSX, MSX2+, Spectrum, Mac, C64, PC, PC
+386, Amiga, ScummVM. The choice is remembered by name ("machinename");
+an index kept before that is read in the order it had then.
+
 `python3 tools/make_android_card.py OUT_DIR [machine ...]` gathers the
 whole `RetroComputer` folder from the owner's own sets (none of it is in
 the repo), laid out as above; `adb push --sync OUT_DIR/RetroComputer

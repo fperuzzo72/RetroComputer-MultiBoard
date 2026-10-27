@@ -52,3 +52,7 @@ tools/dosboxhost/dosboxhost
 lib/dosbox-pure/build/
 lib/dosbox-pure/*.dylib
 lib/dosbox-pure/*.so
+
+# built by tools/build_scummvm_core.sh
+android/app/src/main/jniLibs/
+build/scummvm/

@@ -10,3 +10,8 @@
 [submodule "third_party/blueMSX-libretro"]
 	path = third_party/blueMSX-libretro
 	url = https://github.com/libretro/blueMSX-libretro.git
+[submodule "third_party/scummvm"]
+	path = third_party/scummvm
+	url = https://github.com/libretro/scummvm.git
+	shallow = true
+	ignore = untracked

@@ -191,6 +191,16 @@ target_link_libraries(bluemsx z log)
 target_sources(retro PRIVATE ${ROOT}/src/msx2/msx2_machine.c)
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_MSX2)
 add_dependencies(retro bluemsx)
+
+# ScummVM: third_party/scummvm (libretro's), built by
+# tools/build_scummvm_core.sh with its own makefiles into
+# src/main/jniLibs/arm64-v8a/libscummvm.so, which Gradle packs as it is. Run
+# through src/scummvm/scummvm_machine.c; without the library built, the
+# machine is left out.
+if(EXISTS ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libscummvm.so)
+  target_sources(retro PRIVATE ${ROOT}/src/scummvm/scummvm_machine.c)
+  target_compile_definitions(retro PRIVATE HAVE_MACHINE_SCUMMVM)
+endif()
 add_dependencies(retro dosbox_pure)
 target_link_libraries(retro dl)
 
