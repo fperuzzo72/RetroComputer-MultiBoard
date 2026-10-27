@@ -1,7 +1,8 @@
 #!/bin/sh
 # The VAIO's retro (build/vaio/out) on the Mac, in the x86_64 container:
-# the screen a file (RETRO_FB), keys from a script (RETRO_KEYS), no sound
-# card. The screen at the end is written out as a PNG.
+# the screen a file (RETRO_FB), keys from a script (RETRO_KEYS), the sound
+# card a file. The screen at the end is written out as a PNG, and how much
+# of the sound was not silence is printed.
 #
 #     sh tools/vaio/run.sh CARD_DIR NVS_DIR SECONDS OUT.png ["2:88 3:108 ..."]
 #
@@ -16,15 +17,32 @@ SECS=$3
 OUT=$(cd "$(dirname "$4")" && pwd)/$(basename "$4")
 KEYS=$5
 FB=$ROOT/build/vaio/fb.raw
-rm -f "$FB"
+rm -f "$FB" "$ROOT/build/vaio/sound.raw"
+# the sound card: whatever is played goes to build/vaio/sound.raw, 16-bit
+# mono at 48000Hz after ALSA's own rate conversion
+cat > "$ROOT/build/vaio/asound.conf" <<ASOUND
+pcm.!default { type plug; slave { pcm "capture"; rate 48000; channels 1; format S16_LE } }
+pcm.capture { type file; slave.pcm "null"; file "$ROOT/build/vaio/sound.raw"; format raw }
+ASOUND
 docker run --rm --platform linux/amd64 -v "$ROOT:$ROOT" -v "$CARD:$CARD" -v "$NVS:$NVS" \
     -e RETRO_FB="$FB" -e RETRO_KEYS="$KEYS" alpine:3.24 sh -c "
 apk add -q alsa-lib libstdc++ zlib >/dev/null 2>&1
+cp $ROOT/build/vaio/asound.conf /etc/asound.conf
 cd $ROOT/build/vaio/out
 LD_LIBRARY_PATH=. timeout $SECS ./retro '$CARD' '$NVS'
 rc=\$?
 [ \$rc = 143 ] && echo 'retro: still running at the end' || echo \"retro: ended (\$rc)\"
 " || true
+python3 - "$ROOT/build/vaio/sound.raw" <<'EOF'
+import sys, struct, os
+p = sys.argv[1]
+if not os.path.exists(p): print('sound: none played'); sys.exit()
+d = open(p, 'rb').read()
+s = struct.unpack('<%dh' % (len(d) // 2), d[:len(d) // 2 * 2])
+loud = sum(1 for v in s if abs(v) > 256)
+# the null device has no clock: the time played means nothing, the share does
+print('sound: %d%% not silence, peak %d' % (100 * loud // max(len(s), 1), max((abs(v) for v in s), default=0)))
+EOF
 python3 - "$FB" "$OUT" <<'EOF'
 import sys, zlib, struct
 raw = open(sys.argv[1], 'rb').read()
