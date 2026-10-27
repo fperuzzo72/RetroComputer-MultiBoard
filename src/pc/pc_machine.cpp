@@ -52,6 +52,9 @@
 #define FLOPPY_MAX (2949120u)   /* 2.88MB: anything larger is a hard disk */
 
 static volatile int running;
+/* the core is up: with no disk, or one it could not boot, it never is, and a
+ * key handed to it then wrote into a machine that was not there */
+static volatile int booted;
 static volatile unsigned long frames;
 static uint8_t *fb;
 
@@ -270,6 +273,7 @@ static void m_run(void)
         show_message(pc_core_error());
         for (;;) vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    booted = 1;
     loop_forever();
 }
 
@@ -279,6 +283,7 @@ static unsigned long m_frames(void) { return frames; }
 
 static void m_hid(const uint8_t report[8])
 {
+    if (!booted) return;
     if (pc_keys_report(report)) selector_open();
 }
 
