@@ -17,9 +17,13 @@ for i in 1 2 3 4 5; do
 	apk add -q build-base clang cmake samurai alsa-lib-dev zlib-dev linux-headers && break
 	sleep 3
 done
-CC=clang CXX=clang++ cmake -S $ROOT/android/app/src/main/cpp -B $ROOT/build/vaio/cmake -G Ninja -DCMAKE_BUILD_TYPE=Release >/dev/null
+# ScummVM, when tools/vaio/build_scummvm.sh has built its core
+S=$ROOT/build/vaio/scummvm/libscummvm.so
+CC=clang CXX=clang++ cmake -S $ROOT/android/app/src/main/cpp -B $ROOT/build/vaio/cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+	$( [ -f $S ] && echo -DSCUMMVM_LIB=$S ) >/dev/null
 cmake --build $ROOT/build/vaio/cmake
 mkdir -p $ROOT/build/vaio/out
 cp $ROOT/build/vaio/cmake/retro $ROOT/build/vaio/cmake/*.so $ROOT/build/vaio/out/
+[ -f $S ] && cp $S $ROOT/build/vaio/out/
 ls -la $ROOT/build/vaio/out
 '

@@ -14,7 +14,7 @@
  *   - software rendering (the frontend gives no OpenGL), the mouse as the
  *     pointer (a finger is the trackpad, as on the other machines).
  *
- * Android only.
+ * Android, and Linux (the VAIO) with tools/vaio/build_scummvm.sh's core.
  */
 #include <dirent.h>
 #include <stdio.h>

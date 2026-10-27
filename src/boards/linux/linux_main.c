@@ -54,8 +54,25 @@ static uint32_t *fb;
 static int fb_w, fb_h, fb_stride;   /* stride in pixels */
 static int tty_fd = -1;
 
+/* RETRO_FB=file: the screen is that file, 1280x800 at 32 bits, written
+ * raw (the VAIO's framebuffer, for running in a container on the Mac) */
+static int screen_file(const char *path)
+{
+    int fd = open(path, O_RDWR | O_CREAT, 0644);
+    if (fd < 0) { perror("retro: RETRO_FB"); exit(1); }
+    fb_w = 1280;
+    fb_h = 800;
+    fb_stride = fb_w;
+    if (ftruncate(fd, (off_t)fb_w * fb_h * 4) < 0) { perror("retro: RETRO_FB"); exit(1); }
+    fb = mmap(NULL, (size_t)fb_w * fb_h * 4, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (fb == MAP_FAILED) { perror("retro: mmap RETRO_FB"); exit(1); }
+    printf("retro: screen %dx%d in %s\n", fb_w, fb_h, path);
+    return 1;
+}
+
 static void screen_open(void)
 {
+    if (getenv("RETRO_FB") && screen_file(getenv("RETRO_FB"))) return;
     int fd = open("/dev/fb0", O_RDWR);
     if (fd < 0) { perror("retro: /dev/fb0"); exit(1); }
     struct fb_var_screeninfo v;
@@ -137,13 +154,29 @@ static void present(int w, int h, uint16_t border)
     }
 }
 
+/* The names are UTF-8 and the font is ASCII: a Latin-1 letter is drawn as
+ * its letter without the accent ("cartão" as "cartao"), anything else
+ * past ASCII as '?'. */
+static int next_char(const char **s)
+{
+    static const char latin1[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYPsaaaaaaaceeeeiiiidnooooo/ouuuuypy";
+    const uint8_t *p = (const uint8_t *)*s;
+    if (p[0] < 0x80) { (*s)++; return p[0]; }
+    if ((p[0] == 0xC3) && (p[1] & 0xC0) == 0x80) { *s += 2; return latin1[(p[1] & 0x3F)]; }
+    int n = 1;   /* some other character: skip it whole */
+    while ((p[n] & 0xC0) == 0x80) n++;
+    *s += n;
+    return '?';
+}
+
 static void text(int x, int y, const char *s, int scale, uint32_t c)
 {
-    for (; *s; s++, x += 8 * scale) {
-        const uint8_t *g = font8x16_get_glyph((uint8_t)*s);
+    while (*s) {
+        const uint8_t *g = font8x16_get_glyph((uint8_t)next_char(&s));
         for (int r = 0; r < 16; r++)
             for (int b = 0; b < 8; b++)
                 if (g[r] & (0x80 >> b)) fill(x + b * scale, y + r * scale, scale, scale, c);
+        x += 8 * scale;
     }
 }
 
@@ -417,6 +450,37 @@ static void input_poll(int timeout_ms)
     if (moved && menu_level == M_CLOSED) retro_board_mouse(dx / 2, dy / 2, mouse_buttons);
 }
 
+/* RETRO_KEYS="2:88 3.5:108": at 2 seconds press and let go evdev key 88
+ * (F12), at 3.5 key 108 (Down); for running without a keyboard (RETRO_FB) */
+static struct { double at; int code; } script[64];
+static int script_n, script_next;
+static double script_t0;
+
+static double now_s(void)
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (double)t.tv_sec + t.tv_nsec / 1e9;
+}
+
+static void script_load(void)
+{
+    const char *k = getenv("RETRO_KEYS");
+    script_t0 = now_s();
+    for (int used = 0; k && script_n < 64 && sscanf(k, "%lf:%d%n", &script[script_n].at, &script[script_n].code, &used) == 2; k += used)
+        script_n++;
+}
+
+static void script_step(void)
+{
+    while (script_next < script_n && now_s() - script_t0 >= script[script_next].at) {
+        printf("retro: key %d\n", script[script_next].code);
+        key(script[script_next].code, 1);
+        key(script[script_next].code, 0);
+        script_next++;
+    }
+}
+
 /* --- starting over ------------------------------------------------------------ */
 
 static char **args;
@@ -439,6 +503,10 @@ int main(int argc, char **argv)
     }
     args = argv;
     setvbuf(stdout, NULL, _IOLBF, 0);
+    /* the card's folder, under each name the machines look for it by (the
+     * PC and the C64 take theirs as on the Mac), as android_jni.cpp does */
+    setenv("PC_ROOT", argv[1], 1);
+    setenv("C64_ROOT", argv[1], 1);
     setenv("RETRO_CARD", argv[1], 1);
     mkdir(argv[2], 0775);
     screen_open();
@@ -452,10 +520,12 @@ int main(int argc, char **argv)
     retro_board_menu_hook = menu_hook;
     retro_board_restart_hook = restart_hook;
     retro_board_start();
+    script_load();
 
     uint32_t shown = 0;
     for (;;) {
         input_poll(5);
+        script_step();
         if (menu_wanted) {
             menu_wanted = 0;
             menu_open();

@@ -723,6 +723,23 @@ VAIO's own trackpad never becomes an input device.
   ctrlaltdel is poweroff too, for when retro is not running.
 - `retro/log.txt` on the pendrive is the last run, `log-anterior.txt` the
   one before.
+- **Test on the Mac first: `tools/vaio/run.sh`** runs build/vaio/out's
+  retro in the container with the screen a file (RETRO_FB, 1280x800) and
+  keys from a script (RETRO_KEYS, evdev codes by the second), and writes
+  the screen out as a PNG. It reproduced the PC's crash in one go; every
+  machine boots on it, ScummVM included. No sound card there: "sound 0 Hz"
+  in the log is that, not the core.
+- **The PC and the C64 find the card by PC_ROOT and C64_ROOT**, which
+  android_jni.cpp set and linux_main.c did not: on the VAIO the PC said "no
+  disk images on the card". And a key typed into the PC with no disk wrote
+  into a core never started: pc_machine.cpp ignores keys until it boots.
+- **The menu's font is ASCII**: accented names are drawn without the accent
+  ("cartao"), not as code page 437 garbage.
+- **ScummVM**: `tools/vaio/build_scummvm.sh` builds its core for x86_64
+  (the Android engines, LITE=1). Its makefiles need bash, the target named
+  and DETECTION_STATIC=1 (else they build base/detection as a program
+  first), and DETECT_OBJS given once on the command line (they take the
+  engine list in twice and the link sees each detection.o twice).
 
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 

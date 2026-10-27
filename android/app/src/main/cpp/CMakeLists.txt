@@ -212,7 +212,8 @@ add_dependencies(retro bluemsx)
 # tools/build_scummvm_core.sh with its own makefiles into
 # src/main/jniLibs/arm64-v8a/libscummvm.so, which Gradle packs as it is. Run
 # through src/scummvm/scummvm_machine.c; without the library built, the
-# machine is left out.
+# machine is left out. On Linux, tools/vaio/build.sh passes SCUMMVM_LIB
+# (tools/vaio/build_scummvm.sh's).
 if(ANDROID)
   set(SCUMMVM_LIB ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libscummvm.so)
 endif()
