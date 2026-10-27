@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The Mac's discs, one for each System, each with all the programs.
 
-    python3 tools/make_mac_discs.py OUT_DIR
+    python3 tools/make_mac_discs.py OUT_DIR [EXTRA.img ...]
 
 From roms/mac (the owner's discs, not committed):
 
@@ -14,6 +14,11 @@ it writes three HFS discs of 10MB, each its System Folder (blessed) and
 the same Games, Programs and Files folders, plus TeachText:
 
   "Sistema 3.2.img", "Sistema 6.0.8.img", "Sistema 7.0.1.img"
+
+Each EXTRA disc's folders go into Games on all three, as the Duane Blehm
+Collection (archive.org, TheDuaneBlehmCollection: StuntCopter, Zero
+Gravity, Cairo ShootOut, PUZZ'L, made free by his family after his death
+in 1988).
 
 What only installs a System on another disc (Installer, Installer
 Script, Apple HD SC Setup) stays out. The Mac emulation (umac) takes a
@@ -33,7 +38,8 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAC = os.path.join(ROOT, "roms", "mac")
 SIZE = 10 * 1024 * 1024
-LEAVE_OUT = {b"Installer", b"Installer Script", b"Apple HD SC Setup", b"Desktop DB", b"Desktop DF", b"Desktop"}
+LEAVE_OUT = {b"Installer", b"Installer Script", b"Apple HD SC Setup", b"Desktop DB", b"Desktop DF", b"Desktop",
+             b"TheVolumeSettingsFolder"}
 
 
 def run(*a, **k):
@@ -60,7 +66,7 @@ def export(img, store, skip=()):
     items = []
     try:
         for p, folder in walk():
-            if p.split(b":")[1] in skip or p.rsplit(b":", 1)[-1] in LEAVE_OUT:
+            if p.split(b":")[1] in skip or LEAVE_OUT & set(p.split(b":")):
                 continue
             if folder:
                 items.append((p, None))
@@ -94,14 +100,16 @@ def build(out, label, boot, parts):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         sys.exit(__doc__)
     out = sys.argv[1]
     os.makedirs(out, exist_ok=True)
     store = tempfile.mkdtemp()
     try:
         s32 = export(os.path.join(MAC, "papermac.img"), store)
-        programs = [i for i in s32 if i[0].split(b":")[1] in (b"Games", b"Programs", b"Files")]
+        extras = [(b":Games" + p, l) for extra in sys.argv[2:] for p, l in export(extra, store)]
+        programs = [i for i in s32 if i[0].split(b":")[1] in (b"Games", b"Programs", b"Files")] + extras
+        s32 += extras
         s608 = export(os.path.join(MAC, "system608.img"), store)
         teach = [(b":Programs:TeachText", l) for p, l in s608 if p == b":TeachText"]
         s608 = [i for i in s608 if i[0] != b":TeachText"]

@@ -15,9 +15,10 @@ Writes OUT_DIR/RetroComputer, laid out as the app reads it (README,
                        Chip MSX card rebuilt under 2GB (tools/msx_fat16_disk.py)
   pc        pc/, msdos.img  the MS-DOS floppy (tools/make_pc_floppy.py) and the
                        8086 disk (tools/make_dos_hd.py's)
-  pc386     pc386/     the 386 disk (tools/make_dos_hd.py's)
-  mac       mac/       one disc for each System, all the programs on each
-                       (tools/make_mac_discs.py)
+  pc386     pc386/     the 386 disk (tools/make_dos_hd.py's), with the shareware
+                       games of tools/add_dos_games.py
+  mac       mac/       one disc for each System, all the programs on each, and
+                       the Duane Blehm Collection (tools/make_mac_discs.py)
 
 Copy it with `adb push --sync OUT_DIR/RetroComputer /sdcard/`, which
 resumes where a dropped cable left it. Nothing here is committed: these are
@@ -38,6 +39,8 @@ ROMSETS = os.path.join(ICLOUD, "Downloads/00 ROMS Emuladores")
 EMUS = os.path.join(ICLOUD, "01 Arquivos/Emuladores")
 RA_SYSTEM = os.path.join(EMUS, "EMULATOR GAMES/Retroarch data/System")
 DOS = os.path.join(HOME, "Downloads/DOS files")
+CACHE = os.path.join(HOME, "Library/Caches/retrocomputer")   # the free downloads, fetched once
+BLEHM = "https://archive.org/download/TheDuaneBlehmCollection/Blehm_Collection.img"
 NEXTOR = "https://github.com/Konamiman/Nextor/releases/download/v2.1.4/Nextor-2.1.4.SunriseIDE.blueMSX.ROM"
 
 
@@ -132,12 +135,20 @@ def pc(card):
 
 def pc386(card):
     os.makedirs(os.path.join(card, "pc386"), exist_ok=True)
-    shutil.copy(os.path.join(DOS, "DOS completo 386.img"), os.path.join(card, "pc386", "DOS completo.img"))
+    disk = os.path.join(card, "pc386", "DOS completo.img")
+    shutil.copy(os.path.join(DOS, "DOS completo 386.img"), disk)
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools/add_dos_games.py"), disk, CACHE],
+                   check=True, stdout=subprocess.DEVNULL)
     return 1
 
 
 def mac(card):
-    subprocess.run([sys.executable, os.path.join(ROOT, "tools/make_mac_discs.py"), os.path.join(card, "mac")],
+    os.makedirs(CACHE, exist_ok=True)
+    blehm = os.path.join(CACHE, "Blehm_Collection.img")
+    if not os.path.exists(blehm):
+        with urllib.request.urlopen(BLEHM) as r, open(blehm, "wb") as o:
+            o.write(r.read())
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools/make_mac_discs.py"), os.path.join(card, "mac"), blehm],
                    check=True, stdout=subprocess.DEVNULL)
     return 3
 

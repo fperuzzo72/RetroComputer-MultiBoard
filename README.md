@@ -314,6 +314,14 @@ the same games and programs (and TeachText): "Sistema 3.2.img" and so on.
 hformat leaves the boot blocks empty, which gets the question mark, so
 each disc is given its System's own. All three boot to the Finder on the
 Android board (HiBreak Pro, 2026-10-27).
+Discs given after OUT_DIR have their folders put in Games on all three:
+the card's have the Duane Blehm Collection (StuntCopter, Zero Gravity,
+Cairo ShootOut, PUZZ'L; archive.org, made free by his family).
+
+`python3 tools/add_dos_games.py DISK.img CACHE_DIR` puts the shareware
+episodes of Doom, Heretic and Wolfenstein 3D and Commander Keen 1 in
+C:\\GAMES of the 386's disk, with C:\\BAT launchers and AJUDA lines: only
+what id and Apogee let anyone copy. Doom runs on the HiBreak Pro.
 
 **Back to the reader.** The first menu's last choice, when the other app
 slot holds a firmware, is "Voltar ao CrossPlay" (CrossPoint on the
