@@ -695,8 +695,8 @@ Manbow from msx2/, MSX2+, 59.92fps; 4% of the Mac's CPU.
 (Core 2 T7200, 2GB, i915 framebuffer 1280x800, no UEFI) booted from a
 pendrive: Alpine 3.24 diskless, its apkovl making tty1 run the pendrive's
 `retro/start.sh`. **Ran on the VAIO 2026-10-27**: the MSX, the MSX2+, the
-PC 386 with GP2, the Amiga (59.94fps, sound, joystick) and the menu.
-Switching off through init has not been confirmed on it yet. The owner uses a 2.4GHz Dell keyboard and mouse; the
+PC 386 with GP2, the Amiga (59.94fps, sound, joystick), the menu.
+Switching off confirmed too. The owner uses a 2.4GHz Dell keyboard and mouse; the
 VAIO's own trackpad never becomes an input device.
 
 - **The same retro_board.c as Android**, and the same CMakeLists.txt

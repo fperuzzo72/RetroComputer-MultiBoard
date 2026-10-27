@@ -393,7 +393,13 @@ static void input_poll(int timeout_ms)
         struct input_event ev[64];
         const ssize_t n = read(devs[i].fd, ev, sizeof ev);
         for (int j = 0; j < n / (ssize_t)sizeof ev[0]; j++) {
-            if (ev[j].type == EV_KEY && ev[j].value != 2) {
+            /* a held arrow or page key repeats in the menu (Enter does not); the machines
+             * repeat on their own and never see them */
+            if (ev[j].type == EV_KEY && ev[j].value == 2) {
+                const int c = ev[j].code;
+                if (menu_level != M_CLOSED &&
+                    (c == KEY_UP || c == KEY_DOWN || c == KEY_PAGEUP || c == KEY_PAGEDOWN)) menu_key(c);
+            } else if (ev[j].type == EV_KEY) {
                 const int c = ev[j].code, down = ev[j].value;
                 if (c == BTN_LEFT || c == BTN_RIGHT) {
                     const int bit = c == BTN_LEFT ? 1 : 2;
