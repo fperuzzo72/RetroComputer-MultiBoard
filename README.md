@@ -561,6 +561,11 @@ for blueMSX, and `tools/msx_fat16_disk.py` rebuilds a larger card image
 (the owner's One Chip MSX card) into one.
 `python3 tools/libretro_sources.py` regenerates both cores' source lists.
 
+`python3 tools/make_android_card.py OUT_DIR [machine ...]` gathers the
+whole `RetroComputer` folder from the owner's own sets (none of it is in
+the repo), laid out as above; `adb push --sync OUT_DIR/RetroComputer
+/sdcard/` copies it and resumes after a dropped cable.
+
 `tools/dosboxhost` runs the core on the Mac first, in real time, with a
 PNG of the last picture and how busy the core was (`make -C
 tools/dosboxhost`, a dosbox-pure checkout in `~/github/dosbox-pure`). On
