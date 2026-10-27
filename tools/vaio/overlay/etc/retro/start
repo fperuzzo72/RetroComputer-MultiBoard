@@ -1,0 +1,16 @@
+#!/bin/sh
+# Run on tty1 at every boot. The pendrive (Alpine mounts it read-only under
+# /media) is made writable, and its retro/start.sh is run: that script is
+# on the FAT partition, so it can be changed from any computer.
+for m in /media/*; do
+	[ -f "$m/retro/start.sh" ] && card=$m && break
+done
+if [ -z "$card" ]; then
+	echo "retro: no retro/start.sh on any pendrive"
+	exec /bin/sh -l
+fi
+mount -o remount,rw "$card"
+export RETRO_USB="$card"
+/bin/sh "$card/retro/start.sh"
+echo "retro: start.sh ended ($?); a shell"
+exec /bin/sh -l

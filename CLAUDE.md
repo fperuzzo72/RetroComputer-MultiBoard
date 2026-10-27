@@ -689,6 +689,41 @@ Manbow from msx2/, MSX2+, 59.92fps; 4% of the Mac's CPU.
   - The extracted copy at ~/Documents/ARRUMAR/MSXFAT16 is incomplete
     (zero-length files, 448MB of 1.97GB); read the .dd.
 
+## The Linux board: a Sony VAIO from a pendrive (2026-10-27)
+
+`src/boards/linux/` runs the Android app's machines on a VAIO VGN-SZ330P
+(Core 2 T7200, 2GB, i915 framebuffer 1280x800, no UEFI) booted from a
+pendrive: Alpine 3.24 diskless, its apkovl making tty1 run the pendrive's
+`retro/start.sh`. **Ran on the VAIO 2026-10-27**: the MSX, the MSX2+, the
+PC 386 with GP2, the Amiga (59.94fps, sound, joystick) and the menu.
+Switching off through init has not been confirmed on it yet. The owner uses a 2.4GHz Dell keyboard and mouse; the
+VAIO's own trackpad never becomes an input device.
+
+- **The same retro_board.c as Android**, and the same CMakeLists.txt
+  (`if(ANDROID)` picks the platform). linux_main.c is fbdev (scaled to the
+  height, 4:3 where asked), evdev with EVIOCGRAB, and the menu drawn in
+  lib/pc8086's font; linux_audio.c is ALSA. F12 or the Menu key opens the
+  menu on every machine; Ctrl+Alt+Del switches off.
+- `tools/vaio/build.sh` builds in an x86_64 Alpine container (colima with
+  Rosetta) with clang, the repo mounted at its own path (mac_media.S
+  names the Mac ROM by it). `make_usb.sh` makes the pendrive's image,
+  `install.sh` copies the build, the apks and the card folder onto it.
+- **Diskless Alpine refuses a loose .apk** without
+  `--force-non-repository` ("it would be lost on next reboot"). The
+  container is not diskless and does not show it; the first two boots
+  ended in a shell with libstdc++ and libasound missing.
+- **The menu was taller than the screen** (816 rows of 800), started at
+  row -8, and fill() did not clip there: it wrote in front of the
+  framebuffer, the list showed and then it crashed. fill() clips all four
+  sides now, and the rows follow the screen.
+- **A crash leaves the console in KD_GRAPHICS**, and the shell after it is
+  invisible: retro puts text mode back on SIGSEGV and the like.
+- **Switching off goes through init** (SIGUSR2 to busybox init is
+  poweroff), so OpenRC puts the pendrive back read-only; inittab's
+  ctrlaltdel is poweroff too, for when retro is not running.
+- `retro/log.txt` on the pendrive is the last run, `log-anterior.txt` the
+  one before.
+
 ## The Paper Mono: MSX, Spectrum and Macintosh (2026-09-28 night)
 
 `pio run -e papermono` carries all three, chosen at boot (chooser.cpp,

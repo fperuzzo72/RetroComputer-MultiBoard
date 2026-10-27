@@ -285,6 +285,27 @@ void retro_board_touch_second(int down)
     }
 }
 
+/* A real mouse (the Linux board): moved by dx,dy in the machine's own
+ * pixels, kept inside the picture, with its buttons (bit 0 left, bit 1
+ * right). The machines take where the pointer is, not how far it moved. */
+static int mouse_x = -1, mouse_y;
+
+void retro_board_mouse(int dx, int dy, int buttons)
+{
+    if (!retro_board_has_pointer()) return;
+    if (mouse_x < 0) {
+        mouse_x = pic_w / 2;
+        mouse_y = pic_h / 2;
+    }
+    mouse_x += dx;
+    mouse_y += dy;
+    if (mouse_x < 0) mouse_x = 0;
+    if (mouse_y < 0) mouse_y = 0;
+    if (mouse_x >= pic_w) mouse_x = pic_w - 1;
+    if (mouse_y >= pic_h) mouse_y = pic_h - 1;
+    machine->pointer(mouse_x, mouse_y, buttons);
+}
+
 /* --- the selector -------------------------------------------------------- */
 
 void (*retro_board_menu_hook)(void);

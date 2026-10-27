@@ -30,6 +30,10 @@ void retro_board_touch(int touching, int mx, int my, float scale, unsigned long 
 /* A second finger down beside the first, or lifted: the right button. */
 void retro_board_touch_second(int down);
 
+/* A mouse: how far it moved, in the machine's pixels, and its buttons
+ * (bit 0 left, bit 1 right). For a board with a real one (Linux). */
+void retro_board_mouse(int dx, int dy, int buttons);
+
 /* Whether the running machine's picture is shown at 4:3 whatever its size
  * (display_set_four3), rather than with square pixels. */
 int  retro_board_four3(void);

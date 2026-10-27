@@ -1,5 +1,8 @@
 # The RetroComputer's native side: the machines (the same sources as the
-# boards build) and the Android board, src/boards/android.
+# boards build) and the Android board, src/boards/android. The same file
+# builds the Linux board (src/boards/linux, the VAIO's pendrive) when it is
+# not the NDK building: a program, `retro`, in place of the app's library,
+# its cores beside it (tools/vaio/build.sh).
 cmake_minimum_required(VERSION 3.22.1)
 project(retro C CXX ASM)
 
@@ -39,9 +42,21 @@ set(MSX_CORE
     ${FMSX}/EMULib/IPS.c ${FMSX}/EMULib/MCF.c ${FMSX}/EMULib/SHA1.c ${FMSX}/EMULib/Sound.c
     ${FMSX}/video/video_glue.c ${ROOT}/lib/z80/Z80.c)
 
-add_library(retro SHARED
-    ${BOARD}/android_jni.cpp
-    ${BOARD}/android_audio.c
+if(ANDROID)
+  set(PLATFORM_SRC ${BOARD}/android_jni.cpp ${BOARD}/android_audio.c)
+  set(PLATFORM_DEF ANDROID)
+  set(LOG_LIB log)
+else()
+  set(PLATFORM_SRC ${ROOT}/src/boards/linux/linux_main.c ${ROOT}/src/boards/linux/linux_audio.c)
+  set(PLATFORM_DEF "")
+  set(LOG_LIB "")
+endif()
+if(ANDROID)
+  add_library(retro SHARED ${PLATFORM_SRC})
+else()
+  add_executable(retro ${PLATFORM_SRC})
+endif()
+target_sources(retro PRIVATE
     ${BOARD}/retro_board.c
     ${BOARD}/nvs_file.c
     ${BOARD}/beeper.c
@@ -57,7 +72,8 @@ add_library(retro SHARED
 target_include_directories(retro PRIVATE
     ${BOARD}/shim ${BOARD} ${ROOT}/src ${ROOT}/src/boards/common ${ROOT}/lib/z80
     ${ROOT}/src/msx ${ROOT}/src/spectrum ${PC} ${ROOT}/src/mac
-    ${UMAC}/include ${UMAC}/musashi ${UMAC}/musashi/softfloat ${FMSX}/fMSX ${FMSX}/EMULib ${FMSX}/video)
+    ${UMAC}/include ${UMAC}/musashi ${UMAC}/musashi/softfloat ${FMSX}/fMSX ${FMSX}/EMULib ${FMSX}/video
+    ${ROOT}/lib/pc8086/src)
 
 # The flags the MSX is built with on every board (BPS16, LSB_FIRST, ESP32
 # for the ESPlay-fMSX paths, FMSX for the Z80's fast fetch).
@@ -126,7 +142,7 @@ target_compile_definitions(dosbox_pure PRIVATE __LIBRETRO__ NDEBUG)
 target_compile_options(dosbox_pure PRIVATE -std=c++11 -O2 -fomit-frame-pointer -fexceptions -frtti
     -fvisibility=hidden -ffunction-sections -fdata-sections -w)
 target_link_options(dosbox_pure PRIVATE -Wl,--gc-sections)
-target_link_libraries(dosbox_pure log)
+target_link_libraries(dosbox_pure ${LOG_LIB})
 target_sources(retro PRIVATE ${ROOT}/src/libretro/lr_frontend.c ${ROOT}/src/pc386/pc386_machine.c)
 target_include_directories(retro PRIVATE ${DBP}/libretro-common/include ${ROOT}/src/libretro)
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_PC386)
@@ -147,11 +163,11 @@ file(WRITE ${CMAKE_BINARY_DIR}/puae_caps.c "${CAPS_C}")
 list(REMOVE_ITEM PUAE_SRC ${PUAE}/sources/src/caps/caps.c)
 add_library(puae SHARED ${PUAE_SRC} ${CMAKE_BINARY_DIR}/puae_caps.c)
 target_include_directories(puae PRIVATE ${PUAE_INC} ${PUAE}/sources/src/caps ${PUAE}/jni/include)
-target_compile_definitions(puae PRIVATE ${PUAE_DEFS} ANDROID __LIBRETRO__ USE_LIBRETRO_VFS
+target_compile_definitions(puae PRIVATE ${PUAE_DEFS} ${PLATFORM_DEF} __LIBRETRO__ USE_LIBRETRO_VFS
     GIT_VERSION="7387937")
 target_compile_options(puae PRIVATE $<$<COMPILE_LANGUAGE:C>:-std=gnu99> -O2 -w)
 target_link_options(puae PRIVATE -Wl,--version-script=${PUAE}/libretro/link.T)
-target_link_libraries(puae z log)
+target_link_libraries(puae z ${LOG_LIB})
 
 # CAPSImg (third_party/capsimg, a submodule; the SPS licence, non-commercial):
 # the IPF decoder, built as its CAPSImg/Makefile.in lists it.
@@ -183,11 +199,11 @@ set(BLUEMSX ${ROOT}/third_party/blueMSX-libretro)
 include(${CMAKE_SOURCE_DIR}/bluemsx_sources.cmake)
 add_library(bluemsx SHARED ${BLUEMSX_SRC})
 target_include_directories(bluemsx PRIVATE ${BLUEMSX_INC})
-target_compile_definitions(bluemsx PRIVATE ${BLUEMSX_DEFS} ANDROID GIT_VERSION="e3086eb")
+target_compile_definitions(bluemsx PRIVATE ${BLUEMSX_DEFS} ${PLATFORM_DEF} GIT_VERSION="e3086eb")
 target_compile_options(bluemsx PRIVATE -O2 -w -Wno-error=incompatible-function-pointer-types
     -Wno-error=int-conversion -Wno-error=incompatible-pointer-types $<$<COMPILE_LANGUAGE:CXX>:-Wno-c++11-narrowing>)
 target_link_options(bluemsx PRIVATE -Wl,--version-script=${BLUEMSX}/link.T)
-target_link_libraries(bluemsx z log)
+target_link_libraries(bluemsx z ${LOG_LIB})
 target_sources(retro PRIVATE ${ROOT}/src/msx2/msx2_machine.c)
 target_compile_definitions(retro PRIVATE HAVE_MACHINE_MSX2)
 add_dependencies(retro bluemsx)
@@ -197,7 +213,10 @@ add_dependencies(retro bluemsx)
 # src/main/jniLibs/arm64-v8a/libscummvm.so, which Gradle packs as it is. Run
 # through src/scummvm/scummvm_machine.c; without the library built, the
 # machine is left out.
-if(EXISTS ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libscummvm.so)
+if(ANDROID)
+  set(SCUMMVM_LIB ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libscummvm.so)
+endif()
+if(EXISTS "${SCUMMVM_LIB}")
   target_sources(retro PRIVATE ${ROOT}/src/scummvm/scummvm_machine.c)
   target_compile_definitions(retro PRIVATE HAVE_MACHINE_SCUMMVM)
 endif()
@@ -218,4 +237,13 @@ target_compile_options(retro PRIVATE $<$<COMPILE_LANGUAGE:C>:-w -UANDROID> -O2)
 # the boards' static links always did.
 set_target_properties(retro PROPERTIES C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
 target_link_options(retro PRIVATE -Wl,--gc-sections)
-target_link_libraries(retro c64 android log aaudio z)
+if(ANDROID)
+  target_link_libraries(retro c64 android log aaudio z)
+else()
+  # the cores are found beside the program
+  set_target_properties(retro PROPERTIES BUILD_RPATH "$ORIGIN" INSTALL_RPATH "$ORIGIN")
+  # each function in a section of its own, as the NDK does by default, so
+  # --gc-sections drops video_glue.c's unused GetColor() (see above)
+  target_compile_options(retro PRIVATE -ffunction-sections -fdata-sections)
+  target_link_libraries(retro c64 asound z pthread)
+endif()

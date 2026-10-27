@@ -56,3 +56,4 @@ lib/dosbox-pure/*.so
 # built by tools/build_scummvm_core.sh
 android/app/src/main/jniLibs/
 build/scummvm/
+build/vaio/
